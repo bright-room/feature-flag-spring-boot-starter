@@ -1,0 +1,21 @@
+name: Gradle action
+description: Gradle action
+
+inputs:
+  command:
+    description: Run command
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v4
+      with:
+        distribution: 'corretto'
+        java-version: 21
+
+    - shell: bash
+      run: chmod +x gradlew
+
+    - shell: bash
+      run: ./gradlew ${{ inputs.command }}

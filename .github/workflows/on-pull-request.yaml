@@ -1,0 +1,21 @@
+name: on-pull-request
+
+on:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Gradle Cache
+        uses: ./.github/actions/gradle-cache
+
+      - name: Check with Gradle
+        uses: ./.github/actions/gradle-action
+        with:
+          command: check
