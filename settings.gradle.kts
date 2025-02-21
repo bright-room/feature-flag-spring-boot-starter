@@ -12,5 +12,6 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "feature-flag-spring-boot-starter"
+include("core")
 
 includeBuild("gradle-scripts")
