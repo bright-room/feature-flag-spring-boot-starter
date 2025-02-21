@@ -1,0 +1,25 @@
+[libraries]
+#########################################
+# spring boot
+#########################################
+spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-webflux = { module = "org.springframework.boot:spring-boot-starter-webflux" }
+
+spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
+
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+
+#########################################
+# unit test library
+#########################################
+rest-assured = { module = "io.rest-assured:rest-assured", version = { strictly = "5.5.0" } }
+
+#########################################
+# gradle plugins
+#########################################
+spring-boot = { module = "org.springframework.boot:org.springframework.boot.gradle.plugin", version = { strictly = "3.4.2" } }
+spring-dependency-management = { module = "io.spring.dependency-management:io.spring.dependency-management.gradle.plugin", version = { strictly = "1.1.7" }  }
+
+jreleaser = { module = "org.jreleaser:org.jreleaser.gradle.plugin", version = { strictly = "1.16.0" } }
+spotless = { module = "com.diffplug.spotless:com.diffplug.spotless.gradle.plugin", version = { strictly = "7.0.2" } }
