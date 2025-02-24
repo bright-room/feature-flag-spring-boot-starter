@@ -1,9 +1,8 @@
-import org.jreleaser.model.Active
 import util.by
 
 plugins {
     `maven-publish`
-    id("org.jreleaser")
+    id("cl.franciscosolis.sonatype-central-upload")
 }
 
 publishing {
@@ -63,40 +62,24 @@ publishing {
     }
 }
 
-jreleaser {
-    gitRootSearch = true
+tasks {
+    sonatypeCentralUpload {
+        dependsOn("jar", "sourcesJar", "javadocJar", "generatePomFileForMavenJavaPublication")
 
-    project {
-        inceptionYear = "2025"
-        author("@kukv")
-    }
+        username = System.getenv("SONATYPE_CENTRAL_USERNAME")
+        password = System.getenv("SONATYPE_CENTRAL_PASSWORD")
 
-    signing {
-        active = Active.ALWAYS
-        armored = true
-        verify = true
-    }
+        archives = files(
+            tasks.named("jar"),
+            tasks.named("sourcesJar"),
+            tasks.named("javadocJar"),
+        )
 
-    release {
-        github {
-            skipRelease = true
-            skipTag = true
-            sign = true
-            branch = "main"
-            branchPush = "main"
-            overwrite = true
-        }
-    }
+        pom = file(
+            tasks.named("generatePomFileForMavenJavaPublication").get().outputs.files.single()
+        )
 
-    deploy {
-        maven {
-            mavenCentral.create("sonatype") {
-                active = Active.ALWAYS
-                url = "https://central.sonatype.com/api/v1/publisher"
-                stagingRepository(layout.buildDirectory.dir("staging-deploy").get().toString())
-                setAuthorization("Basic")
-                retryDelay = 60
-            }
-        }
+        signingKey = System.getenv("PGP_SIGNING_KEY")
+        signingKeyPassphrase = System.getenv("PGP_SIGNING_KEY_PASSPHRASE")
     }
 }
