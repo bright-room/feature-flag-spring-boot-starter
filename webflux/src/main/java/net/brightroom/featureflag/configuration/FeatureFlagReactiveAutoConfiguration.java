@@ -15,7 +15,7 @@ import org.springframework.web.reactive.result.method.annotation.RequestMappingH
 public class FeatureFlagReactiveAutoConfiguration {
 
   @Bean
-  FeatureFlagWebFilter featureFlagInterceptor(
+  FeatureFlagWebFilter featureFlagWebFilter(
       FeatureFlagProvider featureFlagProvider, RequestMappingHandlerMapping handlerMapping) {
     return new FeatureFlagWebFilter(featureFlagProvider, handlerMapping);
   }
