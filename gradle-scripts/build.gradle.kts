@@ -6,7 +6,7 @@ dependencies {
     implementation(libs.spring.boot)
     implementation(libs.spring.dependency.management)
 
-    implementation(libs.jreleaser)
+    implementation(libs.sonatype.central.upload)
     implementation(libs.spotless)
 
     // hack to access version catalogue https://github.com/gradle/gradle/issues/15383
