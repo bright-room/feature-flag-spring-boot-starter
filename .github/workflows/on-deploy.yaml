@@ -1,0 +1,40 @@
+name: on-deploy
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  publish-artifacts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Gradle Cache
+        uses: ./.github/actions/gradle-cache
+
+      - name: Publish to maven central with Gradle
+        uses: ./.github/actions/gradle-action
+        env:
+          SONATYPE_CENTRAL_USERNAME: ${{ secrets.SONATYPE_CENTRAL_USERNAME }}
+          SONATYPE_CENTRAL_PASSWORD: ${{ secrets.SONATYPE_CENTRAL_PASSWORD }}
+          PGP_SIGNING_KEY: ${{ secrets.PGP_SIGNING_KEY }}
+          PGP_SIGNING_KEY_PASSPHRASE: ${{ secrets.PGP_SIGNING_KEY_PASSPHRASE }}
+        with:
+          command: sonatypeCentralUpload
+
+  generate-release-note:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    needs:
+      - publish-artifacts
+
+    steps:
+      - name: Generate a release note
+        run: gh release create ${{ github.ref_name }} --generate-notes --latest --verify-tag --repo ${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
