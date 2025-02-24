@@ -14,5 +14,6 @@ dependencyResolutionManagement {
 rootProject.name = "feature-flag-spring-boot-starter"
 include("core")
 include("web")
+include("webflux")
 
 includeBuild("gradle-scripts")
