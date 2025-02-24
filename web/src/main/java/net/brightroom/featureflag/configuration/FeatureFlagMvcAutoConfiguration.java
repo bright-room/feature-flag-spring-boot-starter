@@ -2,7 +2,7 @@ package net.brightroom.featureflag.configuration;
 
 import net.brightroom.featureflag.interceptor.FeatureFlagInterceptor;
 import net.brightroom.featureflag.provider.FeatureFlagProvider;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 
 /**
@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Bean;
  * Spring MVC applications. This configuration is loaded after the main Feature Flag
  * autoconfiguration.
  */
-@AutoConfigureAfter(FeatureFlagAutoConfiguration.class)
+@AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 public class FeatureFlagMvcAutoConfiguration {
 
   @Bean

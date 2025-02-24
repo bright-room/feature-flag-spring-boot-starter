@@ -2,7 +2,7 @@ package net.brightroom.featureflag.configuration;
 
 import net.brightroom.featureflag.filter.FeatureFlagWebFilter;
 import net.brightroom.featureflag.provider.FeatureFlagProvider;
-import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping;
 
@@ -11,7 +11,7 @@ import org.springframework.web.reactive.result.method.annotation.RequestMappingH
  * reactive applications. This configuration is loaded after the main Feature Flag
  * autoconfiguration.
  */
-@AutoConfigureAfter(FeatureFlagAutoConfiguration.class)
+@AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 public class FeatureFlagReactiveAutoConfiguration {
 
   @Bean
