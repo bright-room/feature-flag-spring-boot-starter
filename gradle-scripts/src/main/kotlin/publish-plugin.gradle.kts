@@ -69,15 +69,21 @@ tasks {
         username = System.getenv("SONATYPE_CENTRAL_USERNAME")
         password = System.getenv("SONATYPE_CENTRAL_PASSWORD")
 
-        archives = files(
-            tasks.named("jar"),
-            tasks.named("sourcesJar"),
-            tasks.named("javadocJar"),
-        )
+        archives =
+            files(
+                tasks.named("jar"),
+                tasks.named("sourcesJar"),
+                tasks.named("javadocJar"),
+            )
 
-        pom = file(
-            tasks.named("generatePomFileForMavenJavaPublication").get().outputs.files.single()
-        )
+        pom =
+            file(
+                tasks
+                    .named("generatePomFileForMavenJavaPublication")
+                    .get()
+                    .outputs.files
+                    .single(),
+            )
 
         signingKey = System.getenv("PGP_SIGNING_KEY")
         signingKeyPassphrase = System.getenv("PGP_SIGNING_KEY_PASSPHRASE")

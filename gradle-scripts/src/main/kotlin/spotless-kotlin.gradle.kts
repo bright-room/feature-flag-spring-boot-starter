@@ -10,5 +10,7 @@ spotless {
     }
     kotlinGradle {
         ktlint()
+        target("**/*.gradle.kts")
+        targetExclude("**/build/**")
     }
 }
