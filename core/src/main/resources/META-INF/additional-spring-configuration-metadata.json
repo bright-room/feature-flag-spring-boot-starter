@@ -1,0 +1,9 @@
+{
+  "properties": [
+    {
+      "name": "feature-flags.features",
+      "type": "java.util.Map<java.lang.String,java.lang.Boolean>",
+      "description": "Feature flag settings."
+    }
+  ]
+}
