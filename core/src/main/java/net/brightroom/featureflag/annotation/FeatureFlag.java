@@ -38,13 +38,4 @@ public @interface FeatureFlag {
    * @return the feature name
    */
   String feature() default "";
-
-  /**
-   * Indicates whether the feature flag check is required. If set to true (default), access will be
-   * denied when the feature is disabled. If set to false, access will be allowed even if the
-   * feature is disabled.
-   *
-   * @return true if the feature check is required, false otherwise
-   */
-  boolean required() default true;
 }
