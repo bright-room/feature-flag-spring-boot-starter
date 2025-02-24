@@ -8,7 +8,7 @@ import java.util.Map;
  */
 public class InMemoryFeatureFlagProvider implements FeatureFlagProvider {
 
-  private final Map<String, Boolean> features;
+  Map<String, Boolean> features;
 
   @Override
   public boolean isFeatureEnabled(String featureName) {

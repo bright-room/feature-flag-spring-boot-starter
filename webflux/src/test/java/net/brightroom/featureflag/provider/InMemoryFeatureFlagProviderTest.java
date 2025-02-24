@@ -9,19 +9,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest(classes = {Application.class})
-public class InMemoryFeatureFlagProviderTest {
+class InMemoryFeatureFlagProviderTest {
 
   FeatureFlagProvider featureFlagProvider;
 
   @Test
   void undefinedFeaturesAreNotManagedByFeatureFlag() {
-    assertTrue(featureFlagProvider.isFeatureEnabled("undefined-api"));
+    assertTrue(featureFlagProvider.isFeatureEnabled("undefined-api").block());
   }
 
   @Test
   void validatePredefinedFunctions() {
-    assertTrue(featureFlagProvider.isFeatureEnabled("new-api"));
-    assertFalse(featureFlagProvider.isFeatureEnabled("beta-feature"));
+    assertTrue(featureFlagProvider.isFeatureEnabled("new-api").block());
+    assertFalse(featureFlagProvider.isFeatureEnabled("beta-feature").block());
   }
 
   @Autowired

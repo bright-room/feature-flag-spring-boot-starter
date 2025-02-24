@@ -27,38 +27,37 @@ import reactor.core.publisher.Mono;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class FeatureFlagWebFilter implements WebFilter {
 
-  private final FeatureFlagProvider featureFlagProvider;
-  private final RequestMappingHandlerMapping handlerMapping;
+  FeatureFlagProvider featureFlagProvider;
+  RequestMappingHandlerMapping handlerMapping;
 
   @Override
   @NonNull
-  public Mono<Void> filter(@NonNull ServerWebExchange exchange, WebFilterChain chain) {
+  public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
     return handlerMapping
         .getHandler(exchange)
         .cast(HandlerMethod.class)
         .flatMap(handlerMethod -> checkFeatureFlags(handlerMethod, exchange))
-        .then(chain.filter(exchange))
+        .switchIfEmpty(chain.filter(exchange))
         .onErrorResume(
             FeatureFlagDisabledException.class, ex -> exchange.getResponse().setComplete());
   }
 
   private Mono<Void> checkFeatureFlags(HandlerMethod handlerMethod, ServerWebExchange exchange) {
     FeatureFlag methodAnnotation = handlerMethod.getMethodAnnotation(FeatureFlag.class);
-    if (Objects.nonNull(methodAnnotation) && isFeatureEnabled(methodAnnotation)) {
-      return handleDisabledFeature(exchange);
+    if (Objects.nonNull(methodAnnotation)) {
+      return featureFlagProvider
+          .isFeatureEnabled(methodAnnotation.feature())
+          .flatMap(isEnabled -> isEnabled ? Mono.empty() : handleDisabledFeature(exchange));
     }
 
     FeatureFlag classAnnotation = handlerMethod.getBeanType().getAnnotation(FeatureFlag.class);
-    if (Objects.nonNull(classAnnotation) && isFeatureEnabled(classAnnotation)) {
-      return handleDisabledFeature(exchange);
+    if (Objects.nonNull(classAnnotation)) {
+      return featureFlagProvider
+          .isFeatureEnabled(classAnnotation.feature())
+          .flatMap(isEnabled -> isEnabled ? Mono.empty() : handleDisabledFeature(exchange));
     }
 
     return Mono.empty();
-  }
-
-  private boolean isFeatureEnabled(FeatureFlag annotation) {
-    if (!annotation.required()) return false;
-    return !featureFlagProvider.isFeatureEnabled(annotation.feature());
   }
 
   private Mono<Void> handleDisabledFeature(ServerWebExchange exchange) {
@@ -68,9 +67,7 @@ public class FeatureFlagWebFilter implements WebFilter {
     DataBufferFactory bufferFactory = response.bufferFactory();
     DataBuffer buffer = bufferFactory.wrap("This feature is not available".getBytes());
 
-    Mono<DataBuffer> responseBody = Mono.just(buffer);
-
-    return response.writeWith(responseBody);
+    return response.writeWith(Mono.just(buffer));
   }
 
   /**
