@@ -1,3 +1,5 @@
+import util.libs
+
 plugins {
     java
     id("org.springframework.boot")
@@ -7,17 +9,32 @@ plugins {
 group = "net.bright-room.feature-flag-spring-boot-starter"
 version = "0.0.1"
 
-val javaVersion = JavaLanguageVersion.of("21")
+dependencies {
+    annotationProcessor(libs.spring.boot.configuration.processor)
+    testImplementation(libs.spring.boot.starter.test)
+}
+
+val javaVersion: String = libs.versions.java.get()
 java {
+    withJavadocJar()
+    withSourcesJar()
     toolchain {
-        languageVersion = javaVersion
+        languageVersion = JavaLanguageVersion.of(javaVersion)
     }
 }
 
 tasks {
     compileJava {
-        sourceCompatibility = javaVersion.toString()
-        targetCompatibility = javaVersion.toString()
+        sourceCompatibility = javaVersion
+        targetCompatibility = javaVersion
+    }
+
+    bootJar {
+        enabled = false
+    }
+
+    jar {
+        archiveClassifier.set("")
     }
 
     test {

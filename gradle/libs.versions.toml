@@ -1,3 +1,6 @@
+[versions]
+java = "21"
+
 [libraries]
 #########################################
 # spring boot
@@ -21,4 +24,5 @@ rest-assured = { module = "io.rest-assured:rest-assured", version = { strictly =
 spring-boot = { module = "org.springframework.boot:org.springframework.boot.gradle.plugin", version = { strictly = "3.4.2" } }
 spring-dependency-management = { module = "io.spring.dependency-management:io.spring.dependency-management.gradle.plugin", version = { strictly = "1.1.7" }  }
 
+jreleaser = { module = "org.jreleaser:org.jreleaser.gradle.plugin", version = { strictly = "1.16.0" } }
 spotless = { module = "com.diffplug.spotless:com.diffplug.spotless.gradle.plugin", version = { strictly = "7.0.2" } }
