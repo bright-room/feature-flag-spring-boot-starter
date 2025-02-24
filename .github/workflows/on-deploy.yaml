@@ -17,24 +17,24 @@ jobs:
       - name: Gradle Cache
         uses: ./.github/actions/gradle-cache
 
-      - name: Check with Gradle
+      - name: Publish to maven central with Gradle
         uses: ./.github/actions/gradle-action
         env:
           SONATYPE_CENTRAL_USERNAME: ${{ secrets.SONATYPE_CENTRAL_USERNAME }}
           SONATYPE_CENTRAL_PASSWORD: ${{ secrets.SONATYPE_CENTRAL_PASSWORD }}
-          PGP_SIGNING_KEY: ${{ secrets.SIGNING_SECRET }}
-          PGP_SIGNING_KEY_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}
+          PGP_SIGNING_KEY: ${{ secrets.PGP_SIGNING_KEY }}
+          PGP_SIGNING_KEY_PASSPHRASE: ${{ secrets.PGP_SIGNING_KEY_PASSPHRASE }}
         with:
           command: sonatypeCentralUpload
 
-  generate-draft-release-note:
+  generate-release-note:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     needs:
       - publish-artifacts
 
     steps:
-      - name: generate draft release note
+      - name: Generate a release note
         run: gh release create ${{ github.ref_name }} --generate-notes --latest --verify-tag --repo ${{ github.repository }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
