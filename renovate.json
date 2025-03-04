@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:base"],
+  "extends": ["config:base", "group:springBoot"],
   "timezone": "Asia/Tokyo",
   "labels": ["dependencies", "renovate"],
   "schedule": ["after 9am on saturday", "before 12am on saturday"],
@@ -8,5 +8,25 @@
   "prHourlyLimit": 0,
   "separateMinorPatch": true,
   "dependencyDashboard": true,
-  "automerge": false
+  "automerge": false,
+  "major": {
+    "stabilityDays": 3
+  },
+  "minor": {
+    "stabilityDays": 1
+  },
+  "patch": {
+    "stabilityDays": 1
+  },
+  "packageRules": [
+    {
+      "groupName": "github actions families",
+      "matchManagers": ["github-actions"],
+      "matchPackagePrefixes": ["actions"]
+    },
+    {
+      "updateTypes": ["patch", "minor"],
+      "automerge": true
+    }
+  ]
 }
