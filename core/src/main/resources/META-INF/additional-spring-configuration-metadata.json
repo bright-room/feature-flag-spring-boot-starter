@@ -3,7 +3,47 @@
     {
       "name": "feature-flags.features",
       "type": "java.util.Map<java.lang.String,java.lang.Boolean>",
-      "description": "Feature flag settings."
+      "description": "Flag settings that control the enable/disable of each function. The key indicates the function name and the value indicates enable (true) or disable (false)."
+    },
+    {
+      "name": "feature-flags.response.status",
+      "type": "java.lang.Integer",
+      "description": "HTTP status code returned when access is denied."
+    },
+    {
+      "name": "feature-flags.response.body.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Controls whether a response body is included when access is denied; if true, a response body is returned."
+    },
+    {
+      "name": "feature-flags.response.body.mode",
+      "type": "net.brightroom.featureflag.response.Mode",
+      "description": "Mode setting that determines the content of the response body returned when access is denied."
+    },
+    {
+      "name": "feature-flags.response.body.json.default-fields.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Controls whether the default property is included in the response body."
+    },
+    {
+      "name": "feature-flags.response.body.json.default-fields.title",
+      "type": "java.lang.String",
+      "description": "Defines the title (summary) of the JSON response returned when access is denied."
+    },
+    {
+      "name": "feature-flags.response.body.json.default-fields.detail",
+      "type": "java.lang.String",
+      "description": "Defines the detailed message of the JSON response returned when access is denied."
+    },
+    {
+      "name": "feature-flags.response.body.json.custom-fields",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "description": "Mapping of custom fields to be included in the response. The key represents the field name and the value represents its content."
+    },
+    {
+      "name": "feature-flags.response.body.text.message",
+      "type": "java.lang.String",
+      "description": "Defines the text message returned when access is denied."
     }
   ]
 }

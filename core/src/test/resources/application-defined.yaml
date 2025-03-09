@@ -1,0 +1,17 @@
+feature-flags:
+  features:
+    new-api: true
+    beta-feature: false
+  response:
+    status: 500
+    body:
+      enabled: true
+      mode: json
+      json:
+        default:
+          title: "dummy title"
+          detail: "dummy details"
+        custom-fields:
+          test-message: "test message"
+      text:
+        message: "text message"

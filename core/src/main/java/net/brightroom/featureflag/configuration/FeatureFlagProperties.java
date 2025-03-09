@@ -18,17 +18,27 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * </pre>
  */
 @ConfigurationProperties(prefix = "feature-flags")
-public class FeatureFlagProperties {
+class FeatureFlagProperties {
 
   private Map<String, Boolean> features = new ConcurrentHashMap<>();
+  private ResponseProperties response = new ResponseProperties();
 
   Map<String, Boolean> features() {
     return features;
   }
 
+  ResponseProperties response() {
+    return response;
+  }
+
   // for property injection
   void setFeatures(Map<String, Boolean> features) {
     this.features = features;
+  }
+
+  // for property injection
+  void setResponse(ResponseProperties response) {
+    this.response = response;
   }
 
   FeatureFlagProperties() {}
