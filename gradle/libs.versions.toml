@@ -14,6 +14,12 @@ spring-boot-configuration-processor = { module = "org.springframework.boot:sprin
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 
 #########################################
+# jackson
+#########################################
+jackson-core = { module = "com.fasterxml.jackson.core:jackson-core", version = { strictly = "2.18.3" } }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version = { strictly = "2.18.3" } }
+
+#########################################
 # unit test library
 #########################################
 rest-assured = { module = "io.rest-assured:rest-assured", version = { strictly = "5.5.0" } }
