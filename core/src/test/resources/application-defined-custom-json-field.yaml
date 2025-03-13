@@ -1,0 +1,6 @@
+feature-flags:
+  response:
+    body:
+      json:
+        custom-fields:
+          test_message: "test message"
