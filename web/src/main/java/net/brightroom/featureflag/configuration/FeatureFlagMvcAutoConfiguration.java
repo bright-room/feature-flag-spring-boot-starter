@@ -3,6 +3,7 @@ package net.brightroom.featureflag.configuration;
 import net.brightroom.featureflag.interceptor.FeatureFlagInterceptor;
 import net.brightroom.featureflag.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.provider.InMemoryFeatureFlagProvider;
+import net.brightroom.featureflag.response.AccessDeniedResponse;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -22,8 +23,9 @@ public class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
-  FeatureFlagInterceptor featureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
-    return new FeatureFlagInterceptor(featureFlagProvider);
+  FeatureFlagInterceptor featureFlagInterceptor(
+      FeatureFlagProvider featureFlagProvider, AccessDeniedResponse.Builder builder) {
+    return new FeatureFlagInterceptor(featureFlagProvider, builder);
   }
 
   FeatureFlagMvcAutoConfiguration() {}
