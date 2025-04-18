@@ -3,6 +3,7 @@ package net.brightroom.featureflag.configuration;
 import net.brightroom.featureflag.filter.FeatureFlagWebFilter;
 import net.brightroom.featureflag.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.provider.InMemoryFeatureFlagProvider;
+import net.brightroom.featureflag.response.AccessDeniedResponse;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -24,8 +25,10 @@ public class FeatureFlagReactiveAutoConfiguration {
 
   @Bean
   FeatureFlagWebFilter featureFlagWebFilter(
-      FeatureFlagProvider featureFlagProvider, RequestMappingHandlerMapping handlerMapping) {
-    return new FeatureFlagWebFilter(featureFlagProvider, handlerMapping);
+      FeatureFlagProvider featureFlagProvider,
+      AccessDeniedResponse.Builder builder,
+      RequestMappingHandlerMapping handlerMapping) {
+    return new FeatureFlagWebFilter(featureFlagProvider, builder, handlerMapping);
   }
 
   FeatureFlagReactiveAutoConfiguration() {}

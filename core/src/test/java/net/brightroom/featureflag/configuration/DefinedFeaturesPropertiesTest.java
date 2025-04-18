@@ -1,21 +1,24 @@
 package net.brightroom.featureflag.configuration;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Map;
 import net.brightroom.featureflag.Application;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(classes = {Application.class})
-class FeatureFlagAutoConfigurationTest {
+@ActiveProfiles("defined-features")
+class DefinedFeaturesPropertiesTest {
+
   FeatureFlagProperties featureFlagProperties;
 
   @Test
-  void providerFunctionsProperly() {
+  void definitionExistsInFeatures() {
     Map<String, Boolean> features = featureFlagProperties.features();
+
     assertTrue(features.containsKey("new-api"));
     assertTrue(features.get("new-api"));
 
@@ -24,7 +27,7 @@ class FeatureFlagAutoConfigurationTest {
   }
 
   @Autowired
-  FeatureFlagAutoConfigurationTest(FeatureFlagProperties featureFlagProperties) {
+  DefinedFeaturesPropertiesTest(FeatureFlagProperties featureFlagProperties) {
     this.featureFlagProperties = featureFlagProperties;
   }
 }
