@@ -3,6 +3,7 @@ package net.brightroom.featureflag.filter;
 import java.util.Objects;
 import net.brightroom.featureflag.annotation.FeatureFlag;
 import net.brightroom.featureflag.provider.FeatureFlagProvider;
+import net.brightroom.featureflag.response.AccessDeniedResponse;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -28,6 +29,7 @@ import reactor.core.publisher.Mono;
 public class FeatureFlagWebFilter implements WebFilter {
 
   FeatureFlagProvider featureFlagProvider;
+  AccessDeniedResponse.Builder responseBuilder;
   RequestMappingHandlerMapping handlerMapping;
 
   @Override
@@ -61,11 +63,13 @@ public class FeatureFlagWebFilter implements WebFilter {
   }
 
   private Mono<Void> handleDisabledFeature(ServerWebExchange exchange) {
+    AccessDeniedResponse accessDeniedResponse = responseBuilder.build();
+
     ServerHttpResponse response = exchange.getResponse();
-    response.setStatusCode(HttpStatus.METHOD_NOT_ALLOWED);
+    response.setStatusCode(HttpStatus.valueOf(accessDeniedResponse.status()));
 
     DataBufferFactory bufferFactory = response.bufferFactory();
-    DataBuffer buffer = bufferFactory.wrap("This feature is not available".getBytes());
+    DataBuffer buffer = bufferFactory.wrap(accessDeniedResponse.body().getBytes());
 
     return response.writeWith(Mono.just(buffer));
   }
@@ -77,8 +81,11 @@ public class FeatureFlagWebFilter implements WebFilter {
    * @param handlerMapping handlerMapping
    */
   public FeatureFlagWebFilter(
-      FeatureFlagProvider featureFlagProvider, RequestMappingHandlerMapping handlerMapping) {
+      FeatureFlagProvider featureFlagProvider,
+      AccessDeniedResponse.Builder responseBuilder,
+      RequestMappingHandlerMapping handlerMapping) {
     this.featureFlagProvider = featureFlagProvider;
+    this.responseBuilder = responseBuilder;
     this.handlerMapping = handlerMapping;
   }
 }
