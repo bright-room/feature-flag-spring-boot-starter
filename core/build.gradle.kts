@@ -8,4 +8,7 @@ description = "Core library to make feature flags easily available in spring boo
 
 dependencies {
     implementation(libs.spring.boot.starter)
+
+    implementation(libs.jackson.core)
+    implementation(libs.jackson.databind)
 }
