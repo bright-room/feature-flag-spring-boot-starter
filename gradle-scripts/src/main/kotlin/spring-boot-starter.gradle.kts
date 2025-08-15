@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "net.bright-room.feature-flag-spring-boot-starter"
-version = "1.0.2"
+version = "1.0.3"
 
 dependencies {
     annotationProcessor(libs.spring.boot.configuration.processor)
