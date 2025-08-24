@@ -7,7 +7,7 @@ import java.io.PrintWriter;
 import java.util.Objects;
 import net.brightroom.featureflag.annotation.FeatureFlag;
 import net.brightroom.featureflag.provider.FeatureFlagProvider;
-import org.springframework.http.HttpStatus;
+import net.brightroom.featureflag.response.AccessDeniedResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -19,6 +19,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class FeatureFlagInterceptor implements HandlerInterceptor {
 
   private final FeatureFlagProvider featureFlagProvider;
+  private final AccessDeniedResponse.Builder responseBuilder;
 
   @Override
   public boolean preHandle(
@@ -49,10 +50,12 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
 
   private void writeResponse(HttpServletResponse response) {
     try {
-      response.setStatus(HttpStatus.METHOD_NOT_ALLOWED.value());
+      AccessDeniedResponse accessDeniedResponse = responseBuilder.build();
+
+      response.setStatus(accessDeniedResponse.status());
 
       PrintWriter writer = response.getWriter();
-      writer.write("This feature is not available");
+      writer.write(accessDeniedResponse.body());
     } catch (IOException e) {
       throw new RuntimeException("Fail to write response.", e);
     }
@@ -63,7 +66,9 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
    *
    * @param featureFlagProvider featureFlagProvider
    */
-  public FeatureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
+  public FeatureFlagInterceptor(
+      FeatureFlagProvider featureFlagProvider, AccessDeniedResponse.Builder responseBuilder) {
     this.featureFlagProvider = featureFlagProvider;
+    this.responseBuilder = responseBuilder;
   }
 }
