@@ -21,7 +21,7 @@ rest-assured = { module = "io.rest-assured:rest-assured", version = { strictly =
 #########################################
 # gradle plugins
 #########################################
-spring-boot = { module = "org.springframework.boot:org.springframework.boot.gradle.plugin", version = { strictly = "3.5.6" } }
+spring-boot = { module = "org.springframework.boot:org.springframework.boot.gradle.plugin", version = { strictly = "3.5.7" } }
 spring-dependency-management = { module = "io.spring.dependency-management:io.spring.dependency-management.gradle.plugin", version = { strictly = "1.1.7" }  }
 
 sonatype-central-upload = { module = "cl.franciscosolis.sonatype-central-upload:cl.franciscosolis.sonatype-central-upload.gradle.plugin", version = { strictly = "1.0.3" } }
