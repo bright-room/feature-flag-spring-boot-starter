@@ -1,0 +1,2 @@
+net.brightroom.featureflag.configuration.FeatureFlagMvcAutoConfiguration
+net.brightroom.featureflag.configuration.FeatureFlagMvcInterceptorRegistrationAutoConfiguration

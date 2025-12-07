@@ -1,9 +1,39 @@
 {
   "properties": [
     {
+      "name": "feature-flags.include-path-pattern",
+      "type": "java.util.List<java.lang.String>",
+      "description": "List of regular expressions for feature flag files to include."
+    },
+    {
+      "name": "feature-flags.exclude-path-pattern",
+      "type": "java.util.List<java.lang.String>",
+      "description": "List of regular expressions for feature flag files to exclude."
+    },
+    {
       "name": "feature-flags.features",
       "type": "java.util.Map<java.lang.String,java.lang.Boolean>",
       "description": "Feature flag settings."
+    },
+    {
+      "name": "feature-flags.response.status-code",
+      "type": "java.lang.Integer",
+      "description": "HTTP status code to return when a feature flag is disabled."
+    },
+    {
+      "name": "feature-flags.response.type",
+      "type": "net.brightroom.featureflag.configuration.ResponseType",
+      "description": "Response type to return when a feature flag is disabled."
+    },
+    {
+      "name": "feature-flags.response.body",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "description": "Body to return when a feature flag is disabled."
+    },
+    {
+      "name": "feature-flags.response.message",
+      "type": "java.lang.String",
+      "description": "Message to return when a feature flag is disabled."
     }
   ]
 }

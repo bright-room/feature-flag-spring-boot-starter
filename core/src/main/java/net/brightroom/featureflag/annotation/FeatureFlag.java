@@ -14,13 +14,13 @@ import java.lang.annotation.Target;
  *
  * <pre>
  * // Method level
- * {@literal @}FeatureFlag(feature = "new-api")
+ * {@literal @}FeatureFlag(value = "new-api")
  * public void newFeature() {
  *     // This method will only be accessible if "new-api" feature is enabled
  * }
  *
  * // Class level
- * {@literal @}FeatureFlag(feature = "beta-features")
+ * {@literal @}FeatureFlag(value = "beta-features")
  * public class BetaController {
  *     // All methods in this class will only be accessible if "beta-features" is enabled
  * }
@@ -32,10 +32,10 @@ import java.lang.annotation.Target;
 public @interface FeatureFlag {
 
   /**
-   * The name of the feature to check. This name will be used to look up the feature's
-   * enabled/disabled status.
+   * The list of features to check. This list will be used to look up the feature's enabled/disabled
+   * statuses.
    *
-   * @return the feature name
+   * @return the feature names
    */
-  String feature() default "";
+  String value() default "";
 }
