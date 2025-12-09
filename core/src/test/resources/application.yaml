@@ -1,4 +1,14 @@
 feature-flags:
+  include-path-pattern:
+    - "/**"
+  exclude-path-pattern:
+    - "/health"
   features:
     new-api: true
     beta-feature: false
+  response:
+    status-code: 400
+    type: Json
+    body:
+      error: "Feature flag is disabled"
+    message: "Feature flag is disabled"
