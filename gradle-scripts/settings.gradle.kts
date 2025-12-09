@@ -1,7 +1,3 @@
-plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-}
-
 @Suppress("UnstableApiUsage")
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -9,10 +5,11 @@ dependencyResolutionManagement {
         gradlePluginPortal()
         mavenCentral()
     }
+    versionCatalogs {
+        create("libs") {
+            from(files("../gradle/libs.versions.toml"))
+        }
+    }
 }
 
-rootProject.name = "feature-flag-spring-boot-starter"
-include("core")
-include("webmvc")
-
-includeBuild("gradle-scripts")
+rootProject.name = "gradle-scripts"

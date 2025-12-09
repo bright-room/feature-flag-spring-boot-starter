@@ -5,7 +5,6 @@ java = "25"
 [plugins]
 spring-boot = { id = "org.springframework.boot", version = { strictly = "4.0.0" } }
 spring-dependency-management = { id = "io.spring.dependency-management", version = { strictly = "1.1.7" }  }
-sonatype-central-upload = { id = "cl.franciscosolis.sonatype-central-upload", version = { strictly = "1.0.3" } }
 spotless = { id = "com.diffplug.spotless", version = { strictly = "8.1.0" } }
 
 [libraries]
@@ -25,3 +24,8 @@ spring-boot-starter-webflux-test = { module = "org.springframework.boot:spring-b
 # unit test library
 #########################################
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+#########################################
+# gradle plugins
+#########################################
+sonatype-central-upload = { module = "cl.franciscosolis.sonatype-central-upload:cl.franciscosolis.sonatype-central-upload.gradle.plugin", version = { strictly = "1.0.3" } }
