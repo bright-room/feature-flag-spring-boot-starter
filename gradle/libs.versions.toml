@@ -2,11 +2,6 @@
 app = "2.0.0"
 java = "25"
 
-[plugins]
-spring-boot = { id = "org.springframework.boot", version = { strictly = "4.0.0" } }
-spring-dependency-management = { id = "io.spring.dependency-management", version = { strictly = "1.1.7" }  }
-spotless = { id = "com.diffplug.spotless", version = { strictly = "8.1.0" } }
-
 [libraries]
 #########################################
 # spring boot
@@ -28,4 +23,7 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 #########################################
 # gradle plugins
 #########################################
+spring-boot = { module = "org.springframework.boot:org.springframework.boot.gradle.plugin", version = { strictly = "4.0.0" } }
+spring-dependency-management = { module = "io.spring.dependency-management:io.spring.dependency-management.gradle.plugin", version = { strictly = "1.1.7" }  }
 sonatype-central-upload = { module = "cl.franciscosolis.sonatype-central-upload:cl.franciscosolis.sonatype-central-upload.gradle.plugin", version = { strictly = "1.0.3" } }
+spotless = { module = "com.diffplug.spotless:com.diffplug.spotless.gradle.plugin", version = { strictly = "8.1.0" } }
