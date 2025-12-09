@@ -1,5 +1,12 @@
 [versions]
+app = "1.0.4"
 java = "21"
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version = { strictly = "3.5.8" } }
+spring-dependency-management = { id = "io.spring.dependency-management", version = { strictly = "1.1.7" }  }
+sonatype-central-upload = { id = "cl.franciscosolis.sonatype-central-upload", version = { strictly = "1.0.3" } }
+spotless = { id = "com.diffplug.spotless", version = { strictly = "8.1.0" } }
 
 [libraries]
 #########################################
@@ -7,8 +14,6 @@ java = "21"
 #########################################
 spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
-spring-boot-starter-webflux = { module = "org.springframework.boot:spring-boot-starter-webflux" }
-
 spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
 
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
@@ -17,12 +22,4 @@ spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-star
 # unit test library
 #########################################
 rest-assured = { module = "io.rest-assured:rest-assured", version = { strictly = "5.5.6" } }
-
-#########################################
-# gradle plugins
-#########################################
-spring-boot = { module = "org.springframework.boot:org.springframework.boot.gradle.plugin", version = { strictly = "3.5.8" } }
-spring-dependency-management = { module = "io.spring.dependency-management:io.spring.dependency-management.gradle.plugin", version = { strictly = "1.1.7" }  }
-
-sonatype-central-upload = { module = "cl.franciscosolis.sonatype-central-upload:cl.franciscosolis.sonatype-central-upload.gradle.plugin", version = { strictly = "1.0.3" } }
-spotless = { module = "com.diffplug.spotless:com.diffplug.spotless.gradle.plugin", version = { strictly = "8.1.0" } }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
