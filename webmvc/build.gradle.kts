@@ -12,10 +12,10 @@ version = libs.versions.app.get()
 dependencies {
     implementation(project(":core"))
 
-    implementation(libs.spring.boot.starter.web)
+    implementation(libs.spring.boot.starter.webmvc)
     annotationProcessor(libs.spring.boot.configuration.processor)
 
-    testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.boot.starter.webmvc.test)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 

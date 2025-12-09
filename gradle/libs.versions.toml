@@ -1,9 +1,9 @@
 [versions]
 app = "1.0.4"
-java = "21"
+java = "25"
 
 [plugins]
-spring-boot = { id = "org.springframework.boot", version = { strictly = "3.5.8" } }
+spring-boot = { id = "org.springframework.boot", version = { strictly = "4.0.0" } }
 spring-dependency-management = { id = "io.spring.dependency-management", version = { strictly = "1.1.7" }  }
 sonatype-central-upload = { id = "cl.franciscosolis.sonatype-central-upload", version = { strictly = "1.0.3" } }
 spotless = { id = "com.diffplug.spotless", version = { strictly = "8.1.0" } }
@@ -12,11 +12,14 @@ spotless = { id = "com.diffplug.spotless", version = { strictly = "8.1.0" } }
 #########################################
 # spring boot
 #########################################
-spring-boot-starter = { module = "org.springframework.boot:spring-boot-starter" }
-spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure" }
+spring-boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-starter-webmvc" }
+spring-boot-starter-webflux = { module = "org.springframework.boot:spring-boot-starter-webflux" }
+
 spring-boot-configuration-processor = { module = "org.springframework.boot:spring-boot-configuration-processor" }
 
-spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-starter-webmvc-test = { module = "org.springframework.boot:spring-boot-starter-webmvc-test" }
+spring-boot-starter-webflux-test = { module = "org.springframework.boot:spring-boot-starter-webflux-test" }
 
 #########################################
 # unit test library
