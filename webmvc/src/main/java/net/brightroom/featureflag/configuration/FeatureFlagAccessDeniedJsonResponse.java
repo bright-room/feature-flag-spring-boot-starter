@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.view.json.MappingJackson2JsonView;
+import org.springframework.web.servlet.view.json.JacksonJsonView;
 
 class FeatureFlagAccessDeniedJsonResponse implements FeatureFlagAccessDeniedResponse {
   Integer statusCode;
@@ -21,7 +21,7 @@ class FeatureFlagAccessDeniedJsonResponse implements FeatureFlagAccessDeniedResp
 
   @Override
   public ModelAndView toModelAndView() {
-    MappingJackson2JsonView o = new MappingJackson2JsonView();
+    JacksonJsonView o = new JacksonJsonView();
     o.setAttributesMap(body);
 
     ModelAndView modelAndView = new ModelAndView(o);

@@ -10,10 +10,10 @@ group = "net.bright-room.feature-flag-spring-boot-starter"
 version = libs.versions.app.get()
 
 dependencies {
-    implementation(libs.spring.boot.starter)
+    implementation(libs.spring.boot.autoconfigure)
     annotationProcessor(libs.spring.boot.configuration.processor)
 
-    testImplementation(libs.spring.boot.starter.test)
+    testImplementation(libs.spring.boot.starter.webmvc.test)
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 

@@ -13,4 +13,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "feature-flag-spring-boot-starter"
 include("core")
-include("web")
+include("webmvc")
