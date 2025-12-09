@@ -1,4 +1,0 @@
-feature-flags:
-  features:
-    new-api: true
-    beta-feature: false
