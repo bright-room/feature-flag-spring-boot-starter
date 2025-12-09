@@ -1,24 +1,40 @@
 package net.brightroom.featureflag.configuration;
 
-import net.brightroom.featureflag.interceptor.FeatureFlagInterceptor;
 import net.brightroom.featureflag.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.provider.InMemoryFeatureFlagProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 
-/**
- * Autoconfiguration for Feature Flag MVC support. Configures the Feature Flag interceptor for
- * Spring MVC applications. This configuration is loaded after the main Feature Flag
- * autoconfiguration.
- */
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
-public class FeatureFlagMvcAutoConfiguration {
+class FeatureFlagMvcAutoConfiguration {
+
+  FeatureFlagProperties featureFlagProperties;
+
+  @Bean
+  FeatureFlagInterceptorRegistrationRule featureFlagInterceptorRegistrationRule() {
+    return new FeatureFlagInterceptorRegistrationRule(
+        featureFlagProperties.includePathPattern(), featureFlagProperties.excludePathPattern());
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(FeatureFlagAccessDeniedResponse.class)
+  FeatureFlagAccessDeniedResponse featureFlagAccessDeniedResponse() {
+    ResponseProperties responseProperties = featureFlagProperties.response();
+    ResponseType type = responseProperties.type();
+
+    if (type == ResponseType.PlainText)
+      return new FeatureFlagAccessDeniedPlainTextResponse(
+          responseProperties.statusCode(), responseProperties.message());
+
+    return new FeatureFlagAccessDeniedJsonResponse(
+        responseProperties.statusCode(), responseProperties.body());
+  }
 
   @Bean
   @ConditionalOnMissingBean(FeatureFlagProvider.class)
-  FeatureFlagProvider featureFlagProvider(FeatureFlagProperties properties) {
-    return new InMemoryFeatureFlagProvider(properties.features());
+  FeatureFlagProvider featureFlagProvider() {
+    return new InMemoryFeatureFlagProvider(featureFlagProperties.features());
   }
 
   @Bean
@@ -26,5 +42,7 @@ public class FeatureFlagMvcAutoConfiguration {
     return new FeatureFlagInterceptor(featureFlagProvider);
   }
 
-  FeatureFlagMvcAutoConfiguration() {}
+  FeatureFlagMvcAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
+    this.featureFlagProperties = featureFlagProperties;
+  }
 }
