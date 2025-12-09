@@ -15,15 +15,20 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * <pre>
  * feature-flags:
  *   include-path-pattern:
- *     - /api/v1/feature-flag-enabled
+ *     - "/api/v2/**"
  *   exclude-path-pattern:
- *     - /api/v1/feature-flag-disabled
+ *     - "/api/v2/foo"
+ *     - "/api/v2/bar"
+ *     - "/api/v1/**"
  *   features:
- *     new-api: true
- *     beta-feature: false
+ *     hello-class: true
+ *     user-find: false
  *   response:
- *     status-code: 403
- *     message: "This feature is not available"
+ * #   status-code: 405
+ * #   message: "This feature is disabled."
+ *   type: Json
+ *   body:
+ *     error: "Feature flag is disabled"
  * </pre>
  */
 @ConfigurationProperties(prefix = "feature-flags")
