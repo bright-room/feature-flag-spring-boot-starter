@@ -12,13 +12,13 @@ class DummyController {
     return new DummyResponse("kukv", "12345678");
   }
 
-  @FeatureFlag(feature = "new-api")
+  @FeatureFlag(value = "new-api")
   @GetMapping("/new-endpoint")
   DummyResponse newEndpoint() {
     return new DummyResponse("kukv", "09876543");
   }
 
-  @FeatureFlag(feature = "beta-feature")
+  @FeatureFlag(value = "beta-feature")
   @GetMapping("/beta-endpoint")
   DummyResponse betaEndpoint() {
     return new DummyResponse("kukv", "00000000");

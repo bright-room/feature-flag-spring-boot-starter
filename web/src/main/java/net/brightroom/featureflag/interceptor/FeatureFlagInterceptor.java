@@ -44,7 +44,7 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
   }
 
   private boolean checkFeatureFlag(FeatureFlag annotation) {
-    return !featureFlagProvider.isFeatureEnabled(annotation.feature());
+    return !featureFlagProvider.isFeatureEnabled(annotation.value());
   }
 
   private void writeResponse(HttpServletResponse response) {
