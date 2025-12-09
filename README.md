@@ -27,6 +27,13 @@ See the [release notes](https://github.com/bright-room/feature-flag-spring-boot-
         <artifactId>webmvc</artifactId>
         <version>${version}</version>
     </dependency>
+
+    <!-- Using Spring boot starter webflux -->
+    <dependency>
+        <groupId>net.bright-room.feature-flag-spring-boot-starter</groupId>
+        <artifactId>webflux</artifactId>
+        <version>${version}</version>
+    </dependency>
 </dependencies>
 ```
 
@@ -37,6 +44,9 @@ dependencies {
     
     // Using Spring boot starter webmvc
     implementation 'net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}'
+
+    // Using Spring boot starter webflux
+    implementation 'net.bright-room.feature-flag-spring-boot-starter:webflux:${version}'
 }
 ```
 
@@ -47,6 +57,9 @@ dependencies {
     
     // Using Spring boot starter webmvc
     implementation("net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}")
+
+    // Using Spring boot starter webflux
+    implementation("net.bright-room.feature-flag-spring-boot-starter:webflux:${version}")
 }
 ```
 
