@@ -1,11 +1,12 @@
 # feature-flag-spring-boot-starter
 
-Library for integrating feature flag functionality into Spring MVC.
+Library for integrating feature flag functionality into Spring MVC and Spring WebFlux.
 
 ## Features
 
 - Feature Flag functions can be realized with minimal configuration.
 - The source destination for feature management can be easily changed.
+- Supports both MVC and FebFlux.
 
 ## Installation
 
@@ -26,6 +27,13 @@ See the [release notes](https://github.com/bright-room/feature-flag-spring-boot-
         <artifactId>webmvc</artifactId>
         <version>${version}</version>
     </dependency>
+
+    <!-- Using Spring boot starter webflux -->
+    <dependency>
+        <groupId>net.bright-room.feature-flag-spring-boot-starter</groupId>
+        <artifactId>webflux</artifactId>
+        <version>${version}</version>
+    </dependency>
 </dependencies>
 ```
 
@@ -33,9 +41,12 @@ See the [release notes](https://github.com/bright-room/feature-flag-spring-boot-
 ```groovy
 dependencies {
     implementation 'net.bright-room.feature-flag-spring-boot-starter:core:${version}'
-
+    
     // Using Spring boot starter webmvc
     implementation 'net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}'
+
+    // Using Spring boot starter webflux
+    implementation 'net.bright-room.feature-flag-spring-boot-starter:webflux:${version}'
 }
 ```
 
@@ -43,9 +54,12 @@ dependencies {
 ```kotlin
 dependencies {
     implementation("net.bright-room.feature-flag-spring-boot-starter:core:${version}")
-
+    
     // Using Spring boot starter webmvc
     implementation("net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}")
+
+    // Using Spring boot starter webflux
+    implementation("net.bright-room.feature-flag-spring-boot-starter:webflux:${version}")
 }
 ```
 
@@ -130,7 +144,7 @@ class FeatureFlagExternalDataSourceProvider implements FeatureFlagProvider {
     Boolean enabled = featureManagementMapper.check(featureName);
     // Choose your undefined-flag policy:
     //   return false; — fail-closed: block access for undefined flags (recommended)
-    //   return true;  — fail-open:   allow access for undefined flags
+    //   return true; — fail-open: allow access for undefined flags
     if (enabled == null) return false;
     return enabled;
   }
