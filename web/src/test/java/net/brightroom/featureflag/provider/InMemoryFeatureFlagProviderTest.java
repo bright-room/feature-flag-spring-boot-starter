@@ -3,12 +3,12 @@ package net.brightroom.featureflag.provider;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import net.brightroom.featureflag.Application;
+import net.brightroom.featureflag.configuration.FeatureFlagMvcTestAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest(classes = {Application.class})
+@SpringBootTest(classes = FeatureFlagMvcTestAutoConfiguration.class)
 class InMemoryFeatureFlagProviderTest {
 
   FeatureFlagProvider featureFlagProvider;
@@ -20,8 +20,8 @@ class InMemoryFeatureFlagProviderTest {
 
   @Test
   void validatePredefinedFunctions() {
-    assertTrue(featureFlagProvider.isFeatureEnabled("new-api"));
-    assertFalse(featureFlagProvider.isFeatureEnabled("beta-feature"));
+    assertTrue(featureFlagProvider.isFeatureEnabled("experimental-stage-endpoint"));
+    assertFalse(featureFlagProvider.isFeatureEnabled("development-stage-endpoint"));
   }
 
   @Autowired

@@ -1,4 +1,4 @@
-package net.brightroom.featureflag;
+package net.brightroom.featureflag.configuration;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
@@ -7,27 +7,25 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import java.nio.charset.StandardCharsets;
-import net.brightroom.featureflag.interceptor.FeatureFlagInterceptor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@SpringBootApplication
-public class Application implements WebMvcConfigurer {
-
-  FeatureFlagInterceptor featureFlagInterceptor;
-
-  public static void main(String[] args) {
-    SpringApplication.run(Application.class, args);
-  }
+@Configuration
+@EnableAutoConfiguration
+@EnableConfigurationProperties(FeatureFlagProperties.class)
+@Import({
+  FeatureFlagMvcAutoConfiguration.class,
+  FeatureFlagMvcInterceptorRegistrationAutoConfiguration.class
+})
+public class FeatureFlagMvcTestAutoConfiguration {
 
   @Primary
   @Bean
@@ -51,15 +49,5 @@ public class Application implements WebMvcConfigurer {
         new MappingJackson2HttpMessageConverter(objectMapper());
     return new HttpMessageConverters(
         stringHttpMessageConverter, mappingJackson2HttpMessageConverter);
-  }
-
-  @Override
-  public void addInterceptors(InterceptorRegistry registry) {
-    registry.addInterceptor(featureFlagInterceptor).addPathPatterns("/**");
-  }
-
-  @Autowired
-  Application(FeatureFlagInterceptor featureFlagInterceptor) {
-    this.featureFlagInterceptor = featureFlagInterceptor;
   }
 }
