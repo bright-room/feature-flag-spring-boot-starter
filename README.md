@@ -6,7 +6,7 @@ Library for integrating feature flag functionality into Spring MVC and Spring We
 
 - Feature Flag functions can be realized with minimal configuration.
 - The source destination for feature management can be easily changed.
-- Supports both MVC and FebFlux.
+- Supports both MVC.
 
 ## Installation
 
@@ -21,17 +21,10 @@ See the [release notes](https://github.com/bright-room/feature-flag-spring-boot-
         <artifactId>core</artifactId>
         <version>${version}</version>
     </dependency>
-    <!-- Using Spring boot starter web -->
+    <!-- Using Spring boot starter webmvc -->
     <dependency>
         <groupId>net.bright-room.feature-flag-spring-boot-starter</groupId>
-        <artifactId>web</artifactId>
-        <version>${version}</version>
-    </dependency>
-    
-    <!-- Using Spring boot starter webflux -->
-    <dependency>
-        <groupId>net.bright-room.feature-flag-spring-boot-starter</groupId>
-        <artifactId>webflux</artifactId>
+        <artifactId>webmvc</artifactId>
         <version>${version}</version>
     </dependency>
 </dependencies>
@@ -42,11 +35,8 @@ See the [release notes](https://github.com/bright-room/feature-flag-spring-boot-
 dependencies {
     implementation 'net.bright-room.feature-flag-spring-boot-starter:core:${version}'
     
-    // Using Spring boot starter web
-    implementation 'net.bright-room.feature-flag-spring-boot-starter:web:${version}'
-
-    // Using Spring boot starter webflux
-    implementation 'net.bright-room.feature-flag-spring-boot-starter:webflux:${version}'
+    // Using Spring boot starter webmvc
+    implementation 'net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}'
 }
 ```
 
@@ -55,11 +45,8 @@ dependencies {
 dependencies {
     implementation("net.bright-room.feature-flag-spring-boot-starter:core:${version}")
     
-    // Using Spring boot starter web
-    implementation("net.bright-room.feature-flag-spring-boot-starter:web:${version}")
-
-    // Using Spring boot starter webflux
-    implementation("net.bright-room.feature-flag-spring-boot-starter:webflux:${version}")
+    // Using Spring boot starter webmvc
+    implementation("net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}")
 }
 ```
 
@@ -73,29 +60,22 @@ By default, it is available by defining the functions you want to manage in the 
 
 ```yaml
 feature-flags:
+  include-path-pattern:
+    - "/api/v2/**"
+  exclude-path-pattern:
+    - "/api/v2/foo"
+    - "/api/v2/bar"
+    - "/api/v1/**"
   features:
     hello-class: true
     user-find: false
-    ...
-```
-
-Only Spring MVC requires additional interceptors.
-
-```java
-@Configuration
-public class WebConfiguration implements WebMvcConfigurer {
-
-  FeatureFlagInterceptor featureFlagInterceptor;
-  
-  @Override
-  public void addInterceptors(InterceptorRegistry registry) {
-    registry.addInterceptor(featureFlagInterceptor).addPathPatterns("/**");
-  }
-  
-  WebConfiguration(FeatureFlagInterceptor featureFlagInterceptor) {
-    this.featureFlagInterceptor = featureFlagInterceptor;
-  }
-}
+  response:
+    status-code: 405
+#    type: PlainText
+#    message: "This feature is disabled."
+    type: Json
+    body:
+      error: "Feature flag is disabled"
 ```
 
 Add the @FeatureFlag annotation to the class or method that will be the endpoint.
@@ -104,7 +84,7 @@ Add the @FeatureFlag annotation to the class or method that will be the endpoint
 
 // HelloController.java
 @RestController
-@FeatureFlag(feature = "hello-class")
+@FeatureFlag(value = "hello-class")
 class HelloController {
 
   @GetMapping("/hello")
@@ -122,7 +102,7 @@ class UserController {
   UserService userService;
 
   @GetMapping("/find")
-  @FeatureFlag(feature = "user-find")
+  @FeatureFlag(value = "user-find")
   UserResponse find(@RequestParam("name") String name) {
     return userService.find(name);
   }
@@ -165,6 +145,52 @@ class FeatureFlagExternalDataSourceProvider implements FeatureFlagProvider {
 @Mapper
 interface FeatureManagementMapper {
   Boolean check(@Param("feature") String feature);
+}
+```
+
+## Custom Access Denied Response
+
+The library provides two default response types: `Json` and `PlainText`. You can create a custom response by implementing the `FeatureFlagAccessDeniedResponse` interface.
+
+### Example: XML Response
+
+Here's an example of creating a custom XML response:
+
+```java
+import java.util.Map;
+
+// CustomXmlResponse.java
+public class CustomXmlResponse implements FeatureFlagAccessDeniedResponse {
+
+  Integer statusCode;
+  Map<String, String> body;
+
+  CustomXmlResponse(
+          Integer statusCode, Map<String, String> body) {
+    this.statusCode = statusCode;
+    this.body = body;
+  }
+
+  @Override
+  public void writeTo(HttpServletResponse response) {
+  }
+
+  @Override
+  public ModelAndView toModelAndView() {
+    JacksonXmlView o = new JacksonXmlView();
+    o.setAttributesMap(body);
+
+    ModelAndView modelAndView = new ModelAndView();
+    modelAndView.setStatus(HttpStatusCode.valueOf(statusCode));
+
+    return modelAndView;
+  }
+}
+
+// Configuration.java
+@Bean
+public FeatureFlagAccessDeniedResponse customXmlResponse() {
+  return new CustomXmlResponse(403, Map.of("error", "Feature flag is disabled"));
 }
 ```
 
