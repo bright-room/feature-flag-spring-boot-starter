@@ -172,11 +172,6 @@ public class CustomXmlResponse implements FeatureFlagAccessDeniedResponse {
   }
 
   @Override
-  public boolean supportsDirectWrite() {
-    return false;
-  }
-
-  @Override
   public ModelAndView toModelAndView() {
     JacksonXmlView o = new JacksonXmlView();
     o.setAttributesMap(body);
