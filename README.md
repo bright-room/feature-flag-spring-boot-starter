@@ -6,7 +6,7 @@ Library for integrating feature flag functionality into Spring MVC and Spring We
 
 - Feature Flag functions can be realized with minimal configuration.
 - The source destination for feature management can be easily changed.
-- Supports both MVC.
+- Supports both MVC and FebFlux.
 
 ## Installation
 
