@@ -11,12 +11,14 @@ public interface FeatureFlagAccessDeniedResponse {
    *
    * @param response the HttpServletResponse to write to
    */
-  void writeTo(HttpServletResponse response);
+  default void writeTo(HttpServletResponse response) {}
 
   /**
    * Returns a ModelAndView that can be used to render the response.
    *
    * @return the ModelAndView to render
    */
-  ModelAndView toModelAndView();
+  default ModelAndView toModelAndView() {
+    return new ModelAndView();
+  }
 }

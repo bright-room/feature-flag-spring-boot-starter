@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
       FeatureFlagMethodLevelController.class,
     })
 @Import(FeatureFlagMvcTestAutoConfiguration.class)
-class FeatureFlagInterceptorIntegrationTest {
+class FeatureFlagInterceptorJsonResponseIntegrationTest {
 
   MockMvc mockMvc;
 
@@ -86,7 +86,7 @@ class FeatureFlagInterceptorIntegrationTest {
   }
 
   @Autowired
-  FeatureFlagInterceptorIntegrationTest(MockMvc mockMvc) {
+  FeatureFlagInterceptorJsonResponseIntegrationTest(MockMvc mockMvc) {
     this.mockMvc = mockMvc;
   }
 }
