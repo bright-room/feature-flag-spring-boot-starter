@@ -1,6 +1,6 @@
 # feature-flag-spring-boot-starter
 
-Library for integrating feature flag functionality into Spring MVC and Spring WebFlux.
+Library for integrating feature flag functionality into Spring MVC.
 
 ## Features
 
@@ -172,7 +172,8 @@ public class CustomXmlResponse implements FeatureFlagAccessDeniedResponse {
   }
 
   @Override
-  public void writeTo(HttpServletResponse response) {
+  public boolean supportsDirectWrite() {
+    return false;
   }
 
   @Override
