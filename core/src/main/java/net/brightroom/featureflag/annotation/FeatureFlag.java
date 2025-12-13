@@ -32,10 +32,11 @@ import java.lang.annotation.Target;
 public @interface FeatureFlag {
 
   /**
-   * The name of the feature to check. This name will be used to look up the feature's
-   * enabled/disabled status.
+   * Specifies the feature flag associated with a method or class. The value represents the unique
+   * identifier of the feature flag that determines whether the annotated method or class is
+   * accessible or enabled.
    *
-   * @return the feature name
+   * @return the identifier of the feature flag, defaulting to an empty string if not specified
    */
   String value() default "";
 }

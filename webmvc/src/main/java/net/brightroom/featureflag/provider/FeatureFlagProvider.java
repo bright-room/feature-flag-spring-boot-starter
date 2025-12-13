@@ -1,16 +1,20 @@
 package net.brightroom.featureflag.provider;
 
 /**
- * Interface for feature flag providers. Implementations of this interface are responsible for
- * determining whether specific features are enabled or disabled.
+ * Provides a mechanism to check the status of feature flags within an application.
+ *
+ * <p>The {@code FeatureFlagProvider} interface allows implementations to define how feature flags
+ * are stored and accessed, enabling a consistent method for determining whether a specific feature
+ * is enabled or disabled at runtime. This can be used to control feature rollout, perform
+ * experiments, or toggle functionality dynamically.
  */
 public interface FeatureFlagProvider {
 
   /**
-   * Checks if a specific feature is enabled.
+   * Determines whether a specific feature is enabled based on its feature flag.
    *
-   * @param featureName the name of the feature to check
-   * @return true if the feature is enabled, false otherwise
+   * @param featureName the name of the feature whose status is to be verified
+   * @return {@code true} if the feature is enabled, {@code false} otherwise
    */
   boolean isFeatureEnabled(String featureName);
 }
