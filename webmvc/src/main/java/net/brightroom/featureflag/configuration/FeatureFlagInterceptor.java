@@ -4,28 +4,35 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Objects;
 import net.brightroom.featureflag.annotation.FeatureFlag;
-import net.brightroom.featureflag.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.provider.FeatureFlagProvider;
+import org.jspecify.annotations.NonNull;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 class FeatureFlagInterceptor implements HandlerInterceptor {
   FeatureFlagProvider featureFlagProvider;
+  AccessDeniedInterceptResolution accessDeniedInterceptResolution;
 
   @Override
   public boolean preHandle(
-      HttpServletRequest request, HttpServletResponse response, Object handler) {
+      @NonNull HttpServletRequest request,
+      @NonNull HttpServletResponse response,
+      @NonNull Object handler) {
     if (!(handler instanceof HandlerMethod handlerMethod)) {
       return true;
     }
 
     FeatureFlag methodAnnotation = handlerMethod.getMethodAnnotation(FeatureFlag.class);
-    if (checkFeatureFlag(methodAnnotation))
-      throw new FeatureFlagAccessDeniedException("Feature flag is disabled.");
+    if (checkFeatureFlag(methodAnnotation)) {
+      accessDeniedInterceptResolution.resolution(request, response);
+      return false;
+    }
 
     FeatureFlag classAnnotation = handlerMethod.getBeanType().getAnnotation(FeatureFlag.class);
-    if (checkFeatureFlag(classAnnotation))
-      throw new FeatureFlagAccessDeniedException("Feature flag is disabled.");
+    if (checkFeatureFlag(classAnnotation)) {
+      accessDeniedInterceptResolution.resolution(request, response);
+      return false;
+    }
 
     return true;
   }
@@ -34,7 +41,10 @@ class FeatureFlagInterceptor implements HandlerInterceptor {
     return Objects.nonNull(annotation) && !featureFlagProvider.isFeatureEnabled(annotation.value());
   }
 
-  FeatureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
+  FeatureFlagInterceptor(
+      FeatureFlagProvider featureFlagProvider,
+      AccessDeniedInterceptResolution accessDeniedInterceptResolution) {
     this.featureFlagProvider = featureFlagProvider;
+    this.accessDeniedInterceptResolution = accessDeniedInterceptResolution;
   }
 }
