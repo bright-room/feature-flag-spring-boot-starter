@@ -34,6 +34,16 @@
       "name": "feature-flags.response.message",
       "type": "java.lang.String",
       "description": "Message to return when a feature flag is disabled."
+    },
+    {
+      "name": "feature-flags.response.view.forward-to",
+      "type": "java.lang.String",
+      "description": "View to forward to when a feature flag is disabled."
+    },
+    {
+      "name": "feature-flags.response.view.attributes",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "description": "View attributes to set when a feature flag is disabled."
     }
   ]
 }

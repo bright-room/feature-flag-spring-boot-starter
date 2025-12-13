@@ -5,9 +5,10 @@ import java.util.Map;
 class ResponseProperties {
 
   Integer statusCode = 405;
-  ResponseType type = ResponseType.PlainText;
+  ResponseType type = ResponseType.PLAIN_TEXT;
   Map<String, String> body = Map.of("error", "This feature is not available");
   String message = "This feature is not available";
+  ViewProperties view = new ViewProperties();
 
   Integer statusCode() {
     return statusCode;
@@ -23,6 +24,10 @@ class ResponseProperties {
 
   String message() {
     return message;
+  }
+
+  ViewProperties view() {
+    return view;
   }
 
   // for property injection
@@ -43,6 +48,11 @@ class ResponseProperties {
   // for property injection
   void setMessage(String message) {
     this.message = message;
+  }
+
+  // for property injection
+  void setView(ViewProperties view) {
+    this.view = view;
   }
 
   ResponseProperties() {}

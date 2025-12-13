@@ -8,7 +8,11 @@ feature-flags:
     beta-feature: false
   response:
     status-code: 400
-    type: Json
+    type: JSON
     body:
       error: "Feature flag is disabled"
     message: "Feature flag is disabled"
+    view:
+      forward-to: "/error-page"
+      attributes:
+        message: "Feature flag is disabled"
