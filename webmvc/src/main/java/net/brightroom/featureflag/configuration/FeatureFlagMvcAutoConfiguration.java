@@ -5,6 +5,7 @@ import net.brightroom.featureflag.provider.InMemoryFeatureFlagProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import tools.jackson.databind.json.JsonMapper;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 class FeatureFlagMvcAutoConfiguration {
@@ -18,17 +19,17 @@ class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
-  @ConditionalOnMissingBean(FeatureFlagAccessDeniedResponse.class)
-  FeatureFlagAccessDeniedResponse featureFlagAccessDeniedResponse() {
+  @ConditionalOnMissingBean(AccessDeniedInterceptResolution.class)
+  AccessDeniedInterceptResolution featureFlagAccessDeniedResponse(JsonMapper jsonMapper) {
     ResponseProperties responseProperties = featureFlagProperties.response();
     ResponseType type = responseProperties.type();
 
     if (type == ResponseType.PlainText)
-      return new FeatureFlagAccessDeniedPlainTextResponse(
+      return new AccessDeniedInterceptResolutionViaPlainTextResponse(
           responseProperties.statusCode(), responseProperties.message());
 
-    return new FeatureFlagAccessDeniedJsonResponse(
-        responseProperties.statusCode(), responseProperties.body());
+    return new AccessDeniedInterceptResolutionViaJsonResponse(
+        responseProperties.statusCode(), responseProperties.body(), jsonMapper);
   }
 
   @Bean
@@ -38,8 +39,10 @@ class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
-  FeatureFlagInterceptor featureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
-    return new FeatureFlagInterceptor(featureFlagProvider);
+  FeatureFlagInterceptor featureFlagInterceptor(
+      FeatureFlagProvider featureFlagProvider,
+      AccessDeniedInterceptResolution accessDeniedInterceptResolution) {
+    return new FeatureFlagInterceptor(featureFlagProvider, accessDeniedInterceptResolution);
   }
 
   FeatureFlagMvcAutoConfiguration(FeatureFlagProperties featureFlagProperties) {

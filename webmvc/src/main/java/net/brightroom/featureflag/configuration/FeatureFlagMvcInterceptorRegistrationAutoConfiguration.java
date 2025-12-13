@@ -1,7 +1,6 @@
 package net.brightroom.featureflag.configuration;
 
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.context.annotation.Bean;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -11,12 +10,6 @@ class FeatureFlagMvcInterceptorRegistrationAutoConfiguration implements WebMvcCo
 
   FeatureFlagInterceptor featureFlagInterceptor;
   FeatureFlagInterceptorRegistrationRule featureFlagInterceptorRegistrationRule;
-
-  @Bean
-  FeatureFlagAccessDeniedHandlerExceptionResolver featureFlagAccessDeniedHandlerExceptionResolver(
-      FeatureFlagAccessDeniedResponse featureFlagAccessDeniedResponse) {
-    return new FeatureFlagAccessDeniedHandlerExceptionResolver(featureFlagAccessDeniedResponse);
-  }
 
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
