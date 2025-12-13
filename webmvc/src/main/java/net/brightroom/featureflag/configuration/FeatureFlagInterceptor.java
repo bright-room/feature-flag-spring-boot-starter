@@ -2,6 +2,8 @@ package net.brightroom.featureflag.configuration;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import net.brightroom.featureflag.annotation.FeatureFlag;
 import net.brightroom.featureflag.exception.FeatureFlagAccessDeniedException;
@@ -19,19 +21,28 @@ class FeatureFlagInterceptor implements HandlerInterceptor {
       return true;
     }
 
-    FeatureFlag methodAnnotation = handlerMethod.getMethodAnnotation(FeatureFlag.class);
-    if (checkFeatureFlag(methodAnnotation))
-      throw new FeatureFlagAccessDeniedException("Feature flag is disabled.");
+    boolean isAccessDenied =
+        extractFeatureFlags(handlerMethod).stream()
+            .map(FeatureFlag::value)
+            .anyMatch(featureName -> !featureFlagProvider.isFeatureEnabled(featureName));
 
-    FeatureFlag classAnnotation = handlerMethod.getBeanType().getAnnotation(FeatureFlag.class);
-    if (checkFeatureFlag(classAnnotation))
+    if (isAccessDenied) {
       throw new FeatureFlagAccessDeniedException("Feature flag is disabled.");
+    }
 
     return true;
   }
 
-  private boolean checkFeatureFlag(FeatureFlag annotation) {
-    return Objects.nonNull(annotation) && !featureFlagProvider.isFeatureEnabled(annotation.value());
+  private List<FeatureFlag> extractFeatureFlags(HandlerMethod handlerMethod) {
+    List<FeatureFlag> featureFlags = new ArrayList<>();
+
+    FeatureFlag methodAnnotation = handlerMethod.getMethodAnnotation(FeatureFlag.class);
+    if (Objects.nonNull(methodAnnotation)) featureFlags.add(methodAnnotation);
+
+    FeatureFlag classAnnotation = handlerMethod.getBeanType().getAnnotation(FeatureFlag.class);
+    if (Objects.nonNull(classAnnotation)) featureFlags.add(classAnnotation);
+
+    return featureFlags;
   }
 
   FeatureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
