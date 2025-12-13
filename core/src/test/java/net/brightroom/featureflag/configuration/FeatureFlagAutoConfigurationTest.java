@@ -44,11 +44,23 @@ class FeatureFlagAutoConfigurationTest {
 
     assertEquals(400, response.statusCode());
 
-    assertEquals(ResponseType.Json, response.type);
+    assertEquals(ResponseType.JSON, response.type);
 
     Map<String, String> body = response.body();
     assertTrue(body.containsKey("error"));
     assertEquals("Feature flag is disabled", body.get("error"));
+  }
+
+  @Test
+  void shouldLoadResponseView() {
+    ResponseProperties response = featureFlagProperties.response();
+    ViewProperties view = response.view();
+
+    assertEquals("/error-page", view.forwardTo());
+
+    Map<String, String> attributes = view.attributes();
+    assertTrue(attributes.containsKey("message"));
+    assertEquals("Feature flag is disabled", attributes.get("message"));
   }
 
   @Autowired

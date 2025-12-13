@@ -20,23 +20,17 @@ class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
-  @ConditionalOnMissingBean(AccessDeniedInterceptResolution.class)
-  AccessDeniedInterceptResolution featureFlagAccessDeniedResponse(
+  AccessDeniedInterceptResolutionFactory accessDeniedInterceptResolutionFactory(
       JsonMapper jsonMapper,
       @Value("${spring.mvc.problemdetails.enabled:false}") boolean useRFC7807) {
-    ResponseProperties responseProperties = featureFlagProperties.response();
-    ResponseType type = responseProperties.type();
+    return new AccessDeniedInterceptResolutionFactory(jsonMapper, useRFC7807);
+  }
 
-    if (type == ResponseType.PlainText)
-      return new AccessDeniedInterceptResolutionViaPlainTextResponse(
-          responseProperties.statusCode(), responseProperties.message());
-
-    if (useRFC7807)
-      return new AccessDeniedInterceptResolutionViaRFC7807JsonResponse(
-          responseProperties.statusCode(), responseProperties.body(), jsonMapper);
-
-    return new AccessDeniedInterceptResolutionViaJsonResponse(
-        responseProperties.statusCode(), responseProperties.body(), jsonMapper);
+  @Bean
+  @ConditionalOnMissingBean(AccessDeniedInterceptResolution.class)
+  AccessDeniedInterceptResolution featureFlagAccessDeniedResponse(
+      AccessDeniedInterceptResolutionFactory factory) {
+    return factory.create(featureFlagProperties);
   }
 
   @Bean

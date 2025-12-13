@@ -11,4 +11,6 @@ dependencies {
     implementation(libs.spring.boot.starter.webmvc)
 
     testImplementation(libs.spring.boot.starter.webmvc.test)
+    testImplementation(libs.spring.boot.starter.thymeleaf)
+    testImplementation(libs.jsoup)
 }
