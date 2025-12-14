@@ -6,7 +6,6 @@ Library for integrating feature flag functionality into Spring MVC.
 
 - Feature Flag functions can be realized with minimal configuration.
 - The source destination for feature management can be easily changed.
-- Supports both MVC.
 
 ## Installation
 
@@ -71,9 +70,9 @@ feature-flags:
     user-find: false
   response:
     status-code: 405
-#    type: PlainText
+#    type: PLAIN_TEXT
 #    message: "This feature is disabled."
-    type: Json
+    type: JSON
     body:
       error: "Feature flag is disabled"
 ```
@@ -148,45 +147,86 @@ interface FeatureManagementMapper {
 }
 ```
 
+## Response Types
+
+The library provides three default response types:
+
+### JSON Response
+
+```yaml
+feature-flags:
+  response:
+    status-code: 405
+    type: JSON
+    body:
+      error: "Feature flag is disabled"
+```
+
+### Plain Text Response
+
+```yaml
+feature-flags:
+  response:
+    status-code: 405
+    type: PLAIN_TEXT
+    message: "This feature is disabled."
+```
+
+### View Response
+
+```yaml
+feature-flags:
+  response:
+    status-code: 405
+    type: VIEW
+    view:
+      forward-to: "/access-denied"
+      attributes:
+        message: "Feature flag is disabled"
+```
+
+### RFC 7807 Problem Details Support
+
+When `spring.mvc.problemdetails.enabled=true` is set, JSON responses will follow the RFC 7807 format:
+
+```yaml
+spring:
+  mvc:
+    problemdetails:
+      enabled: true
+
+feature-flags:
+  response:
+    status-code: 405
+    type: JSON
+    body:
+      error: "Feature flag is disabled"
+```
+
 ## Custom Access Denied Response
 
-The library provides two default response types: `Json` and `PlainText`. You can create a custom response by implementing the `FeatureFlagAccessDeniedResponse` interface.
-
-### Example: XML Response
-
-Here's an example of creating a custom XML response:
+You can create a custom response by implementing the `AccessDeniedInterceptResolution` interface and registering it as a bean:
 
 ```java
-import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import net.brightroom.featureflag.configuration.AccessDeniedInterceptResolution;
 
-// CustomXmlResponse.java
-public class CustomXmlResponse implements FeatureFlagAccessDeniedResponse {
-
-  Integer statusCode;
-  Map<String, String> body;
-
-  CustomXmlResponse(
-          Integer statusCode, Map<String, String> body) {
-    this.statusCode = statusCode;
-    this.body = body;
-  }
+// CustomAccessDeniedResponse.java
+@Component
+public class CustomAccessDeniedResponse implements AccessDeniedInterceptResolution {
 
   @Override
-  public ModelAndView toModelAndView() {
-    JacksonXmlView o = new JacksonXmlView();
-    o.setAttributesMap(body);
+  public void resolution(HttpServletRequest request, HttpServletResponse response) {
+    response.setStatus(403);
+    response.setContentType("application/xml; charset=utf-8");
 
-    ModelAndView modelAndView = new ModelAndView();
-    modelAndView.setStatus(HttpStatusCode.valueOf(statusCode));
-
-    return modelAndView;
+    try (PrintWriter writer = response.getWriter()) {
+      writer.write("<error><message>Feature flag is disabled</message></error>");
+    } catch (Exception e) {
+      throw new IllegalStateException("Response conversion failed", e);
+    }
   }
-}
-
-// Configuration.java
-@Bean
-public FeatureFlagAccessDeniedResponse customXmlResponse() {
-  return new CustomXmlResponse(403, Map.of("error", "Feature flag is disabled"));
 }
 ```
 
