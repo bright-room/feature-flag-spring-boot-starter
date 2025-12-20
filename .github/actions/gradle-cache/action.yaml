@@ -8,12 +8,12 @@ runs:
       shell: bash
       run: echo "key=$(TZ=Asia/Tokyo date +%W)" >> $GITHUB_OUTPUT
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@v5
       with:
         path: ~/.gradle/wrapper
         key: gradle-wrapper-${{ hashFiles('gradle/wrapper/gradle-wrapper.properties') }}
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@v5
       with:
         path: |
           ~/.gradle/caches/jars-*
@@ -22,7 +22,7 @@ runs:
         key: gradle-dependencies-${{ steps.weekly-cache.outputs.key }}-${{ hashFiles('gradle/libs.versions.toml', '**/*.gradle.kts') }}
         restore-keys: gradle-dependencies-${{ steps.weekly-cache.outputs.key }}-
 
-    - uses: actions/cache@v4
+    - uses: actions/cache@v5
       with:
         path: |
           ~/.gradle/caches/build-cache-*
