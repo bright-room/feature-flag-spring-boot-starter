@@ -20,7 +20,7 @@ spring-boot-starter-webflux-test = { module = "org.springframework.boot:spring-b
 # unit test library
 #########################################
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
-jsoup = { module = "org.jsoup:jsoup", version = { strictly = "1.21.2" } }
+jsoup = { module = "org.jsoup:jsoup", version = { strictly = "1.22.1" } }
 
 #########################################
 # gradle plugins
