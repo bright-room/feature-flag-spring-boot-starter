@@ -25,7 +25,7 @@ jsoup = { module = "org.jsoup:jsoup", version = { strictly = "1.22.1" } }
 #########################################
 # gradle plugins
 #########################################
-spring-boot = { module = "org.springframework.boot:org.springframework.boot.gradle.plugin", version = { strictly = "4.0.2" } }
+spring-boot = { module = "org.springframework.boot:org.springframework.boot.gradle.plugin", version = { strictly = "4.0.3" } }
 spring-dependency-management = { module = "io.spring.dependency-management:io.spring.dependency-management.gradle.plugin", version = { strictly = "1.1.7" }  }
 sonatype-central-upload = { module = "cl.franciscosolis.sonatype-central-upload:cl.franciscosolis.sonatype-central-upload.gradle.plugin", version = { strictly = "1.0.3" } }
 spotless = { module = "com.diffplug.spotless:com.diffplug.spotless.gradle.plugin", version = { strictly = "8.2.1" } }
