@@ -210,7 +210,7 @@ You can create a custom response by implementing the `AccessDeniedInterceptResol
 ```java
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.brightroom.featureflag.configuration.AccessDeniedInterceptResolution;
+import net.brightroom.featureflag.webmvc.configuration.AccessDeniedInterceptResolution;
 
 // CustomAccessDeniedResponse.java
 @Component
