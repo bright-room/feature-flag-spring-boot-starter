@@ -1,5 +1,4 @@
 import util.libs
-import kotlin.jvm.java
 
 plugins {
     java

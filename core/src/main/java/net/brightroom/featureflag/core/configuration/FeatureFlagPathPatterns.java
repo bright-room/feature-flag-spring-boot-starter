@@ -1,0 +1,65 @@
+package net.brightroom.featureflag.core.configuration;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Path patterns for feature flag interceptor registration.
+ *
+ * <p>This class defines which request paths should be included or excluded when registering the
+ * feature flag interceptor.
+ */
+public class FeatureFlagPathPatterns {
+
+  /** The list of path patterns to include. */
+  List<String> includes = new ArrayList<>();
+
+  /** The list of path patterns to exclude. */
+  List<String> excludes = new ArrayList<>();
+
+  /**
+   * Returns whether the include path patterns are not empty.
+   *
+   * @return true if include path patterns are not empty
+   */
+  public boolean isNotEmptyIncludes() {
+    return !includes.isEmpty();
+  }
+
+  /**
+   * Returns whether the exclude path patterns are not empty.
+   *
+   * @return true if exclude path patterns are not empty
+   */
+  public boolean isNotEmptyExcludes() {
+    return !excludes.isEmpty();
+  }
+
+  /**
+   * Returns the list of include path patterns.
+   *
+   * @return the list of include path patterns
+   */
+  public List<String> includes() {
+    return includes;
+  }
+
+  /**
+   * Returns the list of exclude path patterns.
+   *
+   * @return the list of exclude path patterns
+   */
+  public List<String> excludes() {
+    return excludes;
+  }
+
+  void setIncludes(List<String> includes) {
+    this.includes = includes;
+  }
+
+  void setExcludes(List<String> excludes) {
+    this.excludes = excludes;
+  }
+
+  FeatureFlagPathPatterns() {}
+}

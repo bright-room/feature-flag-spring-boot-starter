@@ -2,39 +2,27 @@ package net.brightroom.featureflag.webmvc.configuration;
 
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.core.configuration.ResponseProperties;
-import net.brightroom.featureflag.core.configuration.ResponseType;
-import net.brightroom.featureflag.core.configuration.ViewProperties;
 import tools.jackson.databind.json.JsonMapper;
 
 class AccessDeniedInterceptResolutionFactory {
 
   JsonMapper jsonMapper;
-  boolean useRFC7807;
 
-  AccessDeniedInterceptResolution create(FeatureFlagProperties featureFlagProperties) {
+  AccessDeniedInterceptResolution create(
+      FeatureFlagProperties featureFlagProperties, boolean useRFC7807) {
     ResponseProperties responseProperties = featureFlagProperties.response();
-    ResponseType type = responseProperties.type();
 
-    if (type == ResponseType.PLAIN_TEXT)
-      return new AccessDeniedInterceptResolutionViaPlainTextResponse(
-          responseProperties.statusCode(), responseProperties.message());
-
-    if (type == ResponseType.VIEW) {
-      ViewProperties viewProperties = responseProperties.view();
-      return new AccessDeniedInterceptResolutionViaViewResponse(
-          responseProperties.statusCode(), viewProperties.forwardTo(), viewProperties.attributes());
-    }
-
-    if (useRFC7807)
-      return new AccessDeniedInterceptResolutionViaRFC7807JsonResponse(
-          responseProperties.statusCode(), responseProperties.body(), jsonMapper);
-
-    return new AccessDeniedInterceptResolutionViaJsonResponse(
-        responseProperties.statusCode(), responseProperties.body(), jsonMapper);
+    return switch (responseProperties.type()) {
+      case PLAIN_TEXT -> new AccessDeniedInterceptResolutionViaPlainTextResponse();
+      case VIEW -> new AccessDeniedInterceptResolutionViaViewResponse();
+      case JSON -> {
+        if (useRFC7807) yield new AccessDeniedInterceptResolutionViaRFC7807JsonResponse(jsonMapper);
+        else yield new AccessDeniedInterceptResolutionViaJsonResponse(jsonMapper);
+      }
+    };
   }
 
-  AccessDeniedInterceptResolutionFactory(JsonMapper jsonMapper, boolean useRFC7807) {
+  AccessDeniedInterceptResolutionFactory(JsonMapper jsonMapper) {
     this.jsonMapper = jsonMapper;
-    this.useRFC7807 = useRFC7807;
   }
 }

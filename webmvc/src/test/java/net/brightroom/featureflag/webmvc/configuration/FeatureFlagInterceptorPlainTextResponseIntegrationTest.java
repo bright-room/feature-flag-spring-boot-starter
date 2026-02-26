@@ -44,7 +44,7 @@ class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
     mockMvc
         .perform(get("/development-stage-endpoint"))
         .andExpect(status().isForbidden())
-        .andExpect(content().string("This feature is not available"));
+        .andExpect(content().string("Feature 'development-stage-endpoint' is not available"));
   }
 
   @Test
@@ -60,7 +60,7 @@ class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
     mockMvc
         .perform(get("/test/disable"))
         .andExpect(status().isForbidden())
-        .andExpect(content().string("This feature is not available"));
+        .andExpect(content().string("Feature 'disable-class-level-feature' is not available"));
   }
 
   @Test

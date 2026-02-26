@@ -48,15 +48,11 @@ class FeatureFlagInterceptorRFC7807JsonResponseIntegrationTest {
             content()
                 .json(
                     """
-
                   {
-                    "detail" : "The feature flag is disabled",
+                    "detail" : "Feature 'development-stage-endpoint' is not available",
                     "instance" : "/development-stage-endpoint",
-                    "properties" : {
-                      "error" : "This feature is not available"
-                    },
                     "status" : 403,
-                    "title" : "Access Denied",
+                    "title" : "Feature flag access denied",
                     "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
                   }
                   """));
@@ -79,15 +75,11 @@ class FeatureFlagInterceptorRFC7807JsonResponseIntegrationTest {
             content()
                 .json(
                     """
-
                   {
-                    "detail" : "The feature flag is disabled",
+                    "detail" : "Feature 'disable-class-level-feature' is not available",
                     "instance" : "/test/disable",
-                    "properties" : {
-                      "error" : "This feature is not available"
-                    },
                     "status" : 403,
-                    "title" : "Access Denied",
+                    "title" : "Feature flag access denied",
                     "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
                   }
                   """));

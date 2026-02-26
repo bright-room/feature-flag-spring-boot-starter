@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Objects;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.webmvc.provider.FeatureFlagProvider;
 import org.jspecify.annotations.NonNull;
 import org.springframework.web.method.HandlerMethod;
@@ -11,7 +12,6 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 class FeatureFlagInterceptor implements HandlerInterceptor {
   FeatureFlagProvider featureFlagProvider;
-  AccessDeniedInterceptResolution accessDeniedInterceptResolution;
 
   @Override
   public boolean preHandle(
@@ -24,14 +24,12 @@ class FeatureFlagInterceptor implements HandlerInterceptor {
 
     FeatureFlag methodAnnotation = handlerMethod.getMethodAnnotation(FeatureFlag.class);
     if (checkFeatureFlag(methodAnnotation)) {
-      accessDeniedInterceptResolution.resolution(request, response);
-      return false;
+      throw new FeatureFlagAccessDeniedException(methodAnnotation.value());
     }
 
     FeatureFlag classAnnotation = handlerMethod.getBeanType().getAnnotation(FeatureFlag.class);
     if (checkFeatureFlag(classAnnotation)) {
-      accessDeniedInterceptResolution.resolution(request, response);
-      return false;
+      throw new FeatureFlagAccessDeniedException(classAnnotation.value());
     }
 
     return true;
@@ -41,10 +39,7 @@ class FeatureFlagInterceptor implements HandlerInterceptor {
     return Objects.nonNull(annotation) && !featureFlagProvider.isFeatureEnabled(annotation.value());
   }
 
-  FeatureFlagInterceptor(
-      FeatureFlagProvider featureFlagProvider,
-      AccessDeniedInterceptResolution accessDeniedInterceptResolution) {
+  FeatureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
     this.featureFlagProvider = featureFlagProvider;
-    this.accessDeniedInterceptResolution = accessDeniedInterceptResolution;
   }
 }

@@ -48,7 +48,8 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
                 .json(
                     """
                   {
-                    "error": "This feature is not available"
+                    "error": "Feature flag access denied",
+                    "message": "Feature 'development-stage-endpoint' is not available"
                   }
                   """));
   }
@@ -70,9 +71,9 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
             content()
                 .json(
                     """
-
                   {
-                    "error": "This feature is not available"
+                    "error": "Feature flag access denied",
+                    "message": "Feature 'disable-class-level-feature' is not available"
                   }
                   """));
   }

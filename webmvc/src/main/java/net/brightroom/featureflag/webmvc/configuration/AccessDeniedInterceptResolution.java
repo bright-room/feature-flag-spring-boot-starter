@@ -2,6 +2,7 @@ package net.brightroom.featureflag.webmvc.configuration;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 
 /**
  * Interface for handling cases where access to a feature flag protected resource is denied.
@@ -15,7 +16,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * responses, redirecting to a specific view, providing RFC 7807-compliant error responses, or plain
  * text messages, depending on the application's requirements.
  */
-public interface AccessDeniedInterceptResolution {
+interface AccessDeniedInterceptResolution {
 
   /**
    * Resolves the response when access to a feature flag protected resource is denied.
@@ -27,6 +28,8 @@ public interface AccessDeniedInterceptResolution {
    *
    * @param request the HTTP servlet request that was denied access
    * @param response the HTTP servlet response to be configured for the denial
+   * @param e the FeatureFlagAccessDeniedException that triggered the resolution
    */
-  void resolution(HttpServletRequest request, HttpServletResponse response);
+  void resolution(
+      HttpServletRequest request, HttpServletResponse response, FeatureFlagAccessDeniedException e);
 }

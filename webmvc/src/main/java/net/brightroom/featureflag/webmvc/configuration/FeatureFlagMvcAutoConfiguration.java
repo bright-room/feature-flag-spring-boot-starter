@@ -16,36 +16,34 @@ class FeatureFlagMvcAutoConfiguration {
   FeatureFlagProperties featureFlagProperties;
 
   @Bean
-  FeatureFlagInterceptorRegistrationRule featureFlagInterceptorRegistrationRule() {
-    return new FeatureFlagInterceptorRegistrationRule(
-        featureFlagProperties.includePathPattern(), featureFlagProperties.excludePathPattern());
-  }
-
-  @Bean
   AccessDeniedInterceptResolutionFactory accessDeniedInterceptResolutionFactory(
-      JsonMapper jsonMapper,
-      @Value("${spring.mvc.problemdetails.enabled:false}") boolean useRFC7807) {
-    return new AccessDeniedInterceptResolutionFactory(jsonMapper, useRFC7807);
+      JsonMapper jsonMapper) {
+    return new AccessDeniedInterceptResolutionFactory(jsonMapper);
   }
 
   @Bean
   @ConditionalOnMissingBean(AccessDeniedInterceptResolution.class)
   AccessDeniedInterceptResolution featureFlagAccessDeniedResponse(
-      AccessDeniedInterceptResolutionFactory factory) {
-    return factory.create(featureFlagProperties);
+      AccessDeniedInterceptResolutionFactory factory,
+      @Value("${spring.mvc.problemdetails.enabled:false}") boolean useRFC7807) {
+    return factory.create(featureFlagProperties, useRFC7807);
   }
 
   @Bean
   @ConditionalOnMissingBean(FeatureFlagProvider.class)
   FeatureFlagProvider featureFlagProvider() {
-    return new InMemoryFeatureFlagProvider(featureFlagProperties.features());
+    return new InMemoryFeatureFlagProvider(featureFlagProperties.featureNames());
   }
 
   @Bean
-  FeatureFlagInterceptor featureFlagInterceptor(
-      FeatureFlagProvider featureFlagProvider,
+  FeatureFlagInterceptor featureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
+    return new FeatureFlagInterceptor(featureFlagProvider);
+  }
+
+  @Bean
+  FeatureFlagExceptionHandler featureFlagExceptionHandler(
       AccessDeniedInterceptResolution accessDeniedInterceptResolution) {
-    return new FeatureFlagInterceptor(featureFlagProvider, accessDeniedInterceptResolution);
+    return new FeatureFlagExceptionHandler(accessDeniedInterceptResolution);
   }
 
   FeatureFlagMvcAutoConfiguration(FeatureFlagProperties featureFlagProperties) {

@@ -4,33 +4,33 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.PrintWriter;
 import java.util.Map;
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import tools.jackson.databind.json.JsonMapper;
 
 class AccessDeniedInterceptResolutionViaJsonResponse implements AccessDeniedInterceptResolution {
-  int statusCode;
-  Map<String, String> body;
 
   JsonMapper jsonMapper;
 
-  AccessDeniedInterceptResolutionViaJsonResponse(
-      int statusCode, Map<String, String> body, JsonMapper jsonMapper) {
-    this.statusCode = statusCode;
-    this.body = body;
-    this.jsonMapper = jsonMapper;
-  }
-
   @Override
-  public void resolution(HttpServletRequest request, HttpServletResponse response) {
-    response.setStatus(statusCode);
+  public void resolution(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      FeatureFlagAccessDeniedException e) {
+    response.setStatus(403);
     response.setContentType("application/json; charset=utf-8");
+
+    Map<String, String> body =
+        Map.of("error", "Feature flag access denied", "message", e.getMessage());
 
     try (PrintWriter writer = response.getWriter()) {
       String json = jsonMapper.writeValueAsString(body);
       writer.write(json);
-    } catch (Exception e) {
-      throw new IllegalStateException("Response json conversion failed", e);
+    } catch (Exception ex) {
+      throw new IllegalStateException("Response json conversion failed", ex);
     }
   }
 
-  AccessDeniedInterceptResolutionViaJsonResponse() {}
+  AccessDeniedInterceptResolutionViaJsonResponse(JsonMapper jsonMapper) {
+    this.jsonMapper = jsonMapper;
+  }
 }

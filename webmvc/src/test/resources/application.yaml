@@ -1,7 +1,8 @@
 feature-flags:
-  include-path-pattern:
-    - "/**"
-  features:
+  path-patterns:
+    includes:
+      - "/**"
+  feature-names:
     experimental-stage-endpoint: true
     development-stage-endpoint: false
     enable-class-level-feature: true

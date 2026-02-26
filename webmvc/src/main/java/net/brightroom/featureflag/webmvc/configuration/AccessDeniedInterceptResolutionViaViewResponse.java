@@ -1,35 +1,46 @@
 package net.brightroom.featureflag.webmvc.configuration;
 
-import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Map;
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 
 class AccessDeniedInterceptResolutionViaViewResponse implements AccessDeniedInterceptResolution {
-  int statusCode;
-  String uri;
-  Map<String, String> attributes;
-
-  AccessDeniedInterceptResolutionViaViewResponse(
-      int statusCode, String uri, Map<String, String> attributes) {
-    this.statusCode = statusCode;
-    this.uri = uri;
-    this.attributes = attributes;
-  }
 
   @Override
-  public void resolution(HttpServletRequest request, HttpServletResponse response) {
-    response.setStatus(statusCode);
+  public void resolution(
+      HttpServletRequest request,
+      HttpServletResponse response,
+      FeatureFlagAccessDeniedException e) {
+    response.setStatus(403);
+    response.setContentType("text/html; charset=utf-8");
 
-    for (Map.Entry<String, String> entry : attributes.entrySet()) {
-      request.setAttribute(entry.getKey(), entry.getValue());
-    }
+    String escapedMessage =
+        e.getMessage()
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;");
 
-    RequestDispatcher dispatcher = request.getRequestDispatcher(uri);
-    try {
-      dispatcher.forward(request, response);
-    } catch (Exception e) {
-      throw new IllegalStateException("Request dispatcher failed", e);
+    String html =
+        """
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <title>Access Denied</title>
+        </head>
+        <body>
+          <h1>403 - Access Denied</h1>
+          <p>%s</p>
+        </body>
+        </html>
+        """
+            .formatted(escapedMessage);
+
+    try (var writer = response.getWriter()) {
+      writer.write(html);
+    } catch (Exception ex) {
+      throw new IllegalStateException("Response write failed", ex);
     }
   }
 
