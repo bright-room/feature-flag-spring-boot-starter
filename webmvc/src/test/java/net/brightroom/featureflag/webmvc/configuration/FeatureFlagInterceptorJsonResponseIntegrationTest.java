@@ -42,7 +42,7 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
   void shouldBlockAccess_whenFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/development-stage-endpoint"))
-        .andExpect(status().isMethodNotAllowed())
+        .andExpect(status().isForbidden())
         .andExpect(
             content()
                 .json(
@@ -65,7 +65,7 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
   void shouldBlockAccess_whenClassLevelFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/test/disable"))
-        .andExpect(status().isMethodNotAllowed())
+        .andExpect(status().isForbidden())
         .andExpect(
             content()
                 .json(

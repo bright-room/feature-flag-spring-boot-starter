@@ -24,7 +24,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *     hello-class: true
  *     user-find: false
  *   response:
- * #   status-code: 405
+ * #   status-code: 403
  * #   message: "This feature is disabled."
  *   type: JSON
  *   body:

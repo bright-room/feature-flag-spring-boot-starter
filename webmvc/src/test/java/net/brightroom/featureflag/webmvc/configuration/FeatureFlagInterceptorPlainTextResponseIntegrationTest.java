@@ -43,7 +43,7 @@ class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
   void shouldBlockAccess_whenFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/development-stage-endpoint"))
-        .andExpect(status().isMethodNotAllowed())
+        .andExpect(status().isForbidden())
         .andExpect(content().string("This feature is not available"));
   }
 
@@ -59,7 +59,7 @@ class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
   void shouldBlockAccess_whenClassLevelFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/test/disable"))
-        .andExpect(status().isMethodNotAllowed())
+        .andExpect(status().isForbidden())
         .andExpect(content().string("This feature is not available"));
   }
 
