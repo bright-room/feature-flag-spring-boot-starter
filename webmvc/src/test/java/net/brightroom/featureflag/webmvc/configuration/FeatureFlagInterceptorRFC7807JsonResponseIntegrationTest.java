@@ -43,7 +43,7 @@ class FeatureFlagInterceptorRFC7807JsonResponseIntegrationTest {
   void shouldBlockAccess_whenFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/development-stage-endpoint"))
-        .andExpect(status().isMethodNotAllowed())
+        .andExpect(status().isForbidden())
         .andExpect(
             content()
                 .json(
@@ -55,7 +55,7 @@ class FeatureFlagInterceptorRFC7807JsonResponseIntegrationTest {
                     "properties" : {
                       "error" : "This feature is not available"
                     },
-                    "status" : 405,
+                    "status" : 403,
                     "title" : "Access Denied",
                     "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
                   }
@@ -74,7 +74,7 @@ class FeatureFlagInterceptorRFC7807JsonResponseIntegrationTest {
   void shouldBlockAccess_whenClassLevelFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/test/disable"))
-        .andExpect(status().isMethodNotAllowed())
+        .andExpect(status().isForbidden())
         .andExpect(
             content()
                 .json(
@@ -86,7 +86,7 @@ class FeatureFlagInterceptorRFC7807JsonResponseIntegrationTest {
                     "properties" : {
                       "error" : "This feature is not available"
                     },
-                    "status" : 405,
+                    "status" : 403,
                     "title" : "Access Denied",
                     "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
                   }

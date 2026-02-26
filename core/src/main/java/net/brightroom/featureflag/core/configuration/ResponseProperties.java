@@ -4,7 +4,7 @@ import java.util.Map;
 
 public class ResponseProperties {
 
-  Integer statusCode = 405;
+  Integer statusCode = 403;
   ResponseType type = ResponseType.PLAIN_TEXT;
   Map<String, String> body = Map.of("error", "This feature is not available");
   String message = "This feature is not available";
