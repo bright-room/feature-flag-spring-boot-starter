@@ -22,7 +22,7 @@
     },
     {
       "name": "feature-flags.response.type",
-      "type": "net.brightroom.featureflag.configuration.ResponseType",
+      "type": "net.brightroom.featureflag.core.configuration.ResponseType",
       "description": "Response type to return when a feature flag is disabled."
     },
     {
