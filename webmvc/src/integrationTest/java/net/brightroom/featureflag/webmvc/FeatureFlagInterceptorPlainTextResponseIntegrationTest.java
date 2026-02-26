@@ -1,9 +1,14 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import net.brightroom.featureflag.webmvc.configuration.FeatureFlagMvcTestAutoConfiguration;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagDisableController;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagEnableController;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagMethodLevelController;
+import net.brightroom.featureflag.webmvc.endpoint.NoFeatureFlagController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -11,6 +16,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(
+    properties = {"feature-flags.response.type=PlainText"},
     controllers = {
       NoFeatureFlagController.class,
       FeatureFlagEnableController.class,
@@ -18,7 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
       FeatureFlagMethodLevelController.class,
     })
 @Import(FeatureFlagMvcTestAutoConfiguration.class)
-class FeatureFlagInterceptorJsonResponseIntegrationTest {
+class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
 
   MockMvc mockMvc;
 
@@ -43,15 +49,7 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
     mockMvc
         .perform(get("/development-stage-endpoint"))
         .andExpect(status().isForbidden())
-        .andExpect(
-            content()
-                .json(
-                    """
-                  {
-                    "error": "Feature flag access denied",
-                    "message": "Feature 'development-stage-endpoint' is not available"
-                  }
-                  """));
+        .andExpect(content().string("Feature 'development-stage-endpoint' is not available"));
   }
 
   @Test
@@ -67,15 +65,7 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
     mockMvc
         .perform(get("/test/disable"))
         .andExpect(status().isForbidden())
-        .andExpect(
-            content()
-                .json(
-                    """
-                  {
-                    "error": "Feature flag access denied",
-                    "message": "Feature 'disable-class-level-feature' is not available"
-                  }
-                  """));
+        .andExpect(content().string("Feature 'disable-class-level-feature' is not available"));
   }
 
   @Test
@@ -87,7 +77,7 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
   }
 
   @Autowired
-  FeatureFlagInterceptorJsonResponseIntegrationTest(MockMvc mockMvc) {
+  FeatureFlagInterceptorPlainTextResponseIntegrationTest(MockMvc mockMvc) {
     this.mockMvc = mockMvc;
   }
 }

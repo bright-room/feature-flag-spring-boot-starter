@@ -1,9 +1,14 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import net.brightroom.featureflag.webmvc.configuration.FeatureFlagMvcTestAutoConfiguration;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagDisableController;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagEnableController;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagMethodLevelController;
+import net.brightroom.featureflag.webmvc.endpoint.NoFeatureFlagController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -11,7 +16,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(
-    properties = {"feature-flags.response.type=PlainText"},
+    properties = {"spring.mvc.problemdetails.enabled=true"},
     controllers = {
       NoFeatureFlagController.class,
       FeatureFlagEnableController.class,
@@ -19,7 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
       FeatureFlagMethodLevelController.class,
     })
 @Import(FeatureFlagMvcTestAutoConfiguration.class)
-class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
+class FeatureFlagInterceptorRFC7807JsonResponseIntegrationTest {
 
   MockMvc mockMvc;
 
@@ -44,7 +49,18 @@ class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
     mockMvc
         .perform(get("/development-stage-endpoint"))
         .andExpect(status().isForbidden())
-        .andExpect(content().string("Feature 'development-stage-endpoint' is not available"));
+        .andExpect(
+            content()
+                .json(
+                    """
+                  {
+                    "detail" : "Feature 'development-stage-endpoint' is not available",
+                    "instance" : "/development-stage-endpoint",
+                    "status" : 403,
+                    "title" : "Feature flag access denied",
+                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
+                  }
+                  """));
   }
 
   @Test
@@ -60,7 +76,18 @@ class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
     mockMvc
         .perform(get("/test/disable"))
         .andExpect(status().isForbidden())
-        .andExpect(content().string("Feature 'disable-class-level-feature' is not available"));
+        .andExpect(
+            content()
+                .json(
+                    """
+                  {
+                    "detail" : "Feature 'disable-class-level-feature' is not available",
+                    "instance" : "/test/disable",
+                    "status" : 403,
+                    "title" : "Feature flag access denied",
+                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
+                  }
+                  """));
   }
 
   @Test
@@ -72,7 +99,7 @@ class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
   }
 
   @Autowired
-  FeatureFlagInterceptorPlainTextResponseIntegrationTest(MockMvc mockMvc) {
+  FeatureFlagInterceptorRFC7807JsonResponseIntegrationTest(MockMvc mockMvc) {
     this.mockMvc = mockMvc;
   }
 }

@@ -1,10 +1,10 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc.endpoint;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
-class NoFeatureFlagViewController {
+public class NoFeatureFlagViewController {
 
   @GetMapping("/test/no-annotation")
   String noAnnotation() {

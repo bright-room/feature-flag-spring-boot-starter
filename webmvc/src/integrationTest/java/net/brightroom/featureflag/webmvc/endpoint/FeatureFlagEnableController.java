@@ -1,15 +1,15 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc.endpoint;
 
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-@Controller
+@RestController
 @FeatureFlag("enable-class-level-feature")
-class FeatureFlagEnableViewController {
+public class FeatureFlagEnableController {
 
   @GetMapping("/test/enabled")
   String testEnabled() {
-    return "enabled";
+    return "Allowed";
   }
 }

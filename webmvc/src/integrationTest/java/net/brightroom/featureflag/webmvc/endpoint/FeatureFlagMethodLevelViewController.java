@@ -1,11 +1,11 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc.endpoint;
 
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @Controller
-class FeatureFlagMethodLevelViewController {
+public class FeatureFlagMethodLevelViewController {
 
   @GetMapping("/stable")
   String stableEndpoint() {
@@ -24,5 +24,5 @@ class FeatureFlagMethodLevelViewController {
     return "development-stage";
   }
 
-  FeatureFlagMethodLevelViewController() {}
+  public FeatureFlagMethodLevelViewController() {}
 }
