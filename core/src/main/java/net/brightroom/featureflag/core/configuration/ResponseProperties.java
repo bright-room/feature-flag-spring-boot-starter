@@ -6,7 +6,7 @@ public class ResponseProperties {
 
   Integer statusCode = 403;
   ResponseType type = ResponseType.PLAIN_TEXT;
-  Map<String, String> body = Map.of("error", "This feature is not available");
+  Map<String, String> body = Map.of();
   String message = "This feature is not available";
   ViewProperties view = new ViewProperties();
 

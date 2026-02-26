@@ -8,3 +8,5 @@ feature-flags:
     disable-class-level-feature: false
   response:
     type: json
+    body:
+      error: "This feature is not available"

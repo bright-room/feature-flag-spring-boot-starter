@@ -69,12 +69,9 @@ feature-flags:
     hello-class: true
     user-find: false
   response:
-    status-code: 405
-#    type: PLAIN_TEXT
-#    message: "This feature is disabled."
-    type: JSON
-    body:
-      error: "Feature flag is disabled"
+    status-code: 403
+    type: PLAIN_TEXT  # default
+    message: "This feature is disabled."
 ```
 
 Add the @FeatureFlag annotation to the class or method that will be the endpoint.
