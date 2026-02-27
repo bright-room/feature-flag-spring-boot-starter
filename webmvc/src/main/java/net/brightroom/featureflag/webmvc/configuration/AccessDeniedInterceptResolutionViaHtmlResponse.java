@@ -13,8 +13,8 @@ import org.springframework.http.ResponseEntity;
  * <p>This implementation returns a {@code ResponseEntity<String>} with {@code text/html} content
  * type, which Spring MVC writes using {@code StringHttpMessageConverter}. The converter can only
  * write the response when the client's {@code Accept} header includes {@code text/html} or {@code
- * text/*}. If the client sends {@code Accept: application/json} only, Spring MVC will return
- * {@code 406 Not Acceptable} instead of the intended HTML response.
+ * text/*}. If the client sends {@code Accept: application/json} only, Spring MVC will return {@code
+ * 406 Not Acceptable} instead of the intended HTML response.
  *
  * <p>For full control over the denied response regardless of the {@code Accept} header, define a
  * custom {@code @ControllerAdvice} that handles {@link

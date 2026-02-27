@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew :webmvc:integrationTest:*)",
+      "Bash(./gradlew :webmvc:test:*)",
+      "Bash(./gradlew :webmvc:compileJava:*)",
+      "Bash(./gradlew :core:test:*)",
+      "Bash(./gradlew check:*)",
+      "Bash(./gradlew spotlessApply:*)"
+    ]
+  }
+}

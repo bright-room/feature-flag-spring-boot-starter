@@ -18,7 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-@WebMvcTest(controllers = {FeatureFlagDisableController.class, FeatureFlagMethodLevelController.class})
+@WebMvcTest(
+    controllers = {FeatureFlagDisableController.class, FeatureFlagMethodLevelController.class})
 @Import({
   FeatureFlagMvcTestAutoConfiguration.class,
   FeatureFlagInterceptorCustomExceptionHandlerIntegrationTest.CustomExceptionHandler.class

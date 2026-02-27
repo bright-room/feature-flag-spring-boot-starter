@@ -12,8 +12,8 @@ import org.springframework.http.ResponseEntity;
  * Implementations of this interface are used in conjunction with the {@link FeatureFlagInterceptor}
  * to provide customized responses for denied access scenarios.
  *
- * <p>Implementations of this interface can define various resolutions such as returning JSON,
- * plain text, or HTML responses, depending on the application's requirements.
+ * <p>Implementations of this interface can define various resolutions such as returning JSON, plain
+ * text, or HTML responses, depending on the application's requirements.
  */
 interface AccessDeniedInterceptResolution {
 
