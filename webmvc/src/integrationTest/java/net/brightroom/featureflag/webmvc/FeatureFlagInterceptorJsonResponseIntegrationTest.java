@@ -60,7 +60,7 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
   }
 
   @Test
-  void shouldBlockAccess_whenClassLevelFeatureNoAnnotated() throws Exception {
+  void shouldAllowAccess_whenNoFeatureFlagAnnotationOnController() throws Exception {
     mockMvc
         .perform(get("/test/no-annotation"))
         .andExpect(status().isOk())

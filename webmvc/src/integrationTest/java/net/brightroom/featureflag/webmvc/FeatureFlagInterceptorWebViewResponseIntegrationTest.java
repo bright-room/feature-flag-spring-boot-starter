@@ -80,7 +80,7 @@ class FeatureFlagInterceptorWebViewResponseIntegrationTest {
   }
 
   @Test
-  void shouldBlockAccess_whenClassLevelFeatureNoAnnotated() throws Exception {
+  void shouldAllowAccess_whenNoFeatureFlagAnnotationOnController() throws Exception {
     MvcResult mvcResult =
         mockMvc.perform(get("/test/no-annotation")).andExpect(status().isOk()).andReturn();
 
