@@ -13,7 +13,7 @@ import java.util.Map;
  */
 public class InMemoryFeatureFlagProvider implements FeatureFlagProvider {
 
-  Map<String, Boolean> features;
+  private final Map<String, Boolean> features;
 
   @Override
   public boolean isFeatureEnabled(String featureName) {
@@ -29,6 +29,6 @@ public class InMemoryFeatureFlagProvider implements FeatureFlagProvider {
    *     feature is enabled, and {@code false} indicates that the feature is disabled.
    */
   public InMemoryFeatureFlagProvider(Map<String, Boolean> features) {
-    this.features = features;
+    this.features = Map.copyOf(features);
   }
 }
