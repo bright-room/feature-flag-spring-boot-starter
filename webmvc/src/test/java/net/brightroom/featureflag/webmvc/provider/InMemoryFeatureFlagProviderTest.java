@@ -13,8 +13,8 @@ class InMemoryFeatureFlagProviderTest {
   FeatureFlagProvider featureFlagProvider;
 
   @Test
-  void undefinedFeaturesAreNotManagedByFeatureFlag() {
-    assertTrue(featureFlagProvider.isFeatureEnabled("undefined-api"));
+  void undefinedFeaturesAreDisabledByDefault() {
+    assertFalse(featureFlagProvider.isFeatureEnabled("undefined-api"));
   }
 
   @Test

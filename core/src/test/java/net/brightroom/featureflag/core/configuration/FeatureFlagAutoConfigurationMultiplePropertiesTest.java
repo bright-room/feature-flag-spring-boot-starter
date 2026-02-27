@@ -43,6 +43,11 @@ class FeatureFlagAutoConfigurationMultiplePropertiesTest {
   }
 
   @Test
+  void shouldLoadDefaultEnabled() {
+    assertTrue(featureFlagProperties.defaultEnabled());
+  }
+
+  @Test
   void shouldLoadResponseType() {
     ResponseProperties response = featureFlagProperties.response();
     assertEquals(ResponseType.PLAIN_TEXT, response.type());

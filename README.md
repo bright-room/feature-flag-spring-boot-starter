@@ -69,9 +69,12 @@ feature-flags:
   feature-names:
     hello-class: true
     user-find: false
+  default-enabled: false  # false (fail-closed, default) | true (fail-open)
   response:
     type: JSON  # PLAIN_TEXT | JSON | HTML (default: JSON)
 ```
+
+> **Undefined flags are blocked by default (fail-closed).** If a feature name referenced in a `@FeatureFlag` annotation is not listed under `feature-flags.feature-names`, access is denied with `403 Forbidden`. Set `feature-flags.default-enabled: true` to allow access for undefined flags instead (fail-open).
 
 Add the `@FeatureFlag` annotation to the class or method that will be the endpoint.
 
@@ -125,7 +128,10 @@ class FeatureFlagExternalDataSourceProvider implements FeatureFlagProvider {
   @Override
   public boolean isFeatureEnabled(String featureName) {
     Boolean enabled = featureManagementMapper.check(featureName);
-    if (enabled == null) return true;
+    // Choose your undefined-flag policy:
+    //   return false; — fail-closed: block access for undefined flags (recommended)
+    //   return true;  — fail-open:   allow access for undefined flags
+    if (enabled == null) return false;
     return enabled;
   }
 

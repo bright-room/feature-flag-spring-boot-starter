@@ -30,6 +30,7 @@ public class FeatureFlagProperties {
   private FeatureFlagPathPatterns pathPatterns = new FeatureFlagPathPatterns();
   private Map<String, Boolean> featureNames = new HashMap<>();
   private ResponseProperties response = new ResponseProperties();
+  private boolean defaultEnabled = false;
 
   /**
    * Returns the path patterns for feature flag interceptor registration.
@@ -58,6 +59,16 @@ public class FeatureFlagProperties {
     return response;
   }
 
+  /**
+   * Returns whether undefined feature flags are enabled by default.
+   *
+   * @return {@code true} if undefined flags are enabled (fail-open), {@code false} if disabled
+   *     (fail-closed)
+   */
+  public boolean defaultEnabled() {
+    return defaultEnabled;
+  }
+
   // for property binding
   void setPathPatterns(FeatureFlagPathPatterns pathPatterns) {
     this.pathPatterns = pathPatterns;
@@ -71,6 +82,11 @@ public class FeatureFlagProperties {
   // for property binding
   void setResponse(ResponseProperties response) {
     this.response = response;
+  }
+
+  // for property binding
+  void setDefaultEnabled(boolean defaultEnabled) {
+    this.defaultEnabled = defaultEnabled;
   }
 
   FeatureFlagProperties() {}

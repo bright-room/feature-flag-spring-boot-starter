@@ -28,6 +28,8 @@ class FeatureFlagAutoConfigurationEmptyPropertiesTest {
     Map<String, Boolean> featureNames = featureFlagProperties.featureNames();
     assertTrue(featureNames.isEmpty());
 
+    assertFalse(featureFlagProperties.defaultEnabled());
+
     ResponseProperties response = featureFlagProperties.response();
     assertEquals(ResponseType.JSON, response.type());
   }
