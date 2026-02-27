@@ -53,8 +53,11 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
                 .json(
                     """
                   {
-                    "error": "Feature flag access denied",
-                    "message": "Feature 'development-stage-endpoint' is not available"
+                    "detail" : "Feature 'development-stage-endpoint' is not available",
+                    "instance" : "/development-stage-endpoint",
+                    "status" : 403,
+                    "title" : "Feature flag access denied",
+                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
                   }
                   """));
   }
@@ -77,8 +80,11 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
                 .json(
                     """
                   {
-                    "error": "Feature flag access denied",
-                    "message": "Feature 'disable-class-level-feature' is not available"
+                    "detail" : "Feature 'disable-class-level-feature' is not available",
+                    "instance" : "/test/disable",
+                    "status" : 403,
+                    "title" : "Feature flag access denied",
+                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
                   }
                   """));
   }

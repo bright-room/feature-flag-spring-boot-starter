@@ -4,7 +4,6 @@ import net.brightroom.featureflag.core.configuration.FeatureFlagAutoConfiguratio
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.webmvc.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.webmvc.provider.InMemoryFeatureFlagProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -21,9 +20,8 @@ class FeatureFlagMvcAutoConfiguration {
 
   @Bean
   AccessDeniedInterceptResolution featureFlagAccessDeniedResponse(
-      AccessDeniedInterceptResolutionFactory factory,
-      @Value("${spring.mvc.problemdetails.enabled:false}") boolean useRFC7807) {
-    return factory.create(featureFlagProperties, useRFC7807);
+      AccessDeniedInterceptResolutionFactory factory) {
+    return factory.create(featureFlagProperties);
   }
 
   @Bean

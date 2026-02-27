@@ -61,7 +61,7 @@ Both modules use Spring Boot's `META-INF/spring/org.springframework.boot.autocon
 Built-in `AccessDeniedInterceptResolution` implementations (selected by `feature-flags.response.type`):
 - `PLAIN_TEXT` → `AccessDeniedInterceptResolutionViaPlainTextResponse`
 - `HTML` → `AccessDeniedInterceptResolutionViaHtmlResponse`
-- `JSON` (default) → `AccessDeniedInterceptResolutionViaJsonResponse`, or `AccessDeniedInterceptResolutionViaRFC7807JsonResponse` when `spring.mvc.problemdetails.enabled=true`
+- `JSON` (default) → `AccessDeniedInterceptResolutionViaJsonResponse` (RFC 7807 / Problem Details format)
 
 ## Contributing
 
