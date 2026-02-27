@@ -1,58 +1,27 @@
 package net.brightroom.featureflag.core.configuration;
 
-import java.util.Map;
-
+/**
+ * Properties related to the response configuration.
+ *
+ * <p>This class encapsulates configuration properties for the response format and type, allowing
+ * customization of how responses are generated and returned by the system.
+ */
 public class ResponseProperties {
 
-  Integer statusCode = 403;
-  ResponseType type = ResponseType.PLAIN_TEXT;
-  Map<String, String> body = Map.of("error", "This feature is not available");
-  String message = "This feature is not available";
-  ViewProperties view = new ViewProperties();
+  ResponseType type = ResponseType.JSON;
 
-  public Integer statusCode() {
-    return statusCode;
-  }
-
+  /**
+   * The type of response to return.
+   *
+   * @return the type of response
+   */
   public ResponseType type() {
     return type;
   }
 
-  public Map<String, String> body() {
-    return body;
-  }
-
-  public String message() {
-    return message;
-  }
-
-  public ViewProperties view() {
-    return view;
-  }
-
-  // for property injection
-  void setStatusCode(Integer statusCode) {
-    this.statusCode = statusCode;
-  }
-
-  // for property injection
+  // for property binding
   void setType(ResponseType type) {
     this.type = type;
-  }
-
-  // for property injection
-  void setBody(Map<String, String> body) {
-    this.body = body;
-  }
-
-  // for property injection
-  void setMessage(String message) {
-    this.message = message;
-  }
-
-  // for property injection
-  void setView(ViewProperties view) {
-    this.view = view;
   }
 
   ResponseProperties() {}

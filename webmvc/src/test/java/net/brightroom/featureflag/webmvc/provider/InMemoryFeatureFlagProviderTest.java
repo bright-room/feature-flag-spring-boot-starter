@@ -3,12 +3,11 @@ package net.brightroom.featureflag.webmvc.provider;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import net.brightroom.featureflag.webmvc.configuration.FeatureFlagMvcTestAutoConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest(classes = FeatureFlagMvcTestAutoConfiguration.class)
+@SpringBootTest(classes = FeatureFlagProviderTestConfiguration.class)
 class InMemoryFeatureFlagProviderTest {
 
   FeatureFlagProvider featureFlagProvider;

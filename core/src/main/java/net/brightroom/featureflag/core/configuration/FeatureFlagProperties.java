@@ -1,76 +1,74 @@
 package net.brightroom.featureflag.core.configuration;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration properties for feature flags. Binds feature flag settings from the application
- * configuration using the prefix "feature-flags".
+ * Properties for feature flag configuration.
  *
- * <p>Configuration example in application.yaml:
+ * <p>These properties are used to define which paths are included or excluded from feature flag
+ * checks and to define the default enabled status for specific features.
  *
- * <pre>
+ * <p>Configuration example in {@code application.yml}:
+ *
+ * <pre>{@code
  * feature-flags:
- *   include-path-pattern:
- *     - "/api/v2/**"
- *   exclude-path-pattern:
- *     - "/api/v2/foo"
- *     - "/api/v2/bar"
- *     - "/api/v1/**"
- *   features:
- *     hello-class: true
- *     user-find: false
- *   response:
- * #   status-code: 403
- * #   message: "This feature is disabled."
- *   type: JSON
- *   body:
- *     error: "Feature flag is disabled"
- * </pre>
+ *   path-patterns:
+ *     includes:
+ *       - "/api/**"
+ *     excludes:
+ *       - "/api/public/**"
+ *   feature-names:
+ *     "new-feature": true
+ *     "beta-feature": false
+ * }</pre>
  */
 @ConfigurationProperties(prefix = "feature-flags")
 public class FeatureFlagProperties {
 
-  List<String> includePathPattern = new ArrayList<>();
-  List<String> excludePathPattern = new ArrayList<>();
-  Map<String, Boolean> features = new ConcurrentHashMap<>();
+  FeatureFlagPathPatterns pathPatterns = new FeatureFlagPathPatterns();
+  Map<String, Boolean> featureNames = new ConcurrentHashMap<>();
   ResponseProperties response = new ResponseProperties();
 
-  public List<String> includePathPattern() {
-    return includePathPattern;
+  /**
+   * Returns the path patterns for feature flag interceptor registration.
+   *
+   * @return the path patterns
+   */
+  public FeatureFlagPathPatterns pathPatterns() {
+    return pathPatterns;
   }
 
-  public List<String> excludePathPattern() {
-    return excludePathPattern;
+  /**
+   * Returns the map of feature names and their enabled status.
+   *
+   * @return the map of features
+   */
+  public Map<String, Boolean> featureNames() {
+    return Map.copyOf(featureNames);
   }
 
-  public Map<String, Boolean> features() {
-    return features;
-  }
-
+  /**
+   * Returns the response properties.
+   *
+   * @return the response properties
+   */
   public ResponseProperties response() {
     return response;
   }
 
-  // for property injection
-  void setIncludePathPattern(List<String> includePathPattern) {
-    this.includePathPattern = includePathPattern;
+  // for property binding
+  void setPathPatterns(FeatureFlagPathPatterns pathPatterns) {
+    this.pathPatterns = pathPatterns;
   }
 
-  // for property injection
-  void setExcludePathPattern(List<String> excludePathPattern) {
-    this.excludePathPattern = excludePathPattern;
+  // for property binding
+  void setFeatureNames(Map<String, Boolean> featureNames) {
+    this.featureNames = featureNames;
   }
 
-  // for property injection
-  void setFeatures(Map<String, Boolean> features) {
-    this.features = features;
-  }
-
-  // for property injection
+  // for property binding
   void setResponse(ResponseProperties response) {
     this.response = response;
   }

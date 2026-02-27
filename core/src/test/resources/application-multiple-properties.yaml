@@ -1,0 +1,13 @@
+feature-flags:
+  path-patterns:
+    includes:
+      - "/api/**"
+      - "/web/**"
+    excludes:
+      - "/internal/**"
+      - "/health/**"
+  feature-names:
+    f1: true
+    f2: false
+  response:
+    type: PLAIN_TEXT

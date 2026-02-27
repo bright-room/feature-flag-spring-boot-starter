@@ -1,29 +1,21 @@
 package net.brightroom.featureflag.webmvc.configuration;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 class AccessDeniedInterceptResolutionViaPlainTextResponse
     implements AccessDeniedInterceptResolution {
-  int statusCode;
-  String message;
-
-  AccessDeniedInterceptResolutionViaPlainTextResponse(int statusCode, String message) {
-    this.statusCode = statusCode;
-    this.message = message;
-  }
 
   @Override
-  public void resolution(HttpServletRequest request, HttpServletResponse response) {
-    response.setStatus(statusCode);
-    response.setContentType("text/plain; charset=utf-8");
-
-    try (PrintWriter writer = response.getWriter()) {
-      writer.write(message);
-    } catch (Exception e) {
-      throw new IllegalStateException("Response text conversion failed", e);
-    }
+  public ResponseEntity<?> resolution(
+      HttpServletRequest request, FeatureFlagAccessDeniedException e) {
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .contentType(new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8))
+        .body(e.getMessage());
   }
 
   AccessDeniedInterceptResolutionViaPlainTextResponse() {}

@@ -1,35 +1,28 @@
 package net.brightroom.featureflag.webmvc.configuration;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.PrintWriter;
-import java.util.Map;
-import tools.jackson.databind.json.JsonMapper;
+import java.net.URI;
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 
 class AccessDeniedInterceptResolutionViaJsonResponse implements AccessDeniedInterceptResolution {
-  int statusCode;
-  Map<String, String> body;
-
-  JsonMapper jsonMapper;
-
-  AccessDeniedInterceptResolutionViaJsonResponse(
-      int statusCode, Map<String, String> body, JsonMapper jsonMapper) {
-    this.statusCode = statusCode;
-    this.body = body;
-    this.jsonMapper = jsonMapper;
-  }
 
   @Override
-  public void resolution(HttpServletRequest request, HttpServletResponse response) {
-    response.setStatus(statusCode);
-    response.setContentType("application/json; charset=utf-8");
+  public ResponseEntity<?> resolution(
+      HttpServletRequest request, FeatureFlagAccessDeniedException e) {
+    ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
+    problemDetail.setType(
+        URI.create("https://github.com/bright-room/feature-flag-spring-boot-starter"));
+    problemDetail.setTitle("Feature flag access denied");
+    problemDetail.setDetail(e.getMessage());
+    problemDetail.setInstance(URI.create(request.getRequestURI()));
 
-    try (PrintWriter writer = response.getWriter()) {
-      String json = jsonMapper.writeValueAsString(body);
-      writer.write(json);
-    } catch (Exception e) {
-      throw new IllegalStateException("Response json conversion failed", e);
-    }
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
+        .body(problemDetail);
   }
 
   AccessDeniedInterceptResolutionViaJsonResponse() {}

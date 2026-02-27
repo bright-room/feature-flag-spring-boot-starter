@@ -1,9 +1,14 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import net.brightroom.featureflag.webmvc.configuration.FeatureFlagMvcTestAutoConfiguration;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagDisableController;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagEnableController;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagMethodLevelController;
+import net.brightroom.featureflag.webmvc.endpoint.NoFeatureFlagController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -48,13 +53,17 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
                 .json(
                     """
                   {
-                    "error": "This feature is not available"
+                    "detail" : "Feature 'development-stage-endpoint' is not available",
+                    "instance" : "/development-stage-endpoint",
+                    "status" : 403,
+                    "title" : "Feature flag access denied",
+                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
                   }
                   """));
   }
 
   @Test
-  void shouldBlockAccess_whenClassLevelFeatureNoAnnotated() throws Exception {
+  void shouldAllowAccess_whenNoFeatureFlagAnnotationOnController() throws Exception {
     mockMvc
         .perform(get("/test/no-annotation"))
         .andExpect(status().isOk())
@@ -70,9 +79,12 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
             content()
                 .json(
                     """
-
                   {
-                    "error": "This feature is not available"
+                    "detail" : "Feature 'disable-class-level-feature' is not available",
+                    "instance" : "/test/disable",
+                    "status" : 403,
+                    "title" : "Feature flag access denied",
+                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
                   }
                   """));
   }

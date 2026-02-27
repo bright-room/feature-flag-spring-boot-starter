@@ -1,10 +1,14 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.forwardedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import net.brightroom.featureflag.webmvc.configuration.FeatureFlagMvcTestAutoConfiguration;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagDisableViewController;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagEnableViewController;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagMethodLevelViewController;
+import net.brightroom.featureflag.webmvc.endpoint.NoFeatureFlagViewController;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -17,10 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @WebMvcTest(
-    properties = {
-      "feature-flags.response.type=VIEW",
-      "feature-flags.response.view.forward-to=/access-denied"
-    },
+    properties = {"feature-flags.response.type=HTML"},
     controllers = {
       NoFeatureFlagViewController.class,
       FeatureFlagEnableViewController.class,
@@ -28,7 +29,7 @@ import org.springframework.test.web.servlet.MvcResult;
       FeatureFlagMethodLevelViewController.class,
     })
 @Import(FeatureFlagMvcTestAutoConfiguration.class)
-class FeatureFlagInterceptorWebViewResponseIntegrationTest {
+class FeatureFlagInterceptorHtmlResponseIntegrationTest {
 
   MockMvc mockMvc;
 
@@ -67,14 +68,19 @@ class FeatureFlagInterceptorWebViewResponseIntegrationTest {
 
   @Test
   void shouldBlockAccess_whenFeatureIsDisabled() throws Exception {
-    mockMvc
-        .perform(get("/development-stage"))
-        .andExpect(status().isForbidden())
-        .andExpect(forwardedUrl("/access-denied"));
+    MvcResult mvcResult =
+        mockMvc.perform(get("/development-stage")).andExpect(status().isForbidden()).andReturn();
+
+    String htmlContent = mvcResult.getResponse().getContentAsString();
+    Document doc = Jsoup.parse(htmlContent);
+
+    assertEquals("Access Denied", doc.title());
+    assertEquals("403 - Access Denied", doc.select("h1").text());
+    assertEquals("Feature 'development-stage-endpoint' is not available", doc.select("p").text());
   }
 
   @Test
-  void shouldBlockAccess_whenClassLevelFeatureNoAnnotated() throws Exception {
+  void shouldAllowAccess_whenNoFeatureFlagAnnotationOnController() throws Exception {
     MvcResult mvcResult =
         mockMvc.perform(get("/test/no-annotation")).andExpect(status().isOk()).andReturn();
 
@@ -92,10 +98,15 @@ class FeatureFlagInterceptorWebViewResponseIntegrationTest {
 
   @Test
   void shouldBlockAccess_whenClassLevelFeatureIsDisabled() throws Exception {
-    mockMvc
-        .perform(get("/test/disable"))
-        .andExpect(status().isForbidden())
-        .andExpect(forwardedUrl("/access-denied"));
+    MvcResult mvcResult =
+        mockMvc.perform(get("/test/disable")).andExpect(status().isForbidden()).andReturn();
+
+    String htmlContent = mvcResult.getResponse().getContentAsString();
+    Document doc = Jsoup.parse(htmlContent);
+
+    assertEquals("Access Denied", doc.title());
+    assertEquals("403 - Access Denied", doc.select("h1").text());
+    assertEquals("Feature 'disable-class-level-feature' is not available", doc.select("p").text());
   }
 
   @Test
@@ -116,7 +127,7 @@ class FeatureFlagInterceptorWebViewResponseIntegrationTest {
   }
 
   @Autowired
-  FeatureFlagInterceptorWebViewResponseIntegrationTest(MockMvc mockMvc) {
+  FeatureFlagInterceptorHtmlResponseIntegrationTest(MockMvc mockMvc) {
     this.mockMvc = mockMvc;
   }
 }

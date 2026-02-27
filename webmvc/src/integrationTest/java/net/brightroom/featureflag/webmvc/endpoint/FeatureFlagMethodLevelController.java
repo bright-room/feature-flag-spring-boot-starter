@@ -1,11 +1,11 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc.endpoint;
 
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-class FeatureFlagMethodLevelController {
+public class FeatureFlagMethodLevelController {
 
   @GetMapping("/stable-endpoint")
   String stableEndpoint() {
@@ -24,5 +24,5 @@ class FeatureFlagMethodLevelController {
     return "Not Allowed";
   }
 
-  FeatureFlagMethodLevelController() {}
+  public FeatureFlagMethodLevelController() {}
 }

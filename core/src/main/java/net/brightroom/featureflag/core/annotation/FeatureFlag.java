@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  *
  * <p>Usage examples:
  *
- * <pre>
+ * <pre>{@code
  * // Method level
  * {@literal @}FeatureFlag(value = "new-api")
  * public void newFeature() {
@@ -24,7 +24,7 @@ import java.lang.annotation.Target;
  * public class BetaController {
  *     // All methods in this class will only be accessible if "beta-features" is enabled
  * }
- * </pre>
+ * }</pre>
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
