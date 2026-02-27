@@ -1,19 +1,17 @@
 package net.brightroom.featureflag.webmvc.configuration;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 class AccessDeniedInterceptResolutionViaHtmlResponse implements AccessDeniedInterceptResolution {
 
   @Override
-  public void resolution(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      FeatureFlagAccessDeniedException e) {
-    response.setStatus(403);
-    response.setContentType("text/html; charset=utf-8");
-
+  public ResponseEntity<?> resolution(
+      HttpServletRequest request, FeatureFlagAccessDeniedException e) {
     String escapedMessage =
         e.getMessage()
             .replace("&", "&amp;")
@@ -38,11 +36,9 @@ class AccessDeniedInterceptResolutionViaHtmlResponse implements AccessDeniedInte
         """
             .formatted(escapedMessage);
 
-    try (var writer = response.getWriter()) {
-      writer.write(html);
-    } catch (Exception ex) {
-      throw new IllegalStateException("Response write failed", ex);
-    }
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .contentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8))
+        .body(html);
   }
 
   AccessDeniedInterceptResolutionViaHtmlResponse() {}

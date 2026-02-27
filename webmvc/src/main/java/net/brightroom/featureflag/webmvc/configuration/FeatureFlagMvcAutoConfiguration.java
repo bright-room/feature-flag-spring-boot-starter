@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
-import tools.jackson.databind.json.JsonMapper;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 class FeatureFlagMvcAutoConfiguration {
@@ -16,9 +15,8 @@ class FeatureFlagMvcAutoConfiguration {
   FeatureFlagProperties featureFlagProperties;
 
   @Bean
-  AccessDeniedInterceptResolutionFactory accessDeniedInterceptResolutionFactory(
-      JsonMapper jsonMapper) {
-    return new AccessDeniedInterceptResolutionFactory(jsonMapper);
+  AccessDeniedInterceptResolutionFactory accessDeniedInterceptResolutionFactory() {
+    return new AccessDeniedInterceptResolutionFactory();
   }
 
   @Bean

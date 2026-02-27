@@ -2,11 +2,8 @@ package net.brightroom.featureflag.webmvc.configuration;
 
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.core.configuration.ResponseProperties;
-import tools.jackson.databind.json.JsonMapper;
 
 class AccessDeniedInterceptResolutionFactory {
-
-  JsonMapper jsonMapper;
 
   AccessDeniedInterceptResolution create(
       FeatureFlagProperties featureFlagProperties, boolean useRFC7807) {
@@ -16,13 +13,11 @@ class AccessDeniedInterceptResolutionFactory {
       case PLAIN_TEXT -> new AccessDeniedInterceptResolutionViaPlainTextResponse();
       case HTML -> new AccessDeniedInterceptResolutionViaHtmlResponse();
       case JSON -> {
-        if (useRFC7807) yield new AccessDeniedInterceptResolutionViaRFC7807JsonResponse(jsonMapper);
-        else yield new AccessDeniedInterceptResolutionViaJsonResponse(jsonMapper);
+        if (useRFC7807) yield new AccessDeniedInterceptResolutionViaRFC7807JsonResponse();
+        else yield new AccessDeniedInterceptResolutionViaJsonResponse();
       }
     };
   }
 
-  AccessDeniedInterceptResolutionFactory(JsonMapper jsonMapper) {
-    this.jsonMapper = jsonMapper;
-  }
+  AccessDeniedInterceptResolutionFactory() {}
 }

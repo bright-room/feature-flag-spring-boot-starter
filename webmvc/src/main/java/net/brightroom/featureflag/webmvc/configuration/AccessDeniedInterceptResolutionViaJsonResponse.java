@@ -1,36 +1,26 @@
 package net.brightroom.featureflag.webmvc.configuration;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import java.io.PrintWriter;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import tools.jackson.databind.json.JsonMapper;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 
 class AccessDeniedInterceptResolutionViaJsonResponse implements AccessDeniedInterceptResolution {
 
-  JsonMapper jsonMapper;
-
   @Override
-  public void resolution(
-      HttpServletRequest request,
-      HttpServletResponse response,
-      FeatureFlagAccessDeniedException e) {
-    response.setStatus(403);
-    response.setContentType("application/json; charset=utf-8");
+  public ResponseEntity<?> resolution(
+      HttpServletRequest request, FeatureFlagAccessDeniedException e) {
+    Map<String, String> body = new LinkedHashMap<>();
+    body.put("error", "Feature flag access denied");
+    body.put("message", e.getMessage());
 
-    Map<String, String> body =
-        Map.of("error", "Feature flag access denied", "message", e.getMessage());
-
-    try (PrintWriter writer = response.getWriter()) {
-      String json = jsonMapper.writeValueAsString(body);
-      writer.write(json);
-    } catch (Exception ex) {
-      throw new IllegalStateException("Response json conversion failed", ex);
-    }
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .contentType(MediaType.APPLICATION_JSON)
+        .body(body);
   }
 
-  AccessDeniedInterceptResolutionViaJsonResponse(JsonMapper jsonMapper) {
-    this.jsonMapper = jsonMapper;
-  }
+  AccessDeniedInterceptResolutionViaJsonResponse() {}
 }

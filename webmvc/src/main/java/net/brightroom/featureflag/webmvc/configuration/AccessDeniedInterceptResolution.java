@@ -1,8 +1,8 @@
 package net.brightroom.featureflag.webmvc.configuration;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import org.springframework.http.ResponseEntity;
 
 /**
  * Interface for handling cases where access to a feature flag protected resource is denied.
@@ -22,14 +22,13 @@ interface AccessDeniedInterceptResolution {
    * Resolves the response when access to a feature flag protected resource is denied.
    *
    * <p>This method is called by the {@link FeatureFlagInterceptor} when a request attempts to
-   * access a resource protected by a feature flag that is disabled. Implementations should handle
-   * the HTTP response appropriately, such as setting status codes, content types, and response
-   * bodies.
+   * access a resource protected by a feature flag that is disabled. Implementations return a {@link
+   * ResponseEntity} which is written through Spring's response processing pipeline, enabling
+   * content negotiation and standard message converters.
    *
    * @param request the HTTP servlet request that was denied access
-   * @param response the HTTP servlet response to be configured for the denial
    * @param e the FeatureFlagAccessDeniedException that triggered the resolution
+   * @return a ResponseEntity representing the denial response
    */
-  void resolution(
-      HttpServletRequest request, HttpServletResponse response, FeatureFlagAccessDeniedException e);
+  ResponseEntity<?> resolution(HttpServletRequest request, FeatureFlagAccessDeniedException e);
 }
