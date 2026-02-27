@@ -21,10 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @WebMvcTest(
-    properties = {
-      "feature-flags.response.type=VIEW",
-      "feature-flags.response.view.forward-to=/access-denied"
-    },
+    properties = {"feature-flags.response.type=HTML"},
     controllers = {
       NoFeatureFlagViewController.class,
       FeatureFlagEnableViewController.class,

@@ -4,7 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 
-class AccessDeniedInterceptResolutionViaViewResponse implements AccessDeniedInterceptResolution {
+class AccessDeniedInterceptResolutionViaHtmlResponse implements AccessDeniedInterceptResolution {
 
   @Override
   public void resolution(
@@ -44,5 +44,5 @@ class AccessDeniedInterceptResolutionViaViewResponse implements AccessDeniedInte
     }
   }
 
-  AccessDeniedInterceptResolutionViaViewResponse() {}
+  AccessDeniedInterceptResolutionViaHtmlResponse() {}
 }

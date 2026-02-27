@@ -14,7 +14,7 @@ class AccessDeniedInterceptResolutionFactory {
 
     return switch (responseProperties.type()) {
       case PLAIN_TEXT -> new AccessDeniedInterceptResolutionViaPlainTextResponse();
-      case VIEW -> new AccessDeniedInterceptResolutionViaViewResponse();
+      case HTML -> new AccessDeniedInterceptResolutionViaHtmlResponse();
       case JSON -> {
         if (useRFC7807) yield new AccessDeniedInterceptResolutionViaRFC7807JsonResponse(jsonMapper);
         else yield new AccessDeniedInterceptResolutionViaJsonResponse(jsonMapper);
