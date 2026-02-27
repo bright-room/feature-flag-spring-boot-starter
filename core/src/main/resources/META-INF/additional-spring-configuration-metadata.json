@@ -19,6 +19,12 @@
       "name": "feature-flags.response.type",
       "type": "net.brightroom.featureflag.core.configuration.ResponseType",
       "description": "The type of response to return."
+    },
+    {
+      "name": "feature-flags.default-enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether undefined feature flags are enabled by default. Defaults to false (fail-closed): undefined flags block access. Set to true for fail-open behavior: undefined flags allow access.",
+      "defaultValue": false
     }
   ]
 }

@@ -46,7 +46,7 @@ This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides f
 
 ### Extension Points
 
-- **Custom feature source**: Implement `FeatureFlagProvider` and register as a `@Bean`. The default `InMemoryFeatureFlagProvider` reads from `feature-flags.feature-names` in config. A custom bean replaces it due to `@ConditionalOnMissingBean`.
+- **Custom feature source**: Implement `FeatureFlagProvider` and register as a `@Bean`. The default `InMemoryFeatureFlagProvider` reads from `feature-flags.feature-names` in config and is **fail-closed by default** — feature names not present in the config are treated as disabled. Set `feature-flags.default-enabled: true` to switch to fail-open behavior. A custom bean replaces the default due to `@ConditionalOnMissingBean`.
 - **Custom denied response**: Define a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
 
 ### Auto-configuration Registration

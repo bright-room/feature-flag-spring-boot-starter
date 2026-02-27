@@ -21,7 +21,8 @@ class FeatureFlagMvcAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean(FeatureFlagProvider.class)
   FeatureFlagProvider featureFlagProvider() {
-    return new InMemoryFeatureFlagProvider(featureFlagProperties.featureNames());
+    return new InMemoryFeatureFlagProvider(
+        featureFlagProperties.featureNames(), featureFlagProperties.defaultEnabled());
   }
 
   @Bean

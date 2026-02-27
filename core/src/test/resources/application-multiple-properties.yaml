@@ -9,5 +9,6 @@ feature-flags:
   feature-names:
     f1: true
     f2: false
+  default-enabled: true
   response:
     type: PLAIN_TEXT
