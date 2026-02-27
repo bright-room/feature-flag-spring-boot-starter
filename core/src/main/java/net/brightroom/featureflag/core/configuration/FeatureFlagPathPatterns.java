@@ -22,7 +22,7 @@ public class FeatureFlagPathPatterns {
    *
    * @return true if include path patterns are not empty
    */
-  public boolean isNotEmptyIncludes() {
+  public boolean hasIncludes() {
     return !includes.isEmpty();
   }
 
@@ -31,7 +31,7 @@ public class FeatureFlagPathPatterns {
    *
    * @return true if exclude path patterns are not empty
    */
-  public boolean isNotEmptyExcludes() {
+  public boolean hasExcludes() {
     return !excludes.isEmpty();
   }
 

@@ -11,7 +11,9 @@ import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest(classes = {FeatureFlagAutoConfiguration.class})
 @TestPropertySource(
-    properties = {"spring.config.location=classpath:/application-multiple-properties.yaml"})
+    properties = {
+      "spring.config.additional-location=classpath:/application-multiple-properties.yaml"
+    })
 class FeatureFlagAutoConfigurationMultiplePropertiesTest {
 
   FeatureFlagProperties featureFlagProperties;

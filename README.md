@@ -159,7 +159,7 @@ Response body:
 
 ```json
 {
-  "type": "https://github.com/bright-room/feature-flag-spring-boot-starter",
+  "type": "https://github.com/bright-room/feature-flag-spring-boot-starter#response-types",
   "title": "Feature flag access denied",
   "detail": "Feature 'user-find' is not available",
   "status": 403,
@@ -197,12 +197,15 @@ You can create a fully custom response by defining a `@ControllerAdvice` that ha
 
 ```java
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 // CustomFeatureFlagExceptionHandler.java
 @ControllerAdvice
+@Order(0) // Ensure this handler takes priority over the library's default handler
 public class CustomFeatureFlagExceptionHandler {
 
   @ExceptionHandler(FeatureFlagAccessDeniedException.class)

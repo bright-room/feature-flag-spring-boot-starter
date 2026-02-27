@@ -6,6 +6,7 @@ import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedExceptio
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.util.HtmlUtils;
 
 /**
  * An {@link AccessDeniedInterceptResolution} implementation that returns a fixed HTML response.
@@ -24,14 +25,8 @@ class AccessDeniedInterceptResolutionViaHtmlResponse implements AccessDeniedInte
 
   @Override
   public ResponseEntity<?> resolution(
-      HttpServletRequest request, FeatureFlagAccessDeniedException e) {
-    String escapedMessage =
-        e.getMessage()
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#39;");
+      @SuppressWarnings("unused") HttpServletRequest request, FeatureFlagAccessDeniedException e) {
+    String escapedMessage = HtmlUtils.htmlEscape(e.getMessage());
 
     String html =
         """

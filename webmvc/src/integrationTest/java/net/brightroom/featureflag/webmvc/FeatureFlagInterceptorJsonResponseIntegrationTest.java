@@ -57,7 +57,7 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
                     "instance" : "/development-stage-endpoint",
                     "status" : 403,
                     "title" : "Feature flag access denied",
-                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
+                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter#response-types"
                   }
                   """));
   }
@@ -84,13 +84,13 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
                     "instance" : "/test/disable",
                     "status" : 403,
                     "title" : "Feature flag access denied",
-                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter"
+                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter#response-types"
                   }
                   """));
   }
 
   @Test
-  void shouldAllowAccess_whenNoFeatureFlagAnnotation() throws Exception {
+  void shouldAllowAccess_whenClassLevelFeatureIsEnabled() throws Exception {
     mockMvc
         .perform(get("/test/enabled"))
         .andExpect(status().isOk())

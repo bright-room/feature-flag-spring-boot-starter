@@ -10,8 +10,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @AutoConfiguration(after = FeatureFlagMvcAutoConfiguration.class)
 class FeatureFlagMvcInterceptorRegistrationAutoConfiguration implements WebMvcConfigurer {
 
-  FeatureFlagInterceptor featureFlagInterceptor;
-  FeatureFlagProperties featureFlagProperties;
+  private final FeatureFlagInterceptor featureFlagInterceptor;
+  private final FeatureFlagProperties featureFlagProperties;
 
   @Override
   public void addInterceptors(InterceptorRegistry registry) {
@@ -19,11 +19,11 @@ class FeatureFlagMvcInterceptorRegistrationAutoConfiguration implements WebMvcCo
 
     FeatureFlagPathPatterns featureFlagPathPatterns = featureFlagProperties.pathPatterns();
 
-    if (featureFlagPathPatterns.isNotEmptyIncludes()) {
+    if (featureFlagPathPatterns.hasIncludes()) {
       registration.addPathPatterns(featureFlagPathPatterns.includes());
     }
 
-    if (featureFlagPathPatterns.isNotEmptyExcludes()) {
+    if (featureFlagPathPatterns.hasExcludes()) {
       registration.excludePathPatterns(featureFlagPathPatterns.excludes());
     }
   }
