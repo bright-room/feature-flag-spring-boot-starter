@@ -11,7 +11,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 class FeatureFlagInterceptor implements HandlerInterceptor {
-  FeatureFlagProvider featureFlagProvider;
+  private final FeatureFlagProvider featureFlagProvider;
 
   @Override
   public boolean preHandle(
