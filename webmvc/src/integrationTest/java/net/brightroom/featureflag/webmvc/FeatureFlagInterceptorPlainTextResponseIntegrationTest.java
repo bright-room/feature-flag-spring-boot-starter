@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(
-    properties = {"feature-flags.response.type=PlainText"},
+    properties = {"feature-flags.response.type=PLAIN_TEXT"},
     controllers = {
       NoFeatureFlagController.class,
       FeatureFlagEnableController.class,

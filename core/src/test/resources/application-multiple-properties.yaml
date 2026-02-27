@@ -10,4 +10,4 @@ feature-flags:
     f1: true
     f2: false
   response:
-    type: plain_text
+    type: PLAIN_TEXT
