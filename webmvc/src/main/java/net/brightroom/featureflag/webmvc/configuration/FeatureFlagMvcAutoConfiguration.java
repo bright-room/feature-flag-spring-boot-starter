@@ -11,17 +11,11 @@ import org.springframework.context.annotation.Bean;
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 class FeatureFlagMvcAutoConfiguration {
 
-  FeatureFlagProperties featureFlagProperties;
+  private final FeatureFlagProperties featureFlagProperties;
 
   @Bean
-  AccessDeniedInterceptResolutionFactory accessDeniedInterceptResolutionFactory() {
-    return new AccessDeniedInterceptResolutionFactory();
-  }
-
-  @Bean
-  AccessDeniedInterceptResolution featureFlagAccessDeniedResponse(
-      AccessDeniedInterceptResolutionFactory factory) {
-    return factory.create(featureFlagProperties);
+  AccessDeniedInterceptResolution featureFlagAccessDeniedResponse() {
+    return new AccessDeniedInterceptResolutionFactory().create(featureFlagProperties);
   }
 
   @Bean
