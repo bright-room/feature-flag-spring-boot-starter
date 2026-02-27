@@ -19,11 +19,11 @@ class FeatureFlagMvcInterceptorRegistrationAutoConfiguration implements WebMvcCo
 
     FeatureFlagPathPatterns featureFlagPathPatterns = featureFlagProperties.pathPatterns();
 
-    if (featureFlagPathPatterns.isNotEmptyIncludes()) {
+    if (featureFlagPathPatterns.hasIncludes()) {
       registration.addPathPatterns(featureFlagPathPatterns.includes());
     }
 
-    if (featureFlagPathPatterns.isNotEmptyExcludes()) {
+    if (featureFlagPathPatterns.hasExcludes()) {
       registration.excludePathPatterns(featureFlagPathPatterns.excludes());
     }
   }
