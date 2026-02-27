@@ -14,7 +14,7 @@ class FeatureFlagMvcInterceptorRegistrationAutoConfiguration {
   FeatureFlagMvcInterceptorRegistrationAutoConfiguration() {}
 
   @Configuration(proxyBeanMethods = false)
-  static class MvcConfigurer implements WebMvcConfigurer {
+  static class FeatureFlagMvcInterceptorRegistrationConfiguration implements WebMvcConfigurer {
 
     private final FeatureFlagInterceptor featureFlagInterceptor;
     private final FeatureFlagProperties featureFlagProperties;
@@ -34,7 +34,7 @@ class FeatureFlagMvcInterceptorRegistrationAutoConfiguration {
       }
     }
 
-    MvcConfigurer(
+    FeatureFlagMvcInterceptorRegistrationConfiguration(
         FeatureFlagInterceptor featureFlagInterceptor,
         FeatureFlagProperties featureFlagProperties) {
       this.featureFlagInterceptor = featureFlagInterceptor;
