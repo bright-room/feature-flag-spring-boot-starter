@@ -159,7 +159,7 @@ Response body:
 
 ```json
 {
-  "type": "https://github.com/bright-room/feature-flag-spring-boot-starter",
+  "type": "https://github.com/bright-room/feature-flag-spring-boot-starter#response-types",
   "title": "Feature flag access denied",
   "detail": "Feature 'user-find' is not available",
   "status": 403,

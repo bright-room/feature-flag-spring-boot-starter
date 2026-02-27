@@ -15,7 +15,8 @@ class AccessDeniedInterceptResolutionViaJsonResponse implements AccessDeniedInte
       HttpServletRequest request, FeatureFlagAccessDeniedException e) {
     ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
     problemDetail.setType(
-        URI.create("https://github.com/bright-room/feature-flag-spring-boot-starter"));
+        URI.create(
+            "https://github.com/bright-room/feature-flag-spring-boot-starter#response-types"));
     problemDetail.setTitle("Feature flag access denied");
     problemDetail.setDetail(e.getMessage());
     problemDetail.setInstance(URI.create(request.getRequestURI()));
