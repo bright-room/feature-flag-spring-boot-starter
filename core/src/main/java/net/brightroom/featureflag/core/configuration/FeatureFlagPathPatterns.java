@@ -12,10 +12,10 @@ import java.util.List;
 public class FeatureFlagPathPatterns {
 
   /** The list of path patterns to include. */
-  List<String> includes = new ArrayList<>();
+  private List<String> includes = new ArrayList<>();
 
   /** The list of path patterns to exclude. */
-  List<String> excludes = new ArrayList<>();
+  private List<String> excludes = new ArrayList<>();
 
   /**
    * Returns whether the include path patterns are not empty.
@@ -36,21 +36,21 @@ public class FeatureFlagPathPatterns {
   }
 
   /**
-   * Returns the list of include path patterns.
+   * Returns an unmodifiable copy of the include path patterns.
    *
    * @return the list of include path patterns
    */
   public List<String> includes() {
-    return includes;
+    return List.copyOf(includes);
   }
 
   /**
-   * Returns the list of exclude path patterns.
+   * Returns an unmodifiable copy of the exclude path patterns.
    *
    * @return the list of exclude path patterns
    */
   public List<String> excludes() {
-    return excludes;
+    return List.copyOf(excludes);
   }
 
   void setIncludes(List<String> includes) {
