@@ -3,12 +3,12 @@
     {
       "name": "feature-flags.path-patterns.includes",
       "type": "java.util.List<java.lang.String>",
-      "description": "List of regular expressions for feature flag files to include."
+      "description": "List of Ant-style path patterns for request paths to include in feature flag checks."
     },
     {
       "name": "feature-flags.path-patterns.excludes",
       "type": "java.util.List<java.lang.String>",
-      "description": "List of regular expressions for feature flag files to exclude."
+      "description": "List of Ant-style path patterns for request paths to exclude from feature flag checks."
     },
     {
       "name": "feature-flags.feature-names",
