@@ -17,15 +17,18 @@ val integrationTestRuntimeOnly by configurations.getting {
     extendsFrom(configurations.testRuntimeOnly.get())
 }
 
-tasks.register<Test>("integrationTest") {
-    description = "Runs integration tests."
-    group = "verification"
-    testClassesDirs = sourceSets["integrationTest"].output.classesDirs
-    classpath = sourceSets["integrationTest"].runtimeClasspath
-    useJUnitPlatform()
-    shouldRunAfter(tasks.test)
-}
+tasks {
+    val integrationTest =
+        register<Test>("integrationTest") {
+            description = "Runs integration tests."
+            group = "verification"
+            testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+            classpath = sourceSets["integrationTest"].runtimeClasspath
+            useJUnitPlatform()
+            shouldRunAfter(test)
+        }
 
-tasks.check {
-    dependsOn(tasks.named("integrationTest"))
+    check {
+        dependsOn(integrationTest)
+    }
 }
