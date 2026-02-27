@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.webmvc.configuration.FeatureFlagMvcTestAutoConfiguration;
 import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagDisableController;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagMethodLevelController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -17,7 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-@WebMvcTest(controllers = {FeatureFlagDisableController.class})
+@WebMvcTest(controllers = {FeatureFlagDisableController.class, FeatureFlagMethodLevelController.class})
 @Import({
   FeatureFlagMvcTestAutoConfiguration.class,
   FeatureFlagInterceptorCustomExceptionHandlerIntegrationTest.CustomExceptionHandler.class
@@ -42,6 +43,14 @@ class FeatureFlagInterceptorCustomExceptionHandlerIntegrationTest {
         .perform(get("/test/disable"))
         .andExpect(status().isServiceUnavailable())
         .andExpect(content().string("custom: disable-class-level-feature"));
+  }
+
+  @Test
+  void customHandlerTakesPriority_whenMethodLevelFeatureIsDisabled() throws Exception {
+    mockMvc
+        .perform(get("/development-stage-endpoint"))
+        .andExpect(status().isServiceUnavailable())
+        .andExpect(content().string("custom: development-stage-endpoint"));
   }
 
   @Autowired
