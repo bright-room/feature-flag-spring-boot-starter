@@ -8,17 +8,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build all modules
 ./gradlew build
 
-# Run all tests
-./gradlew test
-
-# Run tests for a specific module
+# Run unit tests for a specific module
 ./gradlew :core:test
 ./gradlew :webmvc:test
 
-# Run a single test class
-./gradlew :webmvc:test --tests "net.brightroom.featureflag.webmvc.configuration.FeatureFlagInterceptorJsonResponseIntegrationTest"
+# Run integration tests for a specific module
+./gradlew :webmvc:integrationTest
 
-# Check code formatting (runs Spotless + tests)
+# Run a single integration test class
+./gradlew :webmvc:integrationTest --tests "net.brightroom.featureflag.webmvc.FeatureFlagInterceptorJsonResponseIntegrationTest"
+
+# Run all checks (Spotless + unit tests + integration tests)
 ./gradlew check
 
 # Apply Google Java Format
@@ -41,11 +41,12 @@ This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides f
 
 1. `FeatureFlagMvcInterceptorRegistrationAutoConfiguration` registers `FeatureFlagInterceptor` with include/exclude path patterns.
 2. `FeatureFlagInterceptor.preHandle()` checks `@FeatureFlag` on the method first, then on the class. Method-level annotation takes priority.
-3. If the feature is disabled, `AccessDeniedInterceptResolution.resolution()` writes the response and returns `false` to abort the request.
+3. If the feature is disabled, `FeatureFlagAccessDeniedException` is thrown.
+4. `FeatureFlagExceptionHandler` (`@ControllerAdvice`, `@Order(Ordered.LOWEST_PRECEDENCE)`) catches the exception and delegates to `AccessDeniedInterceptResolution.resolution()` to write the response.
 
 ### Extension Points
 
-- **Custom feature source**: Implement `FeatureFlagProvider` and register as a `@Bean`. The default `InMemoryFeatureFlagProvider` reads from `feature-flags.features` in config. A custom bean replaces it due to `@ConditionalOnMissingBean`.
+- **Custom feature source**: Implement `FeatureFlagProvider` and register as a `@Bean`. The default `InMemoryFeatureFlagProvider` reads from `feature-flags.feature-names` in config. A custom bean replaces it due to `@ConditionalOnMissingBean`.
 - **Custom denied response**: Define a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
 
 ### Auto-configuration Registration
