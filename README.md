@@ -33,7 +33,7 @@ See the [release notes](https://github.com/bright-room/feature-flag-spring-boot-
 ```groovy
 dependencies {
     implementation 'net.bright-room.feature-flag-spring-boot-starter:core:${version}'
-    
+
     // Using Spring boot starter webmvc
     implementation 'net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}'
 }
@@ -43,7 +43,7 @@ dependencies {
 ```kotlin
 dependencies {
     implementation("net.bright-room.feature-flag-spring-boot-starter:core:${version}")
-    
+
     // Using Spring boot starter webmvc
     implementation("net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}")
 }
@@ -59,25 +59,21 @@ By default, it is available by defining the functions you want to manage in the 
 
 ```yaml
 feature-flags:
-  include-path-pattern:
-    - "/api/v2/**"
-  exclude-path-pattern:
-    - "/api/v2/foo"
-    - "/api/v2/bar"
-    - "/api/v1/**"
-  features:
+  path-patterns:
+    includes:
+      - "/api/v2/**"
+    excludes:
+      - "/api/v2/foo"
+      - "/api/v2/bar"
+      - "/api/v1/**"
+  feature-names:
     hello-class: true
     user-find: false
   response:
-    status-code: 405
-#    type: PLAIN_TEXT
-#    message: "This feature is disabled."
-    type: JSON
-    body:
-      error: "Feature flag is disabled"
+    type: JSON  # PLAIN_TEXT | JSON | HTML (default: JSON)
 ```
 
-Add the @FeatureFlag annotation to the class or method that will be the endpoint.
+Add the `@FeatureFlag` annotation to the class or method that will be the endpoint.
 
 ```java
 
@@ -90,8 +86,6 @@ class HelloController {
   String hello() {
     return "Hello world!!";
   }
-
-  HelloController() {}
 }
 
 // UserController.java
@@ -118,7 +112,7 @@ By default, function management can be set in the configuration file, but it is 
 
 By changing the source of function management to a database, external file, etc., it is possible to control in real time.
 
-To change the source destination, simply implement the FeatureFlagProvider and register the bean.
+To change the source destination, simply implement the `FeatureFlagProvider` and register the bean.
 
 ```java
 
@@ -149,17 +143,28 @@ interface FeatureManagementMapper {
 
 ## Response Types
 
-The library provides three default response types:
+When a feature flag is disabled, `FeatureFlagAccessDeniedException` is thrown and the response is returned with HTTP status `403 Forbidden`. The response format is selected by `feature-flags.response.type`.
 
-### JSON Response
+### JSON Response (default)
+
+JSON responses follow the [RFC 7807 Problem Details](https://www.rfc-editor.org/rfc/rfc7807) format.
 
 ```yaml
 feature-flags:
   response:
-    status-code: 405
     type: JSON
-    body:
-      error: "Feature flag is disabled"
+```
+
+Response body:
+
+```json
+{
+  "type": "https://github.com/bright-room/feature-flag-spring-boot-starter",
+  "title": "Feature flag access denied",
+  "detail": "Feature 'user-find' is not available",
+  "status": 403,
+  "instance": "/api/v2/find"
+}
 ```
 
 ### Plain Text Response
@@ -167,65 +172,44 @@ feature-flags:
 ```yaml
 feature-flags:
   response:
-    status-code: 405
     type: PLAIN_TEXT
-    message: "This feature is disabled."
 ```
 
-### View Response
+Response body:
+
+```
+Feature 'user-find' is not available
+```
+
+### HTML Response
 
 ```yaml
 feature-flags:
   response:
-    status-code: 405
-    type: VIEW
-    view:
-      forward-to: "/access-denied"
-      attributes:
-        message: "Feature flag is disabled"
+    type: HTML
 ```
 
-### RFC 7807 Problem Details Support
-
-When `spring.mvc.problemdetails.enabled=true` is set, JSON responses will follow the RFC 7807 format:
-
-```yaml
-spring:
-  mvc:
-    problemdetails:
-      enabled: true
-
-feature-flags:
-  response:
-    status-code: 405
-    type: JSON
-    body:
-      error: "Feature flag is disabled"
-```
+> **Note:** The HTML response is returned only when the client's `Accept` header includes `text/html` or `text/*`. If the client only accepts `application/json`, a `406 Not Acceptable` response is returned instead.
 
 ## Custom Access Denied Response
 
-You can create a custom response by implementing the `AccessDeniedInterceptResolution` interface and registering it as a bean:
+You can create a fully custom response by defining a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
 
 ```java
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import net.brightroom.featureflag.webmvc.configuration.AccessDeniedInterceptResolution;
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 
-// CustomAccessDeniedResponse.java
-@Component
-public class CustomAccessDeniedResponse implements AccessDeniedInterceptResolution {
+// CustomFeatureFlagExceptionHandler.java
+@ControllerAdvice
+public class CustomFeatureFlagExceptionHandler {
 
-  @Override
-  public void resolution(HttpServletRequest request, HttpServletResponse response) {
-    response.setStatus(403);
-    response.setContentType("application/xml; charset=utf-8");
-
-    try (PrintWriter writer = response.getWriter()) {
-      writer.write("<error><message>Feature flag is disabled</message></error>");
-    } catch (Exception e) {
-      throw new IllegalStateException("Response conversion failed", e);
-    }
+  @ExceptionHandler(FeatureFlagAccessDeniedException.class)
+  public ResponseEntity<String> handle(FeatureFlagAccessDeniedException e) {
+    return ResponseEntity.status(403)
+        .contentType(MediaType.TEXT_PLAIN)
+        .body("Feature '" + e.featureName() + "' is disabled.");
   }
 }
 ```
