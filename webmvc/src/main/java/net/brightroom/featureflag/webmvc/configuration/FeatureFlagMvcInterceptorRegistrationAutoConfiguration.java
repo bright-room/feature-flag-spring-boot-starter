@@ -3,34 +3,42 @@ package net.brightroom.featureflag.webmvc.configuration;
 import net.brightroom.featureflag.core.configuration.FeatureFlagPathPatterns;
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @AutoConfiguration(after = FeatureFlagMvcAutoConfiguration.class)
-class FeatureFlagMvcInterceptorRegistrationAutoConfiguration implements WebMvcConfigurer {
+class FeatureFlagMvcInterceptorRegistrationAutoConfiguration {
 
-  private final FeatureFlagInterceptor featureFlagInterceptor;
-  private final FeatureFlagProperties featureFlagProperties;
+  FeatureFlagMvcInterceptorRegistrationAutoConfiguration() {}
 
-  @Override
-  public void addInterceptors(InterceptorRegistry registry) {
-    InterceptorRegistration registration = registry.addInterceptor(featureFlagInterceptor);
+  @Configuration(proxyBeanMethods = false)
+  static class MvcConfigurer implements WebMvcConfigurer {
 
-    FeatureFlagPathPatterns featureFlagPathPatterns = featureFlagProperties.pathPatterns();
+    private final FeatureFlagInterceptor featureFlagInterceptor;
+    private final FeatureFlagProperties featureFlagProperties;
 
-    if (featureFlagPathPatterns.hasIncludes()) {
-      registration.addPathPatterns(featureFlagPathPatterns.includes());
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+      InterceptorRegistration registration = registry.addInterceptor(featureFlagInterceptor);
+
+      FeatureFlagPathPatterns featureFlagPathPatterns = featureFlagProperties.pathPatterns();
+
+      if (featureFlagPathPatterns.hasIncludes()) {
+        registration.addPathPatterns(featureFlagPathPatterns.includes());
+      }
+
+      if (featureFlagPathPatterns.hasExcludes()) {
+        registration.excludePathPatterns(featureFlagPathPatterns.excludes());
+      }
     }
 
-    if (featureFlagPathPatterns.hasExcludes()) {
-      registration.excludePathPatterns(featureFlagPathPatterns.excludes());
+    MvcConfigurer(
+        FeatureFlagInterceptor featureFlagInterceptor,
+        FeatureFlagProperties featureFlagProperties) {
+      this.featureFlagInterceptor = featureFlagInterceptor;
+      this.featureFlagProperties = featureFlagProperties;
     }
-  }
-
-  FeatureFlagMvcInterceptorRegistrationAutoConfiguration(
-      FeatureFlagInterceptor featureFlagInterceptor, FeatureFlagProperties featureFlagProperties) {
-    this.featureFlagInterceptor = featureFlagInterceptor;
-    this.featureFlagProperties = featureFlagProperties;
   }
 }
