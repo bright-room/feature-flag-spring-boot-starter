@@ -46,7 +46,7 @@ public class FeatureFlagProperties {
    * @return the map of features
    */
   public Map<String, Boolean> featureNames() {
-    return featureNames;
+    return Map.copyOf(featureNames);
   }
 
   /**
