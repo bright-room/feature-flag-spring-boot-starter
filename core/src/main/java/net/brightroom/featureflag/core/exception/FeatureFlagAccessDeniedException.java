@@ -8,7 +8,9 @@ package net.brightroom.featureflag.core.exception;
  */
 public class FeatureFlagAccessDeniedException extends RuntimeException {
 
-  String featureName;
+  private static final long serialVersionUID = 1L;
+
+  private final String featureName;
 
   /**
    * Constructor.
