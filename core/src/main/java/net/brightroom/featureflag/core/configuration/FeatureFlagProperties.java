@@ -1,7 +1,7 @@
 package net.brightroom.featureflag.core.configuration;
 
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -27,9 +27,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "feature-flags")
 public class FeatureFlagProperties {
 
-  FeatureFlagPathPatterns pathPatterns = new FeatureFlagPathPatterns();
-  Map<String, Boolean> featureNames = new ConcurrentHashMap<>();
-  ResponseProperties response = new ResponseProperties();
+  private FeatureFlagPathPatterns pathPatterns = new FeatureFlagPathPatterns();
+  private Map<String, Boolean> featureNames = new HashMap<>();
+  private ResponseProperties response = new ResponseProperties();
 
   /**
    * Returns the path patterns for feature flag interceptor registration.
