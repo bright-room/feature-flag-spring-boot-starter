@@ -36,7 +36,11 @@ public @interface FeatureFlag {
    * identifier of the feature flag that determines whether the annotated method or class is
    * accessible or enabled.
    *
-   * @return the identifier of the feature flag, defaulting to an empty string if not specified
+   * <p><b>Important:</b> An empty string value is not permitted. If {@code @FeatureFlag} is applied
+   * without a value (i.e., {@code value} is left as the default empty string), an {@link
+   * IllegalStateException} will be thrown at request time by the interceptor.
+   *
+   * @return the identifier of the feature flag; must be a non-empty string
    */
   String value() default "";
 }

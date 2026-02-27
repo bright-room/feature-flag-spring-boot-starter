@@ -23,16 +23,26 @@ class FeatureFlagInterceptor implements HandlerInterceptor {
     }
 
     FeatureFlag methodAnnotation = handlerMethod.getMethodAnnotation(FeatureFlag.class);
+    validateAnnotation(methodAnnotation);
     if (checkFeatureFlag(methodAnnotation)) {
       throw new FeatureFlagAccessDeniedException(methodAnnotation.value());
     }
 
     FeatureFlag classAnnotation = handlerMethod.getBeanType().getAnnotation(FeatureFlag.class);
+    validateAnnotation(classAnnotation);
     if (checkFeatureFlag(classAnnotation)) {
       throw new FeatureFlagAccessDeniedException(classAnnotation.value());
     }
 
     return true;
+  }
+
+  private void validateAnnotation(FeatureFlag annotation) {
+    if (annotation != null && annotation.value().isEmpty()) {
+      throw new IllegalStateException(
+          "@FeatureFlag must specify a non-empty value. "
+              + "An empty value causes fail-open behavior and allows access unconditionally.");
+    }
   }
 
   private boolean checkFeatureFlag(FeatureFlag annotation) {
