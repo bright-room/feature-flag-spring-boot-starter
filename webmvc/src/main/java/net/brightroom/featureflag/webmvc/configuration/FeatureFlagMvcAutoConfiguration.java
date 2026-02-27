@@ -22,7 +22,6 @@ class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
-  @ConditionalOnMissingBean(AccessDeniedInterceptResolution.class)
   AccessDeniedInterceptResolution featureFlagAccessDeniedResponse(
       AccessDeniedInterceptResolutionFactory factory,
       @Value("${spring.mvc.problemdetails.enabled:false}") boolean useRFC7807) {
