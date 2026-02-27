@@ -12,7 +12,7 @@ class AccessDeniedInterceptResolutionViaPlainTextResponse
 
   @Override
   public ResponseEntity<?> resolution(
-      HttpServletRequest request, FeatureFlagAccessDeniedException e) {
+      @SuppressWarnings("unused") HttpServletRequest request, FeatureFlagAccessDeniedException e) {
     return ResponseEntity.status(HttpStatus.FORBIDDEN)
         .contentType(new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8))
         .body(e.getMessage());
