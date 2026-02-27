@@ -12,17 +12,16 @@ import org.springframework.http.ResponseEntity;
  * Implementations of this interface are used in conjunction with the {@link FeatureFlagInterceptor}
  * to provide customized responses for denied access scenarios.
  *
- * <p>Implementations of this interface can define various resolutions such as returning JSON
- * responses, redirecting to a specific view, providing RFC 7807-compliant error responses, or plain
- * text messages, depending on the application's requirements.
+ * <p>Implementations of this interface can define various resolutions such as returning JSON,
+ * plain text, or HTML responses, depending on the application's requirements.
  */
 interface AccessDeniedInterceptResolution {
 
   /**
    * Resolves the response when access to a feature flag protected resource is denied.
    *
-   * <p>This method is called by the {@link FeatureFlagInterceptor} when a request attempts to
-   * access a resource protected by a feature flag that is disabled. Implementations return a {@link
+   * <p>This method is called by {@link FeatureFlagExceptionHandler} when {@link
+   * FeatureFlagAccessDeniedException} is thrown by the interceptor. Implementations return a {@link
    * ResponseEntity} which is written through Spring's response processing pipeline, enabling
    * content negotiation and standard message converters.
    *
