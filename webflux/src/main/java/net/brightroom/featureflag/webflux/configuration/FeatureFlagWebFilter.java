@@ -44,14 +44,15 @@ class FeatureFlagWebFilter implements WebFilter {
     validateAnnotation(annotation);
     return reactiveFeatureFlagProvider
         .isFeatureEnabled(annotation.value())
-        .flatMap(
-            enabled -> {
-              if (enabled) {
-                return chain.filter(exchange);
-              }
-              return resolution.resolve(
-                  exchange, new FeatureFlagAccessDeniedException(annotation.value()));
-            });
+        .flatMap(enabled -> filterByFeatureEnabled(exchange, chain, annotation, enabled));
+  }
+
+  private Mono<Void> filterByFeatureEnabled(
+      ServerWebExchange exchange, WebFilterChain chain, FeatureFlag annotation, boolean enabled) {
+    if (enabled) {
+      return chain.filter(exchange);
+    }
+    return resolution.resolve(exchange, new FeatureFlagAccessDeniedException(annotation.value()));
   }
 
   @Nullable
