@@ -30,7 +30,8 @@ class FeatureFlagAspect {
     validateAnnotation(annotation);
 
     String featureName = annotation.value();
-    Mono<Boolean> enabledMono = reactiveFeatureFlagProvider.isFeatureEnabled(featureName);
+    Mono<Boolean> enabledMono =
+        reactiveFeatureFlagProvider.isFeatureEnabled(featureName).defaultIfEmpty(false);
 
     Class<?> returnType = ((MethodSignature) joinPoint.getSignature()).getReturnType();
 

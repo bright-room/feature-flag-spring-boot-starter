@@ -38,19 +38,20 @@ public class FeatureFlagHandlerFilterFunction {
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
    *
-   * @param featureName the name of the feature flag to check; must not be empty
+   * @param featureName the name of the feature flag to check; must not be null or empty
    * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag
-   * @throws IllegalArgumentException if {@code featureName} is empty
+   * @throws IllegalArgumentException if {@code featureName} is null or empty
    */
   public HandlerFilterFunction<ServerResponse, ServerResponse> of(String featureName) {
-    if (featureName.isEmpty()) {
+    if (featureName == null || featureName.isEmpty()) {
       throw new IllegalArgumentException(
-          "featureName must not be empty. "
+          "featureName must not be null or empty. "
               + "An empty value causes fail-open behavior and allows access unconditionally.");
     }
     return (request, next) ->
         reactiveFeatureFlagProvider
             .isFeatureEnabled(featureName)
+            .defaultIfEmpty(false)
             .flatMap(enabled -> filterByFeatureEnabled(request, next, featureName, enabled));
   }
 

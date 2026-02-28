@@ -4,6 +4,8 @@ import net.brightroom.featureflag.core.configuration.FeatureFlagAutoConfiguratio
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.webflux.provider.InMemoryReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +14,9 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 class FeatureFlagWebFluxAutoConfiguration {
+
+  private static final Logger log =
+      LoggerFactory.getLogger(FeatureFlagWebFluxAutoConfiguration.class);
 
   private final FeatureFlagProperties featureFlagProperties;
 
@@ -54,5 +59,13 @@ class FeatureFlagWebFluxAutoConfiguration {
 
   FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
     this.featureFlagProperties = featureFlagProperties;
+    if (featureFlagProperties.pathPatterns().hasIncludes()
+        || featureFlagProperties.pathPatterns().hasExcludes()) {
+      log.warn(
+          "The 'feature-flags.path-patterns' configuration is set but is not supported by the "
+              + "webflux module. Path-based filtering is not applicable because AOP aspects target "
+              + "@FeatureFlag-annotated methods directly. "
+              + "Consider removing this configuration to avoid confusion.");
+    }
   }
 }
