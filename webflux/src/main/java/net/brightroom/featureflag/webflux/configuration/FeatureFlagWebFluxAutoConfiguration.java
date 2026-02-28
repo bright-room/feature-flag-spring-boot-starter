@@ -37,6 +37,12 @@ public class FeatureFlagWebFluxAutoConfiguration {
         requestMappingHandlerMapping, reactiveFeatureFlagProvider, accessDeniedReactiveResolution);
   }
 
+  @Bean
+  FeatureFlagHandlerFilterFunction featureFlagHandlerFilterFunction(
+      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider) {
+    return new FeatureFlagHandlerFilterFunction(reactiveFeatureFlagProvider, featureFlagProperties);
+  }
+
   FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
     this.featureFlagProperties = featureFlagProperties;
   }
