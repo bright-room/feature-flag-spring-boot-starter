@@ -17,7 +17,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
     properties = {"feature-flags.default-enabled=false"},
     controllers = FeatureFlagUndefinedFlagController.class)
 @Import(FeatureFlagWebFluxTestAutoConfiguration.class)
-class FeatureFlagWebFilterFailClosedIntegrationTest {
+class FeatureFlagAspectFailClosedIntegrationTest {
 
   WebTestClient webTestClient;
 
@@ -43,7 +43,7 @@ class FeatureFlagWebFilterFailClosedIntegrationTest {
   }
 
   @Autowired
-  FeatureFlagWebFilterFailClosedIntegrationTest(WebTestClient webTestClient) {
+  FeatureFlagAspectFailClosedIntegrationTest(WebTestClient webTestClient) {
     this.webTestClient = webTestClient;
   }
 }

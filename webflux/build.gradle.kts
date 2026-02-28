@@ -10,6 +10,7 @@ description = "Library to integrate Spring Reactive and Feature flags."
 dependencies {
     implementation(project(":core"))
     implementation(libs.spring.boot.starter.webflux)
+    implementation("org.springframework.boot:spring-boot-starter-aspectj")
 
     testImplementation(libs.spring.boot.starter.webflux.test)
 

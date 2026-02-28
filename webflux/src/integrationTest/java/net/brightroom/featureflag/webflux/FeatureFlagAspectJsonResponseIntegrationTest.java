@@ -19,7 +19,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
       FeatureFlagMethodLevelController.class,
     })
 @Import(FeatureFlagWebFluxTestAutoConfiguration.class)
-class FeatureFlagWebFilterJsonResponseIntegrationTest {
+class FeatureFlagAspectJsonResponseIntegrationTest {
 
   WebTestClient webTestClient;
 
@@ -126,7 +126,7 @@ class FeatureFlagWebFilterJsonResponseIntegrationTest {
   }
 
   @Autowired
-  FeatureFlagWebFilterJsonResponseIntegrationTest(WebTestClient webTestClient) {
+  FeatureFlagAspectJsonResponseIntegrationTest(WebTestClient webTestClient) {
     this.webTestClient = webTestClient;
   }
 }

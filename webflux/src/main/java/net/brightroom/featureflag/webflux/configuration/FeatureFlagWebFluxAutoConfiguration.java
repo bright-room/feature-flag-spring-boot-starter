@@ -7,10 +7,10 @@ import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.codec.ServerCodecConfigurer;
-import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping;
+import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
+@EnableAspectJAutoProxy(proxyTargetClass = true)
 class FeatureFlagWebFluxAutoConfiguration {
 
   private final FeatureFlagProperties featureFlagProperties;
@@ -23,20 +23,19 @@ class FeatureFlagWebFluxAutoConfiguration {
   }
 
   @Bean
-  @ConditionalOnMissingBean(AccessDeniedWebFilterResolution.class)
-  AccessDeniedWebFilterResolution accessDeniedReactiveResolution(
-      ServerCodecConfigurer codecConfigurer) {
-    return new AccessDeniedWebFilterResolutionFactory(codecConfigurer)
-        .create(featureFlagProperties);
+  AccessDeniedExceptionHandlerResolution accessDeniedExceptionHandlerResolution() {
+    return new AccessDeniedExceptionHandlerResolutionFactory().create(featureFlagProperties);
   }
 
   @Bean
-  FeatureFlagWebFilter featureFlagWebFilter(
-      RequestMappingHandlerMapping requestMappingHandlerMapping,
-      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      AccessDeniedWebFilterResolution accessDeniedReactiveResolution) {
-    return new FeatureFlagWebFilter(
-        requestMappingHandlerMapping, reactiveFeatureFlagProvider, accessDeniedReactiveResolution);
+  FeatureFlagExceptionHandler featureFlagExceptionHandler(
+      AccessDeniedExceptionHandlerResolution accessDeniedExceptionHandlerResolution) {
+    return new FeatureFlagExceptionHandler(accessDeniedExceptionHandlerResolution);
+  }
+
+  @Bean
+  FeatureFlagAspect featureFlagAspect(ReactiveFeatureFlagProvider reactiveFeatureFlagProvider) {
+    return new FeatureFlagAspect(reactiveFeatureFlagProvider);
   }
 
   @Bean
