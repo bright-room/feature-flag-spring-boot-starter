@@ -7,7 +7,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.util.HtmlUtils;
 import reactor.core.publisher.Mono;
 
 class AccessDeniedWebFilterResolutionViaHtmlResponse implements AccessDeniedWebFilterResolution {
@@ -20,28 +19,10 @@ class AccessDeniedWebFilterResolutionViaHtmlResponse implements AccessDeniedWebF
         .getHeaders()
         .setContentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8));
 
-    String html = buildHtml(e);
+    String html = HtmlResponseBuilder.buildHtml(e);
     byte[] body = html.getBytes(StandardCharsets.UTF_8);
     DataBuffer buffer = response.bufferFactory().wrap(body);
     return response.writeWith(Mono.just(buffer));
-  }
-
-  private String buildHtml(FeatureFlagAccessDeniedException e) {
-    String escapedMessage = HtmlUtils.htmlEscape(e.getMessage());
-    return """
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <title>Access Denied</title>
-        </head>
-        <body>
-          <h1>403 - Access Denied</h1>
-          <p>%s</p>
-        </body>
-        </html>
-        """
-        .formatted(escapedMessage);
   }
 
   AccessDeniedWebFilterResolutionViaHtmlResponse() {}

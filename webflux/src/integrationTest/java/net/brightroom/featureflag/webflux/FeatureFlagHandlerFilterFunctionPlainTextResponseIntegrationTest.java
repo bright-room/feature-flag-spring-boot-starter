@@ -51,7 +51,7 @@ class FeatureFlagHandlerFilterFunctionPlainTextResponseIntegrationTest {
   }
 
   @Test
-  void shouldBlockAccess_whenFlagIsDisabled() {
+  void shouldBlockAccess_whenClassLevelFeatureIsDisabled() {
     webTestClient
         .get()
         .uri("/functional/test/disable")
@@ -63,7 +63,7 @@ class FeatureFlagHandlerFilterFunctionPlainTextResponseIntegrationTest {
   }
 
   @Test
-  void shouldAllowAccess_whenFlagIsEnabled() {
+  void shouldAllowAccess_whenClassLevelFeatureIsEnabled() {
     webTestClient
         .get()
         .uri("/functional/test/enabled")

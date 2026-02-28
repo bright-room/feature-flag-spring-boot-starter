@@ -7,8 +7,8 @@ import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping;
-import tools.jackson.databind.json.JsonMapper;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 class FeatureFlagWebFluxAutoConfiguration {
@@ -24,8 +24,10 @@ class FeatureFlagWebFluxAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(AccessDeniedWebFilterResolution.class)
-  AccessDeniedWebFilterResolution accessDeniedReactiveResolution(JsonMapper objectMapper) {
-    return new AccessDeniedWebFilterResolutionFactory(objectMapper).create(featureFlagProperties);
+  AccessDeniedWebFilterResolution accessDeniedReactiveResolution(
+      ServerCodecConfigurer codecConfigurer) {
+    return new AccessDeniedWebFilterResolutionFactory(codecConfigurer)
+        .create(featureFlagProperties);
   }
 
   @Bean

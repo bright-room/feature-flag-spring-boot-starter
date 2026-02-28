@@ -62,7 +62,7 @@ class FeatureFlagHandlerFilterFunctionHtmlResponseIntegrationTest {
   }
 
   @Test
-  void shouldBlockAccess_whenFlagIsDisabled() {
+  void shouldBlockAccess_whenClassLevelFeatureIsDisabled() {
     String html =
         webTestClient
             .get()
@@ -81,7 +81,7 @@ class FeatureFlagHandlerFilterFunctionHtmlResponseIntegrationTest {
   }
 
   @Test
-  void shouldAllowAccess_whenFlagIsEnabled() {
+  void shouldAllowAccess_whenClassLevelFeatureIsEnabled() {
     webTestClient
         .get()
         .uri("/functional/test/enabled")

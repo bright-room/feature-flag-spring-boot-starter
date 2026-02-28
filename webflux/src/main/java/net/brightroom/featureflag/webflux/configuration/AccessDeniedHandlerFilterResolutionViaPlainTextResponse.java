@@ -11,9 +11,13 @@ import reactor.core.publisher.Mono;
 class AccessDeniedHandlerFilterResolutionViaPlainTextResponse
     implements AccessDeniedHandlerFilterResolution {
 
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note: the {@code request} parameter is not used in this implementation.
+   */
   @Override
-  public Mono<ServerResponse> resolve(
-      @SuppressWarnings("unused") ServerRequest request, FeatureFlagAccessDeniedException e) {
+  public Mono<ServerResponse> resolve(ServerRequest request, FeatureFlagAccessDeniedException e) {
     return ServerResponse.status(HttpStatus.FORBIDDEN)
         .contentType(new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8))
         .bodyValue(e.getMessage());

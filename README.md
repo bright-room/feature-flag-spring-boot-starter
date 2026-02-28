@@ -6,7 +6,7 @@ Library for integrating feature flag functionality into Spring MVC and Spring We
 
 - Feature Flag functions can be realized with minimal configuration.
 - The source destination for feature management can be easily changed.
-- Supports both MVC and FebFlux.
+- Supports both MVC and WebFlux.
 
 ## Installation
 
@@ -209,9 +209,11 @@ feature-flags:
     type: HTML
 ```
 
-> **Note:** The HTML response is returned only when the client's `Accept` header includes `text/html` or `text/*`. If the client only accepts `application/json`, a `406 Not Acceptable` response is returned instead.
+> **Note (Spring MVC only):** The HTML response is returned only when the client's `Accept` header includes `text/html` or `text/*`. If the client only accepts `application/json`, a `406 Not Acceptable` response is returned instead. In Spring WebFlux, the HTML response is always returned regardless of the `Accept` header.
 
 ## Custom Access Denied Response
+
+### Spring MVC
 
 You can create a fully custom response by defining a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
 
@@ -233,6 +235,64 @@ public class CustomFeatureFlagExceptionHandler {
     return ResponseEntity.status(403)
         .contentType(MediaType.TEXT_PLAIN)
         .body("Feature '" + e.featureName() + "' is disabled.");
+  }
+}
+```
+
+### Spring WebFlux (Annotation-based controllers)
+
+Define an `AccessDeniedWebFilterResolution` bean to customize the response written by the `WebFilter`.
+
+```java
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.webflux.configuration.AccessDeniedWebFilterResolution;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+// CustomWebFilterResolutionConfig.java
+@Configuration
+public class CustomWebFilterResolutionConfig {
+
+  @Bean
+  AccessDeniedWebFilterResolution customResolution() {
+    return (exchange, e) -> {
+      var response = exchange.getResponse();
+      response.setStatusCode(HttpStatus.FORBIDDEN);
+      response.getHeaders().setContentType(MediaType.TEXT_PLAIN);
+      var body = response.bufferFactory().wrap(
+          ("Feature '" + e.featureName() + "' is disabled.").getBytes());
+      return response.writeWith(Mono.just(body));
+    };
+  }
+}
+```
+
+### Spring WebFlux (Functional endpoints)
+
+Define an `AccessDeniedHandlerFilterResolution` bean to customize the response returned by the `HandlerFilterFunction`.
+
+```java
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.webflux.configuration.AccessDeniedHandlerFilterResolution;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.server.ServerResponse;
+
+// CustomHandlerFilterResolutionConfig.java
+@Configuration
+public class CustomHandlerFilterResolutionConfig {
+
+  @Bean
+  AccessDeniedHandlerFilterResolution customResolution() {
+    return (request, e) -> ServerResponse.status(HttpStatus.FORBIDDEN)
+        .contentType(MediaType.TEXT_PLAIN)
+        .bodyValue("Feature '" + e.featureName() + "' is disabled.");
   }
 }
 ```

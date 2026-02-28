@@ -113,6 +113,18 @@ class FeatureFlagWebFilterJsonResponseIntegrationTest {
         .isEqualTo("Allowed");
   }
 
+  @Test
+  void shouldAllowAccess_whenMethodAnnotationOverridesClassAnnotation() {
+    webTestClient
+        .get()
+        .uri("/test/method-override")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(String.class)
+        .isEqualTo("Method Override Allowed");
+  }
+
   @Autowired
   FeatureFlagWebFilterJsonResponseIntegrationTest(WebTestClient webTestClient) {
     this.webTestClient = webTestClient;

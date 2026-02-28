@@ -12,4 +12,10 @@ public class FeatureFlagDisableController {
   String testDisable() {
     return "Not Allowed";
   }
+
+  @FeatureFlag("experimental-stage-endpoint")
+  @GetMapping("/test/method-override")
+  String testMethodOverride() {
+    return "Method Override Allowed";
+  }
 }

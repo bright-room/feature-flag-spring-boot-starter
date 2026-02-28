@@ -2,11 +2,11 @@ package net.brightroom.featureflag.webflux.configuration;
 
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.core.configuration.ResponseProperties;
-import tools.jackson.databind.json.JsonMapper;
+import org.springframework.http.codec.ServerCodecConfigurer;
 
 class AccessDeniedWebFilterResolutionFactory {
 
-  private final JsonMapper objectMapper;
+  private final ServerCodecConfigurer codecConfigurer;
 
   AccessDeniedWebFilterResolution create(FeatureFlagProperties featureFlagProperties) {
     ResponseProperties responseProperties = featureFlagProperties.response();
@@ -14,11 +14,11 @@ class AccessDeniedWebFilterResolutionFactory {
     return switch (responseProperties.type()) {
       case PLAIN_TEXT -> new AccessDeniedWebFilterResolutionViaPlainTextResponse();
       case HTML -> new AccessDeniedWebFilterResolutionViaHtmlResponse();
-      case JSON -> new AccessDeniedWebFilterResolutionViaJsonResponse(objectMapper);
+      case JSON -> new AccessDeniedWebFilterResolutionViaJsonResponse(codecConfigurer);
     };
   }
 
-  AccessDeniedWebFilterResolutionFactory(JsonMapper objectMapper) {
-    this.objectMapper = objectMapper;
+  AccessDeniedWebFilterResolutionFactory(ServerCodecConfigurer codecConfigurer) {
+    this.codecConfigurer = codecConfigurer;
   }
 }
