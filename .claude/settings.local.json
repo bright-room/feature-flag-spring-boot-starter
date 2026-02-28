@@ -8,7 +8,14 @@
       "Bash(./gradlew check:*)",
       "Bash(./gradlew spotlessApply:*)",
       "Bash(./gradlew :webmvc:spotlessApply:*)",
-      "Bash(./gradlew :webmvc:check:*)"
+      "Bash(./gradlew :webmvc:check:*)",
+      "Bash(./gradlew :webflux:spotlessApply:*)",
+      "Bash(./gradlew :webflux:check:*)",
+      "Bash(jar:*)",
+      "Bash(./gradlew :webflux:dependencies:*)",
+      "Bash(./gradlew :webflux:test:*)",
+      "Bash(./gradlew :webflux:compileJava:*)",
+      "Bash(./gradlew :webflux:integrationTest:*)"
     ]
   }
 }
