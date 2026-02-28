@@ -1,0 +1,6 @@
+feature-flags:
+  feature-names:
+    experimental-stage-endpoint: true
+    development-stage-endpoint: false
+  response:
+    type: json
