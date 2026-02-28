@@ -11,7 +11,7 @@ import org.springframework.web.reactive.result.method.annotation.RequestMappingH
 import tools.jackson.databind.json.JsonMapper;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
-public class FeatureFlagWebFluxAutoConfiguration {
+class FeatureFlagWebFluxAutoConfiguration {
 
   private final FeatureFlagProperties featureFlagProperties;
 
