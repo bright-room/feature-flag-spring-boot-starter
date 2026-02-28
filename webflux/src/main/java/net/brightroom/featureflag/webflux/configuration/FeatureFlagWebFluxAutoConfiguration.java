@@ -7,6 +7,8 @@ import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping;
+import tools.jackson.databind.ObjectMapper;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 public class FeatureFlagWebFluxAutoConfiguration {
@@ -18,6 +20,21 @@ public class FeatureFlagWebFluxAutoConfiguration {
   ReactiveFeatureFlagProvider reactiveFeatureFlagProvider() {
     return new InMemoryReactiveFeatureFlagProvider(
         featureFlagProperties.featureNames(), featureFlagProperties.defaultEnabled());
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(AccessDeniedReactiveResolution.class)
+  AccessDeniedReactiveResolution accessDeniedReactiveResolution(ObjectMapper objectMapper) {
+    return new AccessDeniedReactiveResolutionFactory(objectMapper).create(featureFlagProperties);
+  }
+
+  @Bean
+  FeatureFlagWebFilter featureFlagWebFilter(
+      RequestMappingHandlerMapping requestMappingHandlerMapping,
+      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
+      AccessDeniedReactiveResolution accessDeniedReactiveResolution) {
+    return new FeatureFlagWebFilter(
+        requestMappingHandlerMapping, reactiveFeatureFlagProvider, accessDeniedReactiveResolution);
   }
 
   FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
