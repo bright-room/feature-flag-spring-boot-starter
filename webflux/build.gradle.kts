@@ -12,4 +12,7 @@ dependencies {
     implementation(libs.spring.boot.starter.webflux)
 
     testImplementation(libs.spring.boot.starter.webflux.test)
+
+    integrationTestImplementation(libs.spring.boot.starter.webflux.test)
+    integrationTestImplementation(libs.jsoup)
 }

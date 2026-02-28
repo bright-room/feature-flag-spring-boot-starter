@@ -1,0 +1,8 @@
+feature-flags:
+  feature-names:
+    experimental-stage-endpoint: true
+    development-stage-endpoint: false
+    enable-class-level-feature: true
+    disable-class-level-feature: false
+  response:
+    type: json

@@ -21,25 +21,31 @@ class FeatureFlagWebFilter implements WebFilter {
   @Override
   @NonNull
   public Mono<Void> filter(@NonNull ServerWebExchange exchange, @NonNull WebFilterChain chain) {
-    return handlerMapping
-        .getHandler(exchange)
-        .flatMap(handler -> handleRequest(exchange, chain, handler))
-        .switchIfEmpty(chain.filter(exchange));
+    return doFilter(exchange, chain).then();
   }
 
-  private Mono<Void> handleRequest(
-      ServerWebExchange exchange, WebFilterChain chain, Object handler) {
+  /**
+   * Internal filter that uses a non-void return type so that {@code switchIfEmpty} correctly
+   * distinguishes "handler found and processed" from "no handler found". Using {@code Mono<Void>}
+   * would not work because {@code Mono<Void>} never emits items, causing {@code switchIfEmpty} to
+   * always fire even after the filter chain has already completed.
+   */
+  private Mono<Boolean> doFilter(ServerWebExchange exchange, WebFilterChain chain) {
+    Mono<FeatureFlag> annotationMono =
+        handlerMapping.getHandler(exchange).flatMap(this::resolveAnnotationFromHandler);
+    return annotationMono
+        .flatMap(annotation -> checkAndFilter(exchange, chain, annotation))
+        .switchIfEmpty(chain.filter(exchange).thenReturn(Boolean.FALSE));
+  }
+
+  private Mono<FeatureFlag> resolveAnnotationFromHandler(Object handler) {
     if (!(handler instanceof HandlerMethod handlerMethod)) {
-      return chain.filter(exchange);
+      return Mono.empty();
     }
-    FeatureFlag annotation = resolveAnnotation(handlerMethod);
-    if (annotation == null) {
-      return chain.filter(exchange);
-    }
-    return checkAndFilter(exchange, chain, annotation);
+    return Mono.justOrEmpty(resolveAnnotation(handlerMethod));
   }
 
-  private Mono<Void> checkAndFilter(
+  private Mono<Boolean> checkAndFilter(
       ServerWebExchange exchange, WebFilterChain chain, FeatureFlag annotation) {
     validateAnnotation(annotation);
     return reactiveFeatureFlagProvider
@@ -47,12 +53,14 @@ class FeatureFlagWebFilter implements WebFilter {
         .flatMap(enabled -> filterByFeatureEnabled(exchange, chain, annotation, enabled));
   }
 
-  private Mono<Void> filterByFeatureEnabled(
+  private Mono<Boolean> filterByFeatureEnabled(
       ServerWebExchange exchange, WebFilterChain chain, FeatureFlag annotation, boolean enabled) {
     if (enabled) {
-      return chain.filter(exchange);
+      return chain.filter(exchange).thenReturn(Boolean.TRUE);
     }
-    return resolution.resolve(exchange, new FeatureFlagAccessDeniedException(annotation.value()));
+    return resolution
+        .resolve(exchange, new FeatureFlagAccessDeniedException(annotation.value()))
+        .thenReturn(Boolean.FALSE);
   }
 
   @Nullable
