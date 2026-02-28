@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.reactive.result.method.annotation.RequestMappingHandlerMapping;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 public class FeatureFlagWebFluxAutoConfiguration {
@@ -24,7 +24,7 @@ public class FeatureFlagWebFluxAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean(AccessDeniedReactiveResolution.class)
-  AccessDeniedReactiveResolution accessDeniedReactiveResolution(ObjectMapper objectMapper) {
+  AccessDeniedReactiveResolution accessDeniedReactiveResolution(JsonMapper objectMapper) {
     return new AccessDeniedReactiveResolutionFactory(objectMapper).create(featureFlagProperties);
   }
 

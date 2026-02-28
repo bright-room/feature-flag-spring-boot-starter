@@ -10,11 +10,11 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 class AccessDeniedReactiveResolutionViaJsonResponse implements AccessDeniedReactiveResolution {
 
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
 
   @Override
   public Mono<Void> resolve(ServerWebExchange exchange, FeatureFlagAccessDeniedException e) {
@@ -40,7 +40,7 @@ class AccessDeniedReactiveResolutionViaJsonResponse implements AccessDeniedReact
 
   private Mono<Void> writeBody(ServerHttpResponse response, ProblemDetail problemDetail) {
     try {
-      byte[] body = objectMapper.writeValueAsBytes(problemDetail);
+      byte[] body = jsonMapper.writeValueAsBytes(problemDetail);
       DataBuffer buffer = response.bufferFactory().wrap(body);
       return response.writeWith(Mono.just(buffer));
     } catch (JacksonException ex) {
@@ -48,7 +48,7 @@ class AccessDeniedReactiveResolutionViaJsonResponse implements AccessDeniedReact
     }
   }
 
-  AccessDeniedReactiveResolutionViaJsonResponse(ObjectMapper objectMapper) {
-    this.objectMapper = objectMapper;
+  AccessDeniedReactiveResolutionViaJsonResponse(JsonMapper jsonMapper) {
+    this.jsonMapper = jsonMapper;
   }
 }

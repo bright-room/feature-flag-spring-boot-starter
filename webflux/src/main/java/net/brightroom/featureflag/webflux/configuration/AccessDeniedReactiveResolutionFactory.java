@@ -2,11 +2,11 @@ package net.brightroom.featureflag.webflux.configuration;
 
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.core.configuration.ResponseProperties;
-import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 class AccessDeniedReactiveResolutionFactory {
 
-  private final ObjectMapper objectMapper;
+  private final JsonMapper objectMapper;
 
   AccessDeniedReactiveResolution create(FeatureFlagProperties featureFlagProperties) {
     ResponseProperties responseProperties = featureFlagProperties.response();
@@ -18,7 +18,7 @@ class AccessDeniedReactiveResolutionFactory {
     };
   }
 
-  AccessDeniedReactiveResolutionFactory(ObjectMapper objectMapper) {
+  AccessDeniedReactiveResolutionFactory(JsonMapper objectMapper) {
     this.objectMapper = objectMapper;
   }
 }
