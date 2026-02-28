@@ -1,18 +1,11 @@
 package net.brightroom.featureflag.webflux.configuration;
 
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ProblemDetail;
 import org.springframework.web.reactive.function.server.HandlerFilterFunction;
 import org.springframework.web.reactive.function.server.HandlerFunction;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import org.springframework.web.util.HtmlUtils;
 import reactor.core.publisher.Mono;
 
 /**
@@ -32,14 +25,15 @@ import reactor.core.publisher.Mono;
  * }
  * }</pre>
  *
- * <p>When the feature is disabled, the filter returns a {@code 403 Forbidden} response directly
- * without invoking the handler. The response format follows {@code feature-flags.response.type}
- * configuration.
+ * <p>When the feature is disabled, the filter delegates to {@link AccessDeniedHandlerResolution} to
+ * build the denied response without invoking the handler. The default response format follows
+ * {@code feature-flags.response.type} configuration, and can be customized by providing a custom
+ * {@link AccessDeniedHandlerResolution} bean.
  */
 public class FeatureFlagHandlerFilterFunction {
 
   private final ReactiveFeatureFlagProvider reactiveFeatureFlagProvider;
-  private final FeatureFlagProperties featureFlagProperties;
+  private final AccessDeniedHandlerResolution resolution;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -68,66 +62,13 @@ public class FeatureFlagHandlerFilterFunction {
     if (enabled) {
       return next.handle(request);
     }
-    return buildDeniedResponse(request, new FeatureFlagAccessDeniedException(featureName));
-  }
-
-  private Mono<ServerResponse> buildDeniedResponse(
-      ServerRequest request, FeatureFlagAccessDeniedException e) {
-    return switch (featureFlagProperties.response().type()) {
-      case JSON -> buildJsonResponse(request, e);
-      case PLAIN_TEXT -> buildPlainTextResponse(e);
-      case HTML -> buildHtmlResponse(e);
-    };
-  }
-
-  private Mono<ServerResponse> buildJsonResponse(
-      ServerRequest request, FeatureFlagAccessDeniedException e) {
-    ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
-    problemDetail.setType(
-        URI.create(
-            "https://github.com/bright-room/feature-flag-spring-boot-starter#response-types"));
-    problemDetail.setTitle("Feature flag access denied");
-    problemDetail.setDetail(e.getMessage());
-    problemDetail.setInstance(URI.create(request.path()));
-
-    return ServerResponse.status(HttpStatus.FORBIDDEN)
-        .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-        .bodyValue(problemDetail);
-  }
-
-  private Mono<ServerResponse> buildPlainTextResponse(FeatureFlagAccessDeniedException e) {
-    return ServerResponse.status(HttpStatus.FORBIDDEN)
-        .contentType(new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8))
-        .bodyValue(e.getMessage());
-  }
-
-  private Mono<ServerResponse> buildHtmlResponse(FeatureFlagAccessDeniedException e) {
-    String escapedMessage = HtmlUtils.htmlEscape(e.getMessage());
-    String html =
-        """
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <title>Access Denied</title>
-        </head>
-        <body>
-          <h1>403 - Access Denied</h1>
-          <p>%s</p>
-        </body>
-        </html>
-        """
-            .formatted(escapedMessage);
-
-    return ServerResponse.status(HttpStatus.FORBIDDEN)
-        .contentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8))
-        .bodyValue(html);
+    return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
   }
 
   FeatureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      FeatureFlagProperties featureFlagProperties) {
+      AccessDeniedHandlerResolution resolution) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
-    this.featureFlagProperties = featureFlagProperties;
+    this.resolution = resolution;
   }
 }

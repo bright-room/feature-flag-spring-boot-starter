@@ -38,9 +38,17 @@ public class FeatureFlagWebFluxAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean(AccessDeniedHandlerResolution.class)
+  AccessDeniedHandlerResolution accessDeniedHandlerResolution() {
+    return new AccessDeniedHandlerResolutionFactory().create(featureFlagProperties);
+  }
+
+  @Bean
   FeatureFlagHandlerFilterFunction featureFlagHandlerFilterFunction(
-      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider) {
-    return new FeatureFlagHandlerFilterFunction(reactiveFeatureFlagProvider, featureFlagProperties);
+      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
+      AccessDeniedHandlerResolution accessDeniedHandlerResolution) {
+    return new FeatureFlagHandlerFilterFunction(
+        reactiveFeatureFlagProvider, accessDeniedHandlerResolution);
   }
 
   FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {

@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono;
  * <p>Implementations of this interface can define various resolutions such as returning JSON, plain
  * text, or HTML responses, depending on the application's requirements.
  */
-interface AccessDeniedReactiveResolution {
+public interface AccessDeniedReactiveResolution {
 
   /**
    * Resolves the response when access to a feature flag protected resource is denied.
