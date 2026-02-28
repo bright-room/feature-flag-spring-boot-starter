@@ -7,5 +7,7 @@ feature-flags:
     development-stage-endpoint: false
     enable-class-level-feature: true
     disable-class-level-feature: false
+    legacy-api: false
+    special-endpoint: true
   response:
     type: json
