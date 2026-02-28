@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
-class AccessDeniedReactiveResolutionViaJsonResponse implements AccessDeniedReactiveResolution {
+class AccessDeniedWebFilterResolutionViaJsonResponse implements AccessDeniedWebFilterResolution {
 
   private final JsonMapper jsonMapper;
 
@@ -48,7 +48,7 @@ class AccessDeniedReactiveResolutionViaJsonResponse implements AccessDeniedReact
     }
   }
 
-  AccessDeniedReactiveResolutionViaJsonResponse(JsonMapper jsonMapper) {
+  AccessDeniedWebFilterResolutionViaJsonResponse(JsonMapper jsonMapper) {
     this.jsonMapper = jsonMapper;
   }
 }

@@ -16,7 +16,7 @@ class FeatureFlagWebFilter implements WebFilter {
 
   private final RequestMappingHandlerMapping handlerMapping;
   private final ReactiveFeatureFlagProvider reactiveFeatureFlagProvider;
-  private final AccessDeniedReactiveResolution resolution;
+  private final AccessDeniedWebFilterResolution resolution;
 
   @Override
   @NonNull
@@ -75,7 +75,7 @@ class FeatureFlagWebFilter implements WebFilter {
   FeatureFlagWebFilter(
       RequestMappingHandlerMapping handlerMapping,
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      AccessDeniedReactiveResolution resolution) {
+      AccessDeniedWebFilterResolution resolution) {
     this.handlerMapping = handlerMapping;
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.resolution = resolution;

@@ -9,7 +9,8 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
-class AccessDeniedHandlerResolutionViaJsonResponse implements AccessDeniedHandlerResolution {
+class AccessDeniedHandlerFilterResolutionViaJsonResponse
+    implements AccessDeniedHandlerFilterResolution {
 
   @Override
   public Mono<ServerResponse> resolve(ServerRequest request, FeatureFlagAccessDeniedException e) {
@@ -31,5 +32,5 @@ class AccessDeniedHandlerResolutionViaJsonResponse implements AccessDeniedHandle
     return problemDetail;
   }
 
-  AccessDeniedHandlerResolutionViaJsonResponse() {}
+  AccessDeniedHandlerFilterResolutionViaJsonResponse() {}
 }

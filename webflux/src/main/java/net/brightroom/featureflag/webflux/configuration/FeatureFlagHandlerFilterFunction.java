@@ -25,15 +25,15 @@ import reactor.core.publisher.Mono;
  * }
  * }</pre>
  *
- * <p>When the feature is disabled, the filter delegates to {@link AccessDeniedHandlerResolution} to
- * build the denied response without invoking the handler. The default response format follows
- * {@code feature-flags.response.type} configuration, and can be customized by providing a custom
- * {@link AccessDeniedHandlerResolution} bean.
+ * <p>When the feature is disabled, the filter delegates to {@link
+ * AccessDeniedHandlerFilterResolution} to build the denied response without invoking the handler.
+ * The default response format follows {@code feature-flags.response.type} configuration, and can be
+ * customized by providing a custom {@link AccessDeniedHandlerFilterResolution} bean.
  */
 public class FeatureFlagHandlerFilterFunction {
 
   private final ReactiveFeatureFlagProvider reactiveFeatureFlagProvider;
-  private final AccessDeniedHandlerResolution resolution;
+  private final AccessDeniedHandlerFilterResolution resolution;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -67,7 +67,7 @@ public class FeatureFlagHandlerFilterFunction {
 
   FeatureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      AccessDeniedHandlerResolution resolution) {
+      AccessDeniedHandlerFilterResolution resolution) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.resolution = resolution;
   }

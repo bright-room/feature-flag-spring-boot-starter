@@ -10,7 +10,7 @@ import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.util.HtmlUtils;
 import reactor.core.publisher.Mono;
 
-class AccessDeniedReactiveResolutionViaHtmlResponse implements AccessDeniedReactiveResolution {
+class AccessDeniedWebFilterResolutionViaHtmlResponse implements AccessDeniedWebFilterResolution {
 
   @Override
   public Mono<Void> resolve(ServerWebExchange exchange, FeatureFlagAccessDeniedException e) {
@@ -44,5 +44,5 @@ class AccessDeniedReactiveResolutionViaHtmlResponse implements AccessDeniedReact
         .formatted(escapedMessage);
   }
 
-  AccessDeniedReactiveResolutionViaHtmlResponse() {}
+  AccessDeniedWebFilterResolutionViaHtmlResponse() {}
 }

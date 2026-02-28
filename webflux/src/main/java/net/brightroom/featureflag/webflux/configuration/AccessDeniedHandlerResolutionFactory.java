@@ -3,17 +3,17 @@ package net.brightroom.featureflag.webflux.configuration;
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.core.configuration.ResponseProperties;
 
-class AccessDeniedHandlerResolutionFactory {
+class AccessDeniedHandlerFilterResolutionFactory {
 
-  AccessDeniedHandlerResolution create(FeatureFlagProperties featureFlagProperties) {
+  AccessDeniedHandlerFilterResolution create(FeatureFlagProperties featureFlagProperties) {
     ResponseProperties responseProperties = featureFlagProperties.response();
 
     return switch (responseProperties.type()) {
-      case PLAIN_TEXT -> new AccessDeniedHandlerResolutionViaPlainTextResponse();
-      case HTML -> new AccessDeniedHandlerResolutionViaHtmlResponse();
-      case JSON -> new AccessDeniedHandlerResolutionViaJsonResponse();
+      case PLAIN_TEXT -> new AccessDeniedHandlerFilterResolutionViaPlainTextResponse();
+      case HTML -> new AccessDeniedHandlerFilterResolutionViaHtmlResponse();
+      case JSON -> new AccessDeniedHandlerFilterResolutionViaJsonResponse();
     };
   }
 
-  AccessDeniedHandlerResolutionFactory() {}
+  AccessDeniedHandlerFilterResolutionFactory() {}
 }

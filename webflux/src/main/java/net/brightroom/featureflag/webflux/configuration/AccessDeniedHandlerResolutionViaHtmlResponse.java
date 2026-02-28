@@ -9,7 +9,8 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.util.HtmlUtils;
 import reactor.core.publisher.Mono;
 
-class AccessDeniedHandlerResolutionViaHtmlResponse implements AccessDeniedHandlerResolution {
+class AccessDeniedHandlerFilterResolutionViaHtmlResponse
+    implements AccessDeniedHandlerFilterResolution {
 
   @Override
   public Mono<ServerResponse> resolve(
@@ -38,5 +39,5 @@ class AccessDeniedHandlerResolutionViaHtmlResponse implements AccessDeniedHandle
         .formatted(escapedMessage);
   }
 
-  AccessDeniedHandlerResolutionViaHtmlResponse() {}
+  AccessDeniedHandlerFilterResolutionViaHtmlResponse() {}
 }

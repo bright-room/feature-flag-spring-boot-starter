@@ -9,7 +9,8 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-class AccessDeniedReactiveResolutionViaPlainTextResponse implements AccessDeniedReactiveResolution {
+class AccessDeniedWebFilterResolutionViaPlainTextResponse
+    implements AccessDeniedWebFilterResolution {
 
   @Override
   public Mono<Void> resolve(ServerWebExchange exchange, FeatureFlagAccessDeniedException e) {
@@ -24,5 +25,5 @@ class AccessDeniedReactiveResolutionViaPlainTextResponse implements AccessDenied
     return response.writeWith(Mono.just(buffer));
   }
 
-  AccessDeniedReactiveResolutionViaPlainTextResponse() {}
+  AccessDeniedWebFilterResolutionViaPlainTextResponse() {}
 }

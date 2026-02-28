@@ -23,30 +23,30 @@ class FeatureFlagWebFluxAutoConfiguration {
   }
 
   @Bean
-  @ConditionalOnMissingBean(AccessDeniedReactiveResolution.class)
-  AccessDeniedReactiveResolution accessDeniedReactiveResolution(JsonMapper objectMapper) {
-    return new AccessDeniedReactiveResolutionFactory(objectMapper).create(featureFlagProperties);
+  @ConditionalOnMissingBean(AccessDeniedWebFilterResolution.class)
+  AccessDeniedWebFilterResolution accessDeniedReactiveResolution(JsonMapper objectMapper) {
+    return new AccessDeniedWebFilterResolutionFactory(objectMapper).create(featureFlagProperties);
   }
 
   @Bean
   FeatureFlagWebFilter featureFlagWebFilter(
       RequestMappingHandlerMapping requestMappingHandlerMapping,
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      AccessDeniedReactiveResolution accessDeniedReactiveResolution) {
+      AccessDeniedWebFilterResolution accessDeniedReactiveResolution) {
     return new FeatureFlagWebFilter(
         requestMappingHandlerMapping, reactiveFeatureFlagProvider, accessDeniedReactiveResolution);
   }
 
   @Bean
-  @ConditionalOnMissingBean(AccessDeniedHandlerResolution.class)
-  AccessDeniedHandlerResolution accessDeniedHandlerResolution() {
-    return new AccessDeniedHandlerResolutionFactory().create(featureFlagProperties);
+  @ConditionalOnMissingBean(AccessDeniedHandlerFilterResolution.class)
+  AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution() {
+    return new AccessDeniedHandlerFilterResolutionFactory().create(featureFlagProperties);
   }
 
   @Bean
   FeatureFlagHandlerFilterFunction featureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      AccessDeniedHandlerResolution accessDeniedHandlerResolution) {
+      AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution) {
     return new FeatureFlagHandlerFilterFunction(
         reactiveFeatureFlagProvider, accessDeniedHandlerResolution);
   }
