@@ -62,12 +62,12 @@ class FeatureFlagAspect {
           });
     }
 
-    // Non-reactive return type: block and check synchronously
-    boolean enabled = Boolean.TRUE.equals(enabledMono.block());
-    if (!enabled) {
-      throw new FeatureFlagAccessDeniedException(featureName);
-    }
-    return joinPoint.proceed();
+    // Non-reactive return type: not supported in WebFlux
+    throw new IllegalStateException(
+        "@FeatureFlag on WebFlux controller method '"
+            + ((MethodSignature) joinPoint.getSignature()).getMethod().getName()
+            + "' requires a reactive return type (Mono or Flux). "
+            + "Non-reactive return types are not supported.");
   }
 
   private FeatureFlag resolveAnnotation(ProceedingJoinPoint joinPoint) {

@@ -3,6 +3,7 @@ package net.brightroom.featureflag.webflux.endpoint;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
 
 /**
  * Test controller for verifying fail-closed / fail-open behavior.
@@ -16,8 +17,8 @@ public class FeatureFlagUndefinedFlagController {
 
   @FeatureFlag("undefined-in-config-flag")
   @GetMapping("/undefined-flag-endpoint")
-  String undefinedFlagEndpoint() {
-    return "Allowed";
+  Mono<String> undefinedFlagEndpoint() {
+    return Mono.just("Allowed");
   }
 
   public FeatureFlagUndefinedFlagController() {}

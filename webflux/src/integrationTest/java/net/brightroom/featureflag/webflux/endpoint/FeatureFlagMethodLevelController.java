@@ -3,6 +3,7 @@ package net.brightroom.featureflag.webflux.endpoint;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
 
 @RestController
 public class FeatureFlagMethodLevelController {
@@ -14,14 +15,14 @@ public class FeatureFlagMethodLevelController {
 
   @FeatureFlag("experimental-stage-endpoint")
   @GetMapping("/experimental-stage-endpoint")
-  String experimentalStageEndpoint() {
-    return "Allowed";
+  Mono<String> experimentalStageEndpoint() {
+    return Mono.just("Allowed");
   }
 
   @FeatureFlag("development-stage-endpoint")
   @GetMapping("/development-stage-endpoint")
-  String developmentStageEndpoint() {
-    return "Not Allowed";
+  Mono<String> developmentStageEndpoint() {
+    return Mono.just("Not Allowed");
   }
 
   public FeatureFlagMethodLevelController() {}
