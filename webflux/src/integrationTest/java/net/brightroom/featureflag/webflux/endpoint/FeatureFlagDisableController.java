@@ -19,4 +19,6 @@ public class FeatureFlagDisableController {
   Mono<String> testMethodOverride() {
     return Mono.just("Method Override Allowed");
   }
+
+  public FeatureFlagDisableController() {}
 }

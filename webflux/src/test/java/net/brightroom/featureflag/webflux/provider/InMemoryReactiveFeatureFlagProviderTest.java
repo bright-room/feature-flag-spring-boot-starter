@@ -19,7 +19,7 @@ class InMemoryReactiveFeatureFlagProviderTest {
   }
 
   @Test
-  void validatePredefinedFunctions() {
+  void validatePredefinedFeatures() {
     assertTrue(reactiveFeatureFlagProvider.isFeatureEnabled("experimental-stage-endpoint").block());
     assertFalse(reactiveFeatureFlagProvider.isFeatureEnabled("development-stage-endpoint").block());
   }

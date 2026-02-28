@@ -8,10 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
 @EnableAspectJAutoProxy(proxyTargetClass = true)
 class FeatureFlagWebFluxAutoConfiguration {
 
@@ -39,6 +41,7 @@ class FeatureFlagWebFluxAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean
   FeatureFlagAspect featureFlagAspect(ReactiveFeatureFlagProvider reactiveFeatureFlagProvider) {
     return new FeatureFlagAspect(reactiveFeatureFlagProvider);
   }
@@ -50,6 +53,7 @@ class FeatureFlagWebFluxAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean
   FeatureFlagHandlerFilterFunction featureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution) {

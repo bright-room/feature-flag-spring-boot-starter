@@ -10,4 +10,6 @@ public class NoFeatureFlagController {
   String noAnnotation() {
     return "No Annotation";
   }
+
+  public NoFeatureFlagController() {}
 }

@@ -13,4 +13,6 @@ public class FeatureFlagEnableController {
   Mono<String> testEnabled() {
     return Mono.just("Allowed");
   }
+
+  public FeatureFlagEnableController() {}
 }

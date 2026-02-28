@@ -11,6 +11,9 @@ import reactor.core.publisher.Mono;
 class AccessDeniedHandlerFilterResolutionViaHtmlResponse
     implements AccessDeniedHandlerFilterResolution {
 
+  private static final MediaType TEXT_HTML_UTF8 =
+      new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8);
+
   /**
    * {@inheritDoc}
    *
@@ -19,9 +22,7 @@ class AccessDeniedHandlerFilterResolutionViaHtmlResponse
   @Override
   public Mono<ServerResponse> resolve(ServerRequest request, FeatureFlagAccessDeniedException e) {
     String html = HtmlResponseBuilder.buildHtml(e);
-    return ServerResponse.status(HttpStatus.FORBIDDEN)
-        .contentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8))
-        .bodyValue(html);
+    return ServerResponse.status(HttpStatus.FORBIDDEN).contentType(TEXT_HTML_UTF8).bodyValue(html);
   }
 
   AccessDeniedHandlerFilterResolutionViaHtmlResponse() {}

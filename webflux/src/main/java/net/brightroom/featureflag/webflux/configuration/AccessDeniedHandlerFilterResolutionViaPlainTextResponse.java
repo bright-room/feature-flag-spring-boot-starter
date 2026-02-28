@@ -11,6 +11,9 @@ import reactor.core.publisher.Mono;
 class AccessDeniedHandlerFilterResolutionViaPlainTextResponse
     implements AccessDeniedHandlerFilterResolution {
 
+  private static final MediaType TEXT_PLAIN_UTF8 =
+      new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8);
+
   /**
    * {@inheritDoc}
    *
@@ -19,7 +22,7 @@ class AccessDeniedHandlerFilterResolutionViaPlainTextResponse
   @Override
   public Mono<ServerResponse> resolve(ServerRequest request, FeatureFlagAccessDeniedException e) {
     return ServerResponse.status(HttpStatus.FORBIDDEN)
-        .contentType(new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8))
+        .contentType(TEXT_PLAIN_UTF8)
         .bodyValue(e.getMessage());
   }
 
