@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import net.brightroom.featureflag.webmvc.configuration.FeatureFlagMvcTestAutoConfiguration;
+import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagClassMethodPriorityController;
 import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagDisableController;
 import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagEnableController;
 import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagMethodLevelController;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
       FeatureFlagEnableController.class,
       FeatureFlagDisableController.class,
       FeatureFlagMethodLevelController.class,
+      FeatureFlagClassMethodPriorityController.class,
     })
 @Import(FeatureFlagMvcTestAutoConfiguration.class)
 class FeatureFlagInterceptorJsonResponseIntegrationTest {
@@ -95,6 +97,33 @@ class FeatureFlagInterceptorJsonResponseIntegrationTest {
         .perform(get("/test/enabled"))
         .andExpect(status().isOk())
         .andExpect(content().string("Allowed"));
+  }
+
+  @Test
+  void shouldBlockAccess_whenClassLevelFeatureIsDisabledAndNoMethodAnnotation() throws Exception {
+    mockMvc
+        .perform(get("/legacy/data"))
+        .andExpect(status().isForbidden())
+        .andExpect(
+            content()
+                .json(
+                    """
+                  {
+                    "detail" : "Feature 'legacy-api' is not available",
+                    "instance" : "/legacy/data",
+                    "status" : 403,
+                    "title" : "Feature flag access denied",
+                    "type" : "https://github.com/bright-room/feature-flag-spring-boot-starter#response-types"
+                  }
+                  """));
+  }
+
+  @Test
+  void shouldAllowAccess_whenMethodAnnotationOverridesDisabledClassAnnotation() throws Exception {
+    mockMvc
+        .perform(get("/legacy/special"))
+        .andExpect(status().isOk())
+        .andExpect(content().string("Special endpoint data"));
   }
 
   @Autowired
