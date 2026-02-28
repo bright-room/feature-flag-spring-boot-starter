@@ -45,11 +45,13 @@ class FeatureFlagWebFilter implements WebFilter {
     return reactiveFeatureFlagProvider
         .isFeatureEnabled(annotation.value())
         .flatMap(
-            enabled ->
-                enabled
-                    ? chain.filter(exchange)
-                    : resolution.resolve(
-                        exchange, new FeatureFlagAccessDeniedException(annotation.value())));
+            enabled -> {
+              if (enabled) {
+                return chain.filter(exchange);
+              }
+              return resolution.resolve(
+                  exchange, new FeatureFlagAccessDeniedException(annotation.value()));
+            });
   }
 
   @Nullable
