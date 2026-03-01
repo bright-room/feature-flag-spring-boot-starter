@@ -9,8 +9,8 @@ import reactor.core.publisher.Mono;
 public class FeatureFlagMethodLevelController {
 
   @GetMapping("/stable-endpoint")
-  String stableEndpoint() {
-    return "No Annotation";
+  Mono<String> stableEndpoint() {
+    return Mono.just("No Annotation");
   }
 
   @FeatureFlag("experimental-stage-endpoint")
