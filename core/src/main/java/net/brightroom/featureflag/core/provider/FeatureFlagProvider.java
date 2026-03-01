@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webmvc.provider;
+package net.brightroom.featureflag.core.provider;
 
 /**
  * Provides a mechanism to check the status of feature flags within an application.

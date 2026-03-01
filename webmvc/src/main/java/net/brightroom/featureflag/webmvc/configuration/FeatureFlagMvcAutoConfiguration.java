@@ -2,8 +2,8 @@ package net.brightroom.featureflag.webmvc.configuration;
 
 import net.brightroom.featureflag.core.configuration.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
-import net.brightroom.featureflag.webmvc.provider.FeatureFlagProvider;
-import net.brightroom.featureflag.webmvc.provider.InMemoryFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;

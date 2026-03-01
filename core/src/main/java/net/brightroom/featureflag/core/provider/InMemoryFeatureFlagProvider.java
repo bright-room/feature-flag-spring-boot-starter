@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webmvc.provider;
+package net.brightroom.featureflag.core.provider;
 
 import java.util.Map;
 
