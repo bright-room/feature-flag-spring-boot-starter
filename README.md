@@ -241,32 +241,25 @@ public class CustomFeatureFlagExceptionHandler {
 
 ### Spring WebFlux (Annotation-based controllers)
 
-Define an `AccessDeniedWebFilterResolution` bean to customize the response written by the `WebFilter`.
+You can create a fully custom response by defining a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
 
 ```java
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.webflux.configuration.AccessDeniedWebFilterResolution;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 
-// CustomWebFilterResolutionConfig.java
-@Configuration
-public class CustomWebFilterResolutionConfig {
+// CustomFeatureFlagExceptionHandler.java
+@ControllerAdvice
+@Order(0) // Ensure this handler takes priority over the library's default handler
+public class CustomFeatureFlagExceptionHandler {
 
-  @Bean
-  AccessDeniedWebFilterResolution customResolution() {
-    return (exchange, e) -> {
-      var response = exchange.getResponse();
-      response.setStatusCode(HttpStatus.FORBIDDEN);
-      response.getHeaders().setContentType(MediaType.TEXT_PLAIN);
-      var body = response.bufferFactory().wrap(
-          ("Feature '" + e.featureName() + "' is disabled.").getBytes());
-      return response.writeWith(Mono.just(body));
-    };
+  @ExceptionHandler(FeatureFlagAccessDeniedException.class)
+  ResponseEntity<String> handle(FeatureFlagAccessDeniedException e) {
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .body("Feature '" + e.featureName() + "' is disabled.");
   }
 }
 ```
