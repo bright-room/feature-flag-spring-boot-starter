@@ -1,7 +1,7 @@
 package net.brightroom.featureflag.webflux.resolution.handlerfilter;
 
-import java.net.URI;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.resolution.ProblemDetailBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -14,22 +14,10 @@ class AccessDeniedHandlerFilterResolutionViaJsonResponse
 
   @Override
   public Mono<ServerResponse> resolve(ServerRequest request, FeatureFlagAccessDeniedException e) {
-    ProblemDetail problemDetail = buildProblemDetail(request, e);
+    ProblemDetail problemDetail = ProblemDetailBuilder.build(request.path(), e);
     return ServerResponse.status(HttpStatus.FORBIDDEN)
         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
         .bodyValue(problemDetail);
-  }
-
-  private ProblemDetail buildProblemDetail(
-      ServerRequest request, FeatureFlagAccessDeniedException e) {
-    ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
-    problemDetail.setType(
-        URI.create(
-            "https://github.com/bright-room/feature-flag-spring-boot-starter#response-types"));
-    problemDetail.setTitle("Feature flag access denied");
-    problemDetail.setDetail(e.getMessage());
-    problemDetail.setInstance(URI.create(request.path()));
-    return problemDetail;
   }
 
   AccessDeniedHandlerFilterResolutionViaJsonResponse() {}

@@ -2,7 +2,7 @@ package net.brightroom.featureflag.webflux.resolution.exceptionhandler;
 
 import java.nio.charset.StandardCharsets;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.webflux.resolution.HtmlResponseBuilder;
+import net.brightroom.featureflag.core.resolution.HtmlResponseBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
