@@ -1,6 +1,6 @@
 package net.brightroom.featureflag.webflux.configuration;
 
-import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
+import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.webflux.autoconfigure.FeatureFlagWebFluxAutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

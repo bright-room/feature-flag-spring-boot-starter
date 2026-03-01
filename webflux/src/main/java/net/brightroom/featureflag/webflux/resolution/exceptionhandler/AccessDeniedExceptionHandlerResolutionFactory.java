@@ -1,7 +1,7 @@
 package net.brightroom.featureflag.webflux.resolution.exceptionhandler;
 
-import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
-import net.brightroom.featureflag.core.configuration.ResponseProperties;
+import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
+import net.brightroom.featureflag.core.properties.ResponseProperties;
 
 public class AccessDeniedExceptionHandlerResolutionFactory {
 

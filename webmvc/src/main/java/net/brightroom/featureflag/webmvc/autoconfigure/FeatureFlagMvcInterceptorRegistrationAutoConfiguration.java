@@ -1,7 +1,7 @@
 package net.brightroom.featureflag.webmvc.autoconfigure;
 
-import net.brightroom.featureflag.core.configuration.FeatureFlagPathPatterns;
-import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
+import net.brightroom.featureflag.core.properties.FeatureFlagPathPatterns;
+import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.webmvc.interceptor.FeatureFlagInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

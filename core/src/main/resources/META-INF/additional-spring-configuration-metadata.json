@@ -25,7 +25,7 @@
     },
     {
       "name": "feature-flags.response.type",
-      "type": "net.brightroom.featureflag.core.configuration.ResponseType",
+      "type": "net.brightroom.featureflag.core.properties.ResponseType",
       "description": "The type of response to return."
     },
     {

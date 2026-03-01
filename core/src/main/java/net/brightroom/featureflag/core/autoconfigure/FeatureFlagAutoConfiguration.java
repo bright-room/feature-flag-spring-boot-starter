@@ -1,5 +1,6 @@
-package net.brightroom.featureflag.core.configuration;
+package net.brightroom.featureflag.core.autoconfigure;
 
+import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 

@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.core.configuration;
+package net.brightroom.featureflag.core.properties;
 
 import java.util.ArrayList;
 import java.util.List;

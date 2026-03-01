@@ -1,9 +1,13 @@
-package net.brightroom.featureflag.core.configuration;
+package net.brightroom.featureflag.core.autoconfigure;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 import java.util.Map;
+import net.brightroom.featureflag.core.properties.FeatureFlagPathPatterns;
+import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
+import net.brightroom.featureflag.core.properties.ResponseProperties;
+import net.brightroom.featureflag.core.properties.ResponseType;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

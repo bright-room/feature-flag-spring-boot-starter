@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.core.configuration;
+package net.brightroom.featureflag.core.properties;
 
 /**
  * Properties related to the response configuration.

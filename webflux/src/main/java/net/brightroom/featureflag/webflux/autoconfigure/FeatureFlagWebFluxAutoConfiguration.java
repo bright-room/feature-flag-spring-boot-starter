@@ -1,8 +1,8 @@
 package net.brightroom.featureflag.webflux.autoconfigure;
 
-import net.brightroom.featureflag.core.configuration.FeatureFlagAutoConfiguration;
-import net.brightroom.featureflag.core.configuration.FeatureFlagPathPatterns;
-import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
+import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
+import net.brightroom.featureflag.core.properties.FeatureFlagPathPatterns;
+import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect;
 import net.brightroom.featureflag.webflux.exception.FeatureFlagExceptionHandler;
 import net.brightroom.featureflag.webflux.filter.FeatureFlagHandlerFilterFunction;

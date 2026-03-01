@@ -1,7 +1,7 @@
 package net.brightroom.featureflag.webmvc.autoconfigure;
 
-import net.brightroom.featureflag.core.configuration.FeatureFlagAutoConfiguration;
-import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
+import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
+import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
 import net.brightroom.featureflag.webmvc.exception.FeatureFlagExceptionHandler;

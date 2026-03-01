@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.core.configuration;
+package net.brightroom.featureflag.core.properties;
 
 /**
  * Represents the type of response to be returned by the system.

@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.core.configuration;
+package net.brightroom.featureflag.core.properties;
 
 import java.util.HashMap;
 import java.util.Map;
