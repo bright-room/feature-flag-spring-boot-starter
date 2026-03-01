@@ -13,7 +13,7 @@ import java.util.List;
  *     is now registered for all paths ({@code /**}) unconditionally. Remove {@code path-patterns}
  *     from your configuration. This class will be removed in the next major version.
  */
-@Deprecated
+@Deprecated(forRemoval = true)
 public class FeatureFlagPathPatterns {
 
   /** The list of path patterns to include. */
