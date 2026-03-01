@@ -1,6 +1,7 @@
 package net.brightroom.featureflag.webflux.autoconfigure;
 
 import net.brightroom.featureflag.core.configuration.FeatureFlagAutoConfiguration;
+import net.brightroom.featureflag.core.configuration.FeatureFlagPathPatterns;
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect;
 import net.brightroom.featureflag.webflux.exception.FeatureFlagExceptionHandler;
@@ -70,8 +71,10 @@ public class FeatureFlagWebFluxAutoConfiguration {
 
   public FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
     this.featureFlagProperties = featureFlagProperties;
-    if (featureFlagProperties.pathPatterns().hasIncludes()
-        || featureFlagProperties.pathPatterns().hasExcludes()) {
+
+    @SuppressWarnings("deprecation")
+    FeatureFlagPathPatterns pathPatterns = featureFlagProperties.pathPatterns();
+    if (pathPatterns.hasIncludes() || pathPatterns.hasExcludes()) {
       log.warn(
           "The 'feature-flags.path-patterns' configuration is set but is not supported by the "
               + "webflux module. Path-based filtering is not applicable because AOP aspects target "
