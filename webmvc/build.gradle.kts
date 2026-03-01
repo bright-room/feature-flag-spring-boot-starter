@@ -8,7 +8,7 @@ plugins {
 description = "Library to integrate Spring MVC and Feature flags."
 
 dependencies {
-    implementation(project(":core"))
+    implementation(projects.core)
     implementation(libs.spring.boot.starter.webmvc)
 
     testImplementation(libs.spring.boot.starter.webmvc.test)
