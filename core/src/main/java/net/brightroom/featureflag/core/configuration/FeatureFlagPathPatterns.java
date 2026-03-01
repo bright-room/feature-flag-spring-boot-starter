@@ -9,10 +9,9 @@ import java.util.List;
  * <p>This class defines which request paths should be included or excluded when registering the
  * feature flag interceptor.
  *
- * @deprecated {@code feature-flags.path-patterns} has no effect as of this version. The
- *     interceptor is now registered for all paths ({@code /**}) unconditionally. Remove
- *     {@code path-patterns} from your configuration. This class will be removed in the next major
- *     version.
+ * @deprecated {@code feature-flags.path-patterns} has no effect as of this version. The interceptor
+ *     is now registered for all paths ({@code /**}) unconditionally. Remove {@code path-patterns}
+ *     from your configuration. This class will be removed in the next major version.
  */
 @Deprecated
 public class FeatureFlagPathPatterns {
