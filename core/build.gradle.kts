@@ -8,5 +8,6 @@ description = "Core Library to Feature flags."
 
 dependencies {
     implementation(libs.spring.boot.autoconfigure)
+    implementation(libs.spring.web)
     testImplementation(libs.spring.boot.starter.test)
 }

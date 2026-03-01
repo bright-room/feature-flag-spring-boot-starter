@@ -3,10 +3,10 @@ package net.brightroom.featureflag.webmvc.resolution;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.resolution.HtmlResponseBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.util.HtmlUtils;
 
 /**
  * An {@link AccessDeniedInterceptResolution} implementation that returns a fixed HTML response.
@@ -26,27 +26,9 @@ class AccessDeniedInterceptResolutionViaHtmlResponse implements AccessDeniedInte
   @Override
   public ResponseEntity<?> resolution(
       @SuppressWarnings("unused") HttpServletRequest request, FeatureFlagAccessDeniedException e) {
-    String escapedMessage = HtmlUtils.htmlEscape(e.getMessage());
-
-    String html =
-        """
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <title>Access Denied</title>
-        </head>
-        <body>
-          <h1>403 - Access Denied</h1>
-          <p>%s</p>
-        </body>
-        </html>
-        """
-            .formatted(escapedMessage);
-
     return ResponseEntity.status(HttpStatus.FORBIDDEN)
         .contentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8))
-        .body(html);
+        .body(HtmlResponseBuilder.buildHtml(e));
   }
 
   AccessDeniedInterceptResolutionViaHtmlResponse() {}

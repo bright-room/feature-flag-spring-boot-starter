@@ -1,11 +1,10 @@
 package net.brightroom.featureflag.webmvc.resolution;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.net.URI;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.resolution.ProblemDetailBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 
 class AccessDeniedInterceptResolutionViaJsonResponse implements AccessDeniedInterceptResolution {
@@ -13,17 +12,10 @@ class AccessDeniedInterceptResolutionViaJsonResponse implements AccessDeniedInte
   @Override
   public ResponseEntity<?> resolution(
       HttpServletRequest request, FeatureFlagAccessDeniedException e) {
-    ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.FORBIDDEN);
-    problemDetail.setType(
-        URI.create(
-            "https://github.com/bright-room/feature-flag-spring-boot-starter#response-types"));
-    problemDetail.setTitle("Feature flag access denied");
-    problemDetail.setDetail(e.getMessage());
-    problemDetail.setInstance(URI.create(request.getRequestURI()));
-
+    var body = ProblemDetailBuilder.build(request.getRequestURI(), e);
     return ResponseEntity.status(HttpStatus.FORBIDDEN)
         .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-        .body(problemDetail);
+        .body(body);
   }
 
   AccessDeniedInterceptResolutionViaJsonResponse() {}
