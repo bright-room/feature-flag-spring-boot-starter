@@ -1,9 +1,8 @@
 name: on-deploy
 
 on:
-  push:
-    tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+  release:
+    types: [published]
 
 jobs:
   publish-artifacts:
@@ -13,6 +12,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Gradle Cache
         uses: ./.github/actions/gradle-cache
@@ -25,16 +26,4 @@ jobs:
           PGP_SIGNING_KEY: ${{ secrets.PGP_SIGNING_KEY }}
           PGP_SIGNING_KEY_PASSPHRASE: ${{ secrets.PGP_SIGNING_KEY_PASSPHRASE }}
         with:
-          command: sonatypeCentralUpload
-
-  generate-release-note:
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    needs:
-      - publish-artifacts
-
-    steps:
-      - name: Generate a release note
-        run: gh release create ${{ github.ref_name }} --generate-notes --latest --verify-tag --repo ${{ github.repository }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          command: sonatypeCentralUpload -PreleaseVersion=${{ github.event.release.tag_name }}
