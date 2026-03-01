@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webflux.configuration;
+package net.brightroom.featureflag.webflux.filter;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -9,7 +9,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.webflux.filter.FeatureFlagHandlerFilterFunction;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import org.junit.jupiter.api.Test;

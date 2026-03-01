@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webflux.configuration;
+package net.brightroom.featureflag.webflux.aspect;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Method;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
