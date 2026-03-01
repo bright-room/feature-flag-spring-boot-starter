@@ -39,7 +39,7 @@ This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides f
 
 ### Request Flow
 
-1. `FeatureFlagMvcInterceptorRegistrationAutoConfiguration` registers `FeatureFlagInterceptor` with include/exclude path patterns.
+1. `FeatureFlagMvcInterceptorRegistrationAutoConfiguration` registers `FeatureFlagInterceptor` for all paths (`/**`).
 2. `FeatureFlagInterceptor.preHandle()` checks `@FeatureFlag` on the method first, then on the class. Method-level annotation takes priority.
 3. If the feature is disabled, `FeatureFlagAccessDeniedException` is thrown.
 4. `FeatureFlagExceptionHandler` (`@ControllerAdvice`, `@Order(Ordered.LOWEST_PRECEDENCE)`) catches the exception and delegates to `AccessDeniedInterceptResolution.resolution()` to write the response.

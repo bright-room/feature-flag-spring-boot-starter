@@ -73,13 +73,6 @@ By default, it is available by defining the functions you want to manage in the 
 
 ```yaml
 feature-flags:
-  path-patterns:
-    includes:
-      - "/api/v2/**"
-    excludes:
-      - "/api/v2/foo"
-      - "/api/v2/bar"
-      - "/api/v1/**"
   feature-names:
     hello-class: true
     user-find: false
@@ -87,10 +80,6 @@ feature-flags:
   response:
     type: JSON  # PLAIN_TEXT | JSON | HTML (default: JSON)
 ```
-
-> **Note (Spring MVC only):** `path-patterns` is only supported in the Spring MVC module.
-> In WebFlux, AOP aspects target `@FeatureFlag`-annotated methods directly,
-> so path-based filtering is not applicable.
 
 > **Undefined flags are blocked by default (fail-closed).** If a feature name referenced in a `@FeatureFlag` annotation is not listed under `feature-flags.feature-names`, access is denied with `403 Forbidden`. Set `feature-flags.default-enabled: true` to allow access for undefined flags instead (fail-open).
 
