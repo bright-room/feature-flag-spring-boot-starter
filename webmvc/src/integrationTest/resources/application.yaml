@@ -9,5 +9,6 @@ feature-flags:
     disable-class-level-feature: false
     legacy-api: false
     special-endpoint: true
+    rollout-test-feature: true
   response:
     type: json
