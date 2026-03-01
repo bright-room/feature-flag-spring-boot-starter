@@ -7,18 +7,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Properties for feature flag configuration.
  *
- * <p>These properties are used to define which paths are included or excluded from feature flag
- * checks and to define the default enabled status for specific features.
+ * <p>These properties are used to define the default enabled status for specific features.
  *
  * <p>Configuration example in {@code application.yml}:
  *
  * <pre>{@code
  * feature-flags:
- *   path-patterns:
- *     includes:
- *       - "/api/**"
- *     excludes:
- *       - "/api/public/**"
  *   feature-names:
  *     "new-feature": true
  *     "beta-feature": false
@@ -36,7 +30,11 @@ public class FeatureFlagProperties {
    * Returns the path patterns for feature flag interceptor registration.
    *
    * @return the path patterns
+   * @deprecated {@code feature-flags.path-patterns} has no effect. The interceptor is registered
+   *     for all paths ({@code /**}) unconditionally. Remove {@code path-patterns} from your
+   *     configuration. This method will be removed in the next major version.
    */
+  @Deprecated
   public FeatureFlagPathPatterns pathPatterns() {
     return pathPatterns;
   }
