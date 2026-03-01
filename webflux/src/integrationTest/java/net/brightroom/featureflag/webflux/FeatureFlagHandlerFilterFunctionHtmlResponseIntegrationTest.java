@@ -19,30 +19,6 @@ class FeatureFlagHandlerFilterFunctionHtmlResponseIntegrationTest {
   WebTestClient webTestClient;
 
   @Test
-  void shouldAllowAccess_whenNoFilter() {
-    webTestClient
-        .get()
-        .uri("/functional/stable-endpoint")
-        .exchange()
-        .expectStatus()
-        .isOk()
-        .expectBody(String.class)
-        .isEqualTo("No Annotation");
-  }
-
-  @Test
-  void shouldAllowAccess_whenFeatureIsEnabled() {
-    webTestClient
-        .get()
-        .uri("/functional/experimental-stage-endpoint")
-        .exchange()
-        .expectStatus()
-        .isOk()
-        .expectBody(String.class)
-        .isEqualTo("Allowed");
-  }
-
-  @Test
   void shouldBlockAccess_whenFeatureIsDisabled() {
     String html =
         webTestClient
@@ -78,18 +54,6 @@ class FeatureFlagHandlerFilterFunctionHtmlResponseIntegrationTest {
     assertEquals("Access Denied", doc.title());
     assertEquals("403 - Access Denied", doc.select("h1").text());
     assertEquals("Feature 'disable-class-level-feature' is not available", doc.select("p").text());
-  }
-
-  @Test
-  void shouldAllowAccess_whenClassLevelFeatureIsEnabled() {
-    webTestClient
-        .get()
-        .uri("/functional/test/enabled")
-        .exchange()
-        .expectStatus()
-        .isOk()
-        .expectBody(String.class)
-        .isEqualTo("Allowed");
   }
 
   @Autowired

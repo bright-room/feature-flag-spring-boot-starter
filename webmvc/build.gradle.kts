@@ -14,6 +14,5 @@ dependencies {
     testImplementation(libs.spring.boot.starter.webmvc.test)
 
     integrationTestImplementation(libs.spring.boot.starter.test)
-    integrationTestImplementation(libs.spring.boot.starter.thymeleaf)
     integrationTestImplementation(libs.jsoup)
 }

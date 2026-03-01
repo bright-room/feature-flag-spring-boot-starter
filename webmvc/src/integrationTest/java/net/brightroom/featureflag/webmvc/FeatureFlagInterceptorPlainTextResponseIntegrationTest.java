@@ -6,9 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import net.brightroom.featureflag.webmvc.configuration.FeatureFlagMvcTestAutoConfiguration;
 import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagDisableController;
-import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagEnableController;
 import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagMethodLevelController;
-import net.brightroom.featureflag.webmvc.endpoint.NoFeatureFlagController;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -18,8 +16,6 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(
     properties = {"feature-flags.response.type=PLAIN_TEXT"},
     controllers = {
-      NoFeatureFlagController.class,
-      FeatureFlagEnableController.class,
       FeatureFlagDisableController.class,
       FeatureFlagMethodLevelController.class,
     })
@@ -27,22 +23,6 @@ import org.springframework.test.web.servlet.MockMvc;
 class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
 
   MockMvc mockMvc;
-
-  @Test
-  void shouldAllowAccess_whenNoAnnotated() throws Exception {
-    mockMvc
-        .perform(get("/stable-endpoint"))
-        .andExpect(status().isOk())
-        .andExpect(content().string("No Annotation"));
-  }
-
-  @Test
-  void shouldAllowAccess_whenFeatureIsEnabled() throws Exception {
-    mockMvc
-        .perform(get("/experimental-stage-endpoint"))
-        .andExpect(status().isOk())
-        .andExpect(content().string("Allowed"));
-  }
 
   @Test
   void shouldBlockAccess_whenFeatureIsDisabled() throws Exception {
@@ -53,27 +33,11 @@ class FeatureFlagInterceptorPlainTextResponseIntegrationTest {
   }
 
   @Test
-  void shouldAllowAccess_whenNoFeatureFlagAnnotationOnController() throws Exception {
-    mockMvc
-        .perform(get("/test/no-annotation"))
-        .andExpect(status().isOk())
-        .andExpect(content().string("No Annotation"));
-  }
-
-  @Test
   void shouldBlockAccess_whenClassLevelFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/test/disable"))
         .andExpect(status().isForbidden())
         .andExpect(content().string("Feature 'disable-class-level-feature' is not available"));
-  }
-
-  @Test
-  void shouldAllowAccess_whenClassLevelFeatureIsEnabled() throws Exception {
-    mockMvc
-        .perform(get("/test/enabled"))
-        .andExpect(status().isOk())
-        .andExpect(content().string("Allowed"));
   }
 
   @Autowired
