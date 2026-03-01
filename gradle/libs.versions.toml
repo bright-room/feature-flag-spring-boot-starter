@@ -1,5 +1,5 @@
 [versions]
-app = "3.0.0"
+app = "3.0.1"
 java = "25"
 
 [libraries]
