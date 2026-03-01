@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webmvc.provider;
+package net.brightroom.featureflag.core.provider;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;

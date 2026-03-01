@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.webmvc.configuration;
 
+import net.brightroom.featureflag.core.configuration.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -24,6 +25,7 @@ import org.springframework.context.annotation.Import;
 @EnableAutoConfiguration
 @EnableConfigurationProperties(FeatureFlagProperties.class)
 @Import({
+  FeatureFlagAutoConfiguration.class,
   FeatureFlagMvcAutoConfiguration.class,
   FeatureFlagMvcInterceptorRegistrationAutoConfiguration.class
 })
