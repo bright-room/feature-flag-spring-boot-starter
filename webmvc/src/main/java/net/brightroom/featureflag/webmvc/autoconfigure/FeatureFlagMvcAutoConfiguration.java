@@ -4,6 +4,8 @@ import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguratio
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
+import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
+import net.brightroom.featureflag.webmvc.context.SessionIdFeatureFlagContextResolver;
 import net.brightroom.featureflag.webmvc.exception.FeatureFlagExceptionHandler;
 import net.brightroom.featureflag.webmvc.interceptor.FeatureFlagInterceptor;
 import net.brightroom.featureflag.webmvc.resolution.AccessDeniedInterceptResolution;
@@ -30,8 +32,15 @@ public class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
-  FeatureFlagInterceptor featureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
-    return new FeatureFlagInterceptor(featureFlagProvider);
+  @ConditionalOnMissingBean(FeatureFlagContextResolver.class)
+  FeatureFlagContextResolver featureFlagContextResolver() {
+    return new SessionIdFeatureFlagContextResolver();
+  }
+
+  @Bean
+  FeatureFlagInterceptor featureFlagInterceptor(
+      FeatureFlagProvider featureFlagProvider, FeatureFlagContextResolver contextResolver) {
+    return new FeatureFlagInterceptor(featureFlagProvider, contextResolver);
   }
 
   @Bean
