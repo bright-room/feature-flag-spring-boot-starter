@@ -17,8 +17,8 @@ import net.brightroom.featureflag.core.context.FeatureFlagContext;
  * custom {@link FeatureFlagContextResolver} implementation that extracts a stable user identifier
  * from the request.
  *
- * <p>This bean is registered with {@code @ConditionalOnMissingBean}, so declaring any other
- * {@link FeatureFlagContextResolver} {@code @Bean} will automatically disable this default.
+ * <p>This bean is registered with {@code @ConditionalOnMissingBean}, so declaring any other {@link
+ * FeatureFlagContextResolver} {@code @Bean} will automatically disable this default.
  */
 public class SessionIdFeatureFlagContextResolver implements FeatureFlagContextResolver {
 

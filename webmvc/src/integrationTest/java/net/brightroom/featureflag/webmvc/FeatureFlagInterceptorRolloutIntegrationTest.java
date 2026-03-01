@@ -85,8 +85,7 @@ class FeatureFlagInterceptorRolloutIntegrationTest {
         return userId;
       }
     }
-    throw new IllegalStateException(
-        "Could not find a userId with bucket at least " + threshold);
+    throw new IllegalStateException("Could not find a userId with bucket at least " + threshold);
   }
 
   private static int computeBucket(String featureName, String userId) throws Exception {
