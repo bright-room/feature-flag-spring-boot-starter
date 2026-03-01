@@ -38,7 +38,4 @@ out/
 
 ### AI agents ###
 /.claude/outputs/
-/org/
-/implementation-plan.md
-/questions.md
-/prompt.md
+.claude/settings.local.json

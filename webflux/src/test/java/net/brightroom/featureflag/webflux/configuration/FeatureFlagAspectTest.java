@@ -181,4 +181,45 @@ class FeatureFlagAspectTest {
 
     StepVerifier.create((Mono<?>) result).expectErrorMatches(e -> e == cause).verify();
   }
+
+  @Test
+  void checkFeatureFlag_returnsFluxError_whenFeatureDisabled() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("fluxMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Flux.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(false));
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    StepVerifier.create((Flux<?>) result)
+        .expectErrorMatches(
+            e ->
+                e instanceof FeatureFlagAccessDeniedException
+                    && ((FeatureFlagAccessDeniedException) e).featureName().equals("some-feature"))
+        .verify();
+  }
+
+  @Test
+  void checkFeatureFlag_returnsFluxError_whenProceedThrows() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("fluxMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Flux.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    RuntimeException cause = new RuntimeException("unexpected");
+    when(joinPoint.proceed()).thenThrow(cause);
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    StepVerifier.create((Flux<?>) result).expectErrorMatches(e -> e == cause).verify();
+  }
 }
