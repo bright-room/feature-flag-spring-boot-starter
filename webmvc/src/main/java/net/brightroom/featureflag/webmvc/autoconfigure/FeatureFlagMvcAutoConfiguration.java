@@ -40,7 +40,7 @@ public class FeatureFlagMvcAutoConfiguration {
     return new FeatureFlagExceptionHandler(accessDeniedInterceptResolution);
   }
 
-  public FeatureFlagMvcAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
+  FeatureFlagMvcAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
     this.featureFlagProperties = featureFlagProperties;
   }
 }

@@ -13,7 +13,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @AutoConfiguration(after = FeatureFlagMvcAutoConfiguration.class)
 public class FeatureFlagMvcInterceptorRegistrationAutoConfiguration {
 
-  public FeatureFlagMvcInterceptorRegistrationAutoConfiguration() {}
+  FeatureFlagMvcInterceptorRegistrationAutoConfiguration() {}
 
   @Configuration(proxyBeanMethods = false)
   static class FeatureFlagMvcInterceptorRegistrationConfiguration implements WebMvcConfigurer {

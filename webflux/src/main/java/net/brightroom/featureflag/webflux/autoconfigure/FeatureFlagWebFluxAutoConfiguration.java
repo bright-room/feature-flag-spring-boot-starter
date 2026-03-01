@@ -69,7 +69,7 @@ public class FeatureFlagWebFluxAutoConfiguration {
         reactiveFeatureFlagProvider, accessDeniedHandlerResolution);
   }
 
-  public FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
+  FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
     this.featureFlagProperties = featureFlagProperties;
 
     @SuppressWarnings("deprecation")
