@@ -1,1 +1,1 @@
-net.brightroom.featureflag.webflux.configuration.FeatureFlagWebFluxAutoConfiguration
+net.brightroom.featureflag.webflux.autoconfigure.FeatureFlagWebFluxAutoConfiguration

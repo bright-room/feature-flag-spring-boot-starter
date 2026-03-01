@@ -3,7 +3,7 @@ package net.brightroom.featureflag.webflux.endpoint;
 import static org.springframework.web.reactive.function.server.RequestPredicates.GET;
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
-import net.brightroom.featureflag.webflux.configuration.FeatureFlagHandlerFilterFunction;
+import net.brightroom.featureflag.webflux.filter.FeatureFlagHandlerFilterFunction;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.server.RouterFunction;

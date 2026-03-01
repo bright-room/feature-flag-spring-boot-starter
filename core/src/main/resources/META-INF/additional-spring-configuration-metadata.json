@@ -3,12 +3,20 @@
     {
       "name": "feature-flags.path-patterns.includes",
       "type": "java.util.List<java.lang.String>",
-      "description": "List of Ant-style path patterns for request paths to include in feature flag checks."
+      "description": "List of Ant-style path patterns for request paths to include in feature flag checks.",
+      "deprecation": {
+        "reason": "feature-flags.path-patterns has no effect. The interceptor is registered for all paths unconditionally. Remove path-patterns from your configuration.",
+        "level": "error"
+      }
     },
     {
       "name": "feature-flags.path-patterns.excludes",
       "type": "java.util.List<java.lang.String>",
-      "description": "List of Ant-style path patterns for request paths to exclude from feature flag checks."
+      "description": "List of Ant-style path patterns for request paths to exclude from feature flag checks.",
+      "deprecation": {
+        "reason": "feature-flags.path-patterns has no effect. The interceptor is registered for all paths unconditionally. Remove path-patterns from your configuration.",
+        "level": "error"
+      }
     },
     {
       "name": "feature-flags.feature-names",
@@ -17,7 +25,7 @@
     },
     {
       "name": "feature-flags.response.type",
-      "type": "net.brightroom.featureflag.core.configuration.ResponseType",
+      "type": "net.brightroom.featureflag.core.properties.ResponseType",
       "description": "The type of response to return."
     },
     {

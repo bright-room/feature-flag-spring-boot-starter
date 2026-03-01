@@ -1,1 +1,1 @@
-net.brightroom.featureflag.core.configuration.FeatureFlagAutoConfiguration
+net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration
