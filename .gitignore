@@ -38,3 +38,4 @@ out/
 
 ### AI agents ###
 /.claude/outputs/
+.claude/settings.local.json

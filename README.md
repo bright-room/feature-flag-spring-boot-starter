@@ -1,11 +1,12 @@
 # feature-flag-spring-boot-starter
 
-Library for integrating feature flag functionality into Spring MVC.
+Library for integrating feature flag functionality into Spring MVC and Spring WebFlux.
 
 ## Features
 
 - Feature Flag functions can be realized with minimal configuration.
 - The source destination for feature management can be easily changed.
+- Supports both MVC and WebFlux.
 
 ## Installation
 
@@ -26,6 +27,13 @@ See the [release notes](https://github.com/bright-room/feature-flag-spring-boot-
         <artifactId>webmvc</artifactId>
         <version>${version}</version>
     </dependency>
+
+    <!-- Using Spring boot starter webflux -->
+    <dependency>
+        <groupId>net.bright-room.feature-flag-spring-boot-starter</groupId>
+        <artifactId>webflux</artifactId>
+        <version>${version}</version>
+    </dependency>
 </dependencies>
 ```
 
@@ -33,9 +41,12 @@ See the [release notes](https://github.com/bright-room/feature-flag-spring-boot-
 ```groovy
 dependencies {
     implementation 'net.bright-room.feature-flag-spring-boot-starter:core:${version}'
-
+    
     // Using Spring boot starter webmvc
     implementation 'net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}'
+
+    // Using Spring boot starter webflux
+    implementation 'net.bright-room.feature-flag-spring-boot-starter:webflux:${version}'
 }
 ```
 
@@ -43,9 +54,12 @@ dependencies {
 ```kotlin
 dependencies {
     implementation("net.bright-room.feature-flag-spring-boot-starter:core:${version}")
-
+    
     // Using Spring boot starter webmvc
     implementation("net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}")
+
+    // Using Spring boot starter webflux
+    implementation("net.bright-room.feature-flag-spring-boot-starter:webflux:${version}")
 }
 ```
 
@@ -73,6 +87,10 @@ feature-flags:
   response:
     type: JSON  # PLAIN_TEXT | JSON | HTML (default: JSON)
 ```
+
+> **Note (Spring MVC only):** `path-patterns` is only supported in the Spring MVC module.
+> In WebFlux, AOP aspects target `@FeatureFlag`-annotated methods directly,
+> so path-based filtering is not applicable.
 
 > **Undefined flags are blocked by default (fail-closed).** If a feature name referenced in a `@FeatureFlag` annotation is not listed under `feature-flags.feature-names`, access is denied with `403 Forbidden`. Set `feature-flags.default-enabled: true` to allow access for undefined flags instead (fail-open).
 
@@ -130,7 +148,7 @@ class FeatureFlagExternalDataSourceProvider implements FeatureFlagProvider {
     Boolean enabled = featureManagementMapper.check(featureName);
     // Choose your undefined-flag policy:
     //   return false; — fail-closed: block access for undefined flags (recommended)
-    //   return true;  — fail-open:   allow access for undefined flags
+    //   return true; — fail-open: allow access for undefined flags
     if (enabled == null) return false;
     return enabled;
   }
@@ -195,9 +213,11 @@ feature-flags:
     type: HTML
 ```
 
-> **Note:** The HTML response is returned only when the client's `Accept` header includes `text/html` or `text/*`. If the client only accepts `application/json`, a `406 Not Acceptable` response is returned instead.
+> **Note (Spring MVC only):** The HTML response is returned only when the client's `Accept` header includes `text/html` or `text/*`. If the client only accepts `application/json`, a `406 Not Acceptable` response is returned instead. In Spring WebFlux, the HTML response is always returned regardless of the `Accept` header.
 
 ## Custom Access Denied Response
+
+### Spring MVC
 
 You can create a fully custom response by defining a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
 
@@ -219,6 +239,57 @@ public class CustomFeatureFlagExceptionHandler {
     return ResponseEntity.status(403)
         .contentType(MediaType.TEXT_PLAIN)
         .body("Feature '" + e.featureName() + "' is disabled.");
+  }
+}
+```
+
+### Spring WebFlux (Annotation-based controllers)
+
+You can create a fully custom response by defining a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
+
+```java
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
+// CustomFeatureFlagExceptionHandler.java
+@ControllerAdvice
+@Order(0) // Ensure this handler takes priority over the library's default handler
+public class CustomFeatureFlagExceptionHandler {
+
+  @ExceptionHandler(FeatureFlagAccessDeniedException.class)
+  ResponseEntity<String> handle(FeatureFlagAccessDeniedException e) {
+    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+        .body("Feature '" + e.featureName() + "' is disabled.");
+  }
+}
+```
+
+### Spring WebFlux (Functional endpoints)
+
+Define an `AccessDeniedHandlerFilterResolution` bean to customize the response returned by the `HandlerFilterFunction`.
+
+```java
+import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.webflux.configuration.AccessDeniedHandlerFilterResolution;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.server.ServerResponse;
+
+// CustomHandlerFilterResolutionConfig.java
+@Configuration
+public class CustomHandlerFilterResolutionConfig {
+
+  @Bean
+  AccessDeniedHandlerFilterResolution customResolution() {
+    return (request, e) -> ServerResponse.status(HttpStatus.FORBIDDEN)
+        .contentType(MediaType.TEXT_PLAIN)
+        .bodyValue("Feature '" + e.featureName() + "' is disabled.");
   }
 }
 ```
