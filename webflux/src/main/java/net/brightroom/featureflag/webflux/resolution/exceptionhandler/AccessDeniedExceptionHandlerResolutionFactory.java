@@ -1,11 +1,12 @@
-package net.brightroom.featureflag.webflux.configuration;
+package net.brightroom.featureflag.webflux.resolution.exceptionhandler;
 
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.core.configuration.ResponseProperties;
 
-class AccessDeniedExceptionHandlerResolutionFactory {
+public class AccessDeniedExceptionHandlerResolutionFactory {
 
-  AccessDeniedExceptionHandlerResolution create(FeatureFlagProperties featureFlagProperties) {
+  public AccessDeniedExceptionHandlerResolution create(
+      FeatureFlagProperties featureFlagProperties) {
     ResponseProperties responseProperties = featureFlagProperties.response();
 
     return switch (responseProperties.type()) {
@@ -15,5 +16,5 @@ class AccessDeniedExceptionHandlerResolutionFactory {
     };
   }
 
-  AccessDeniedExceptionHandlerResolutionFactory() {}
+  public AccessDeniedExceptionHandlerResolutionFactory() {}
 }

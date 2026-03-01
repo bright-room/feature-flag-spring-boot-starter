@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webflux.configuration;
+package net.brightroom.featureflag.webflux.aspect;
 
 import java.lang.reflect.Method;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
@@ -14,14 +14,14 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Aspect
-class FeatureFlagAspect {
+public class FeatureFlagAspect {
 
   private final ReactiveFeatureFlagProvider reactiveFeatureFlagProvider;
 
   @Around(
       "@within(net.brightroom.featureflag.core.annotation.FeatureFlag) || "
           + "@annotation(net.brightroom.featureflag.core.annotation.FeatureFlag)")
-  Object checkFeatureFlag(ProceedingJoinPoint joinPoint) throws Throwable {
+  public Object checkFeatureFlag(ProceedingJoinPoint joinPoint) throws Throwable {
     FeatureFlag annotation = resolveAnnotation(joinPoint);
     if (annotation == null) {
       return joinPoint.proceed();
@@ -91,7 +91,7 @@ class FeatureFlagAspect {
     }
   }
 
-  FeatureFlagAspect(ReactiveFeatureFlagProvider reactiveFeatureFlagProvider) {
+  public FeatureFlagAspect(ReactiveFeatureFlagProvider reactiveFeatureFlagProvider) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
   }
 }

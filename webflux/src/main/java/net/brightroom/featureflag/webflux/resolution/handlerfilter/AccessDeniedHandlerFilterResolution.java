@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webflux.configuration;
+package net.brightroom.featureflag.webflux.resolution.handlerfilter;
 
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import org.springframework.web.reactive.function.server.HandlerFilterFunction;

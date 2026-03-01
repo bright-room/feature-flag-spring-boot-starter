@@ -1,7 +1,8 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc.autoconfigure;
 
 import net.brightroom.featureflag.core.configuration.FeatureFlagPathPatterns;
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
+import net.brightroom.featureflag.webmvc.interceptor.FeatureFlagInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -10,9 +11,9 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @AutoConfiguration(after = FeatureFlagMvcAutoConfiguration.class)
-class FeatureFlagMvcInterceptorRegistrationAutoConfiguration {
+public class FeatureFlagMvcInterceptorRegistrationAutoConfiguration {
 
-  FeatureFlagMvcInterceptorRegistrationAutoConfiguration() {}
+  public FeatureFlagMvcInterceptorRegistrationAutoConfiguration() {}
 
   @Configuration(proxyBeanMethods = false)
   static class FeatureFlagMvcInterceptorRegistrationConfiguration implements WebMvcConfigurer {

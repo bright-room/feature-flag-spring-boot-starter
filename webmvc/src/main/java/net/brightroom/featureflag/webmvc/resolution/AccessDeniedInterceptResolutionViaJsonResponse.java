@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc.resolution;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;

@@ -1,9 +1,16 @@
-package net.brightroom.featureflag.webflux.configuration;
+package net.brightroom.featureflag.webflux.autoconfigure;
 
 import net.brightroom.featureflag.core.configuration.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
+import net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect;
+import net.brightroom.featureflag.webflux.exception.FeatureFlagExceptionHandler;
+import net.brightroom.featureflag.webflux.filter.FeatureFlagHandlerFilterFunction;
 import net.brightroom.featureflag.webflux.provider.InMemoryReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.webflux.resolution.exceptionhandler.AccessDeniedExceptionHandlerResolution;
+import net.brightroom.featureflag.webflux.resolution.exceptionhandler.AccessDeniedExceptionHandlerResolutionFactory;
+import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
+import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolutionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -15,7 +22,7 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
 @EnableAspectJAutoProxy(proxyTargetClass = true)
-class FeatureFlagWebFluxAutoConfiguration {
+public class FeatureFlagWebFluxAutoConfiguration {
 
   private static final Logger log =
       LoggerFactory.getLogger(FeatureFlagWebFluxAutoConfiguration.class);
@@ -61,7 +68,7 @@ class FeatureFlagWebFluxAutoConfiguration {
         reactiveFeatureFlagProvider, accessDeniedHandlerResolution);
   }
 
-  FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
+  public FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
     this.featureFlagProperties = featureFlagProperties;
     if (featureFlagProperties.pathPatterns().hasIncludes()
         || featureFlagProperties.pathPatterns().hasExcludes()) {

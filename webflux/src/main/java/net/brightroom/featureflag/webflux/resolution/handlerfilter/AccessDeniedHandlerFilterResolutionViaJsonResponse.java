@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webflux.configuration;
+package net.brightroom.featureflag.webflux.resolution.handlerfilter;
 
 import java.net.URI;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;

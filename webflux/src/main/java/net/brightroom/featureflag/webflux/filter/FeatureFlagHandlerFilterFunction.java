@@ -1,7 +1,8 @@
-package net.brightroom.featureflag.webflux.configuration;
+package net.brightroom.featureflag.webflux.filter;
 
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import org.springframework.web.reactive.function.server.HandlerFilterFunction;
 import org.springframework.web.reactive.function.server.HandlerFunction;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -66,7 +67,7 @@ public class FeatureFlagHandlerFilterFunction {
     return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
   }
 
-  FeatureFlagHandlerFilterFunction(
+  public FeatureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       AccessDeniedHandlerFilterResolution resolution) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;

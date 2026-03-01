@@ -1,13 +1,17 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc.autoconfigure;
 
 import net.brightroom.featureflag.core.configuration.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.configuration.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
+import net.brightroom.featureflag.webmvc.exception.FeatureFlagExceptionHandler;
+import net.brightroom.featureflag.webmvc.interceptor.FeatureFlagInterceptor;
+import net.brightroom.featureflag.webmvc.resolution.AccessDeniedInterceptResolution;
+import net.brightroom.featureflag.webmvc.resolution.AccessDeniedInterceptResolutionFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
-class FeatureFlagMvcAutoConfiguration {
+public class FeatureFlagMvcAutoConfiguration {
 
   private final FeatureFlagProperties featureFlagProperties;
 
@@ -27,7 +31,7 @@ class FeatureFlagMvcAutoConfiguration {
     return new FeatureFlagExceptionHandler(accessDeniedInterceptResolution);
   }
 
-  FeatureFlagMvcAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
+  public FeatureFlagMvcAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
     this.featureFlagProperties = featureFlagProperties;
   }
 }

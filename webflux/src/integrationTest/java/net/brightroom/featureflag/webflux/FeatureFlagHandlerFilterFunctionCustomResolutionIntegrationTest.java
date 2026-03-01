@@ -1,8 +1,8 @@
 package net.brightroom.featureflag.webflux;
 
-import net.brightroom.featureflag.webflux.configuration.AccessDeniedHandlerFilterResolution;
 import net.brightroom.featureflag.webflux.configuration.FeatureFlagWebFluxTestAutoConfiguration;
 import net.brightroom.featureflag.webflux.endpoint.FeatureFlagRouterConfiguration;
+import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest;

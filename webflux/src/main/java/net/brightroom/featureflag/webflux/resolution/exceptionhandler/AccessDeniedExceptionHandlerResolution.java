@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webflux.configuration;
+package net.brightroom.featureflag.webflux.resolution.exceptionhandler;
 
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import org.springframework.http.ResponseEntity;
@@ -11,7 +11,7 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
  * <p>Implementations return a {@link ResponseEntity} which is written through Spring's response
  * processing pipeline, enabling content negotiation and standard message converters.
  */
-interface AccessDeniedExceptionHandlerResolution {
+public interface AccessDeniedExceptionHandlerResolution {
 
   /**
    * Resolves the response when access to a feature flag protected resource is denied.

@@ -1,4 +1,4 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc.interceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -10,7 +10,7 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-class FeatureFlagInterceptor implements HandlerInterceptor {
+public class FeatureFlagInterceptor implements HandlerInterceptor {
   private final FeatureFlagProvider featureFlagProvider;
 
   @Override
@@ -52,7 +52,7 @@ class FeatureFlagInterceptor implements HandlerInterceptor {
     return Objects.nonNull(annotation) && !featureFlagProvider.isFeatureEnabled(annotation.value());
   }
 
-  FeatureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
+  public FeatureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
     this.featureFlagProvider = featureFlagProvider;
   }
 }

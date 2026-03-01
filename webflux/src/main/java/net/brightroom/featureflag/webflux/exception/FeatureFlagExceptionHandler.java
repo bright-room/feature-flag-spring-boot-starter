@@ -1,6 +1,7 @@
-package net.brightroom.featureflag.webflux.configuration;
+package net.brightroom.featureflag.webflux.exception;
 
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.webflux.resolution.exceptionhandler.AccessDeniedExceptionHandlerResolution;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
  */
 @ControllerAdvice
 @Order(Ordered.LOWEST_PRECEDENCE)
-class FeatureFlagExceptionHandler {
+public class FeatureFlagExceptionHandler {
 
   private final AccessDeniedExceptionHandlerResolution accessDeniedExceptionHandlerResolution;
 
@@ -30,7 +31,7 @@ class FeatureFlagExceptionHandler {
     return accessDeniedExceptionHandlerResolution.resolution(request, e);
   }
 
-  FeatureFlagExceptionHandler(
+  public FeatureFlagExceptionHandler(
       AccessDeniedExceptionHandlerResolution accessDeniedExceptionHandlerResolution) {
     this.accessDeniedExceptionHandlerResolution = accessDeniedExceptionHandlerResolution;
   }

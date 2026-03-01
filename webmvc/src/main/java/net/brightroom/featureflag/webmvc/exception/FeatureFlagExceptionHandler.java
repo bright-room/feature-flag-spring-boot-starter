@@ -1,7 +1,8 @@
-package net.brightroom.featureflag.webmvc.configuration;
+package net.brightroom.featureflag.webmvc.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.webmvc.resolution.AccessDeniedInterceptResolution;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
  */
 @ControllerAdvice
 @Order(Ordered.LOWEST_PRECEDENCE)
-class FeatureFlagExceptionHandler {
+public class FeatureFlagExceptionHandler {
 
   private final AccessDeniedInterceptResolution accessDeniedInterceptResolution;
 
@@ -30,7 +31,8 @@ class FeatureFlagExceptionHandler {
     return accessDeniedInterceptResolution.resolution(request, e);
   }
 
-  FeatureFlagExceptionHandler(AccessDeniedInterceptResolution accessDeniedInterceptResolution) {
+  public FeatureFlagExceptionHandler(
+      AccessDeniedInterceptResolution accessDeniedInterceptResolution) {
     this.accessDeniedInterceptResolution = accessDeniedInterceptResolution;
   }
 }
