@@ -23,7 +23,8 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           label_trigger: claude-plan
-          claude_args: '--model claude-opus-4-6'
+          claude_args: '--model claude-opus-4-6 --allowedTools Read,Glob,Grep,Agent'
+          show_full_output: true
           prompt: |
             あなたはこのリポジトリの実装プランナーです。
             Issueの内容を注意深く読み、詳細な実装プランを作成してください。
