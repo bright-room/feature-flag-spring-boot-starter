@@ -73,16 +73,13 @@ jobs:
           echo "Selected model: $MODEL"
 
       - name: Run Claude Code
-        id: run-claude-code
+        id: claude
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
-
-          allowed_bots: "claude-bot,claude"
 
           claude_args: |
             --model ${{ steps.determine-claude-model.outputs.model }}
