@@ -25,23 +25,65 @@ jobs:
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 1
 
+      # Extract model from the comment / issue body
+      - name: Determine Claude Model
+        id: determine-claude-model
+        run: |
+          # Get the comment/issue body based on event type
+          if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            BODY=$(cat <<'EOF'
+          ${{ github.event.comment.body }}
+          EOF
+          )
+          elif [ "${{ github.event_name }}" = "pull_request_review_comment" ]; then
+            BODY=$(cat <<'EOF'
+          ${{ github.event.comment.body }}
+          EOF
+          )
+          elif [ "${{ github.event_name }}" = "pull_request_review" ]; then
+            BODY=$(cat <<'EOF'
+          ${{ github.event.review.body }}
+          EOF
+          )
+          elif [ "${{ github.event_name }}" = "issues" ]; then
+            BODY=$(cat <<'EOF'
+          ${{ github.event.issue.body }}
+          EOF
+          )
+          fi
+          
+          # Convert to lowercase for case-insensitive matching
+          BODY_LOWER=$(echo "$BODY" | tr '[:upper:]' '[:lower:]')
+
+          # Determine model based on keywords
+          if echo "$BODY_LOWER" | grep -q '\bopus\b'; then
+            MODEL="claude-opus-4-1"
+          elif echo "$BODY_LOWER" | grep -q '\bhaiku\b'; then
+            MODEL="claude-haiku-4-5"
+          else
+            # Default to sonnet (including when 'sonnet' keyword is present)
+            MODEL="claude-sonnet-4-5"
+          fi
+
+          echo "model=$MODEL" >> $GITHUB_OUTPUT
+          echo "Selected model: $MODEL"
+
       - name: Run Claude Code
-        id: claude
+        id: run-claude-code
         uses: anthropics/claude-code-action@v1
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
 
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
+          allowed_bots: "claude-bot,claude"
 
-          claude_args: '--allowed-tools "Bash(gh issue create*)" "Bash(gh pr create*)" "Bash(./gradlew spotlessApply:*)" "Bash(./gradlew check:*)"'
-
+          claude_args: |
+            --model ${{ steps.determine-claude-model.outputs.model }}
+            --allowed-tools "Bash(gh issue create*)" "Bash(gh pr create*)" "Bash(./gradlew spotlessApply:*)" "Bash(./gradlew check:*)"
