@@ -3,6 +3,8 @@ package net.brightroom.featureflag.core.provider;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.context.ApplicationEventPublisher;
 
 /**
@@ -19,6 +21,8 @@ import org.springframework.context.ApplicationEventPublisher;
  * InMemoryFeatureFlagProvider} as the default provider in that scenario.
  */
 public class InMemoryMutableFeatureFlagProvider implements MutableFeatureFlagProvider {
+
+  private static final Log log = LogFactory.getLog(InMemoryMutableFeatureFlagProvider.class);
 
   private final ConcurrentHashMap<String, Boolean> features;
   private final boolean defaultEnabled;
@@ -54,12 +58,20 @@ public class InMemoryMutableFeatureFlagProvider implements MutableFeatureFlagPro
   @Override
   public void enable(String featureName) {
     features.put(featureName, true);
-    eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, true));
+    try {
+      eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, true));
+    } catch (Exception e) {
+      log.warn("Failed to publish FeatureFlagChangedEvent for '" + featureName + "'", e);
+    }
   }
 
   @Override
   public void disable(String featureName) {
     features.put(featureName, false);
-    eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, false));
+    try {
+      eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, false));
+    } catch (Exception e) {
+      log.warn("Failed to publish FeatureFlagChangedEvent for '" + featureName + "'", e);
+    }
   }
 }
