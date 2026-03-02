@@ -61,12 +61,12 @@ jobs:
 
           # Determine model based on keywords
           if echo "$BODY_LOWER" | grep -q '\bopus\b'; then
-            MODEL="claude-opus-4-1"
+            MODEL="claude-opus-4-6"
           elif echo "$BODY_LOWER" | grep -q '\bhaiku\b'; then
             MODEL="claude-haiku-4-5"
           else
             # Default to sonnet (including when 'sonnet' keyword is present)
-            MODEL="claude-sonnet-4-5"
+            MODEL="claude-sonnet-4-6"
           fi
 
           echo "model=$MODEL" >> $GITHUB_OUTPUT
