@@ -29,7 +29,7 @@ public class FeatureFlagEndpoint {
 
   private final MutableFeatureFlagProvider provider;
 
-  FeatureFlagEndpoint(MutableFeatureFlagProvider provider) {
+  public FeatureFlagEndpoint(MutableFeatureFlagProvider provider) {
     this.provider = provider;
   }
 
