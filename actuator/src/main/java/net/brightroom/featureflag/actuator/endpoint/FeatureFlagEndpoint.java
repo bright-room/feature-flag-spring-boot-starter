@@ -24,7 +24,7 @@ import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
  * {@link net.brightroom.featureflag.core.provider.InMemoryMutableFeatureFlagProvider} is
  * auto-configured when the {@code actuator} module is on the classpath.
  */
-@Endpoint(id = "featureFlags")
+@Endpoint(id = "feature-flags")
 public class FeatureFlagEndpoint {
 
   private final MutableFeatureFlagProvider provider;

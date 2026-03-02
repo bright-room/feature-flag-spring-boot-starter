@@ -5,11 +5,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Map;
 import net.brightroom.featureflag.actuator.endpoint.FeatureFlagEndpointResponse;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.test.web.server.LocalManagementPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.client.RestClient;
 
 @SpringBootTest(
     classes = TestApplication.class,
@@ -22,11 +22,12 @@ import org.springframework.test.context.TestPropertySource;
     })
 class FeatureFlagEndpointIntegrationTest {
 
-  TestRestTemplate restTemplate;
+  RestClient restClient;
 
   @Test
   void shouldReturnOk_whenGetEndpointCalled() {
-    var response = restTemplate.getForEntity("/actuator/feature-flags", String.class);
+    var response =
+        restClient.get().uri("/actuator/feature-flags").retrieve().toEntity(String.class);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
   }
@@ -34,7 +35,11 @@ class FeatureFlagEndpointIntegrationTest {
   @Test
   void shouldReturnAllFeatureFlags_whenGetEndpointCalled() {
     var response =
-        restTemplate.getForEntity("/actuator/feature-flags", FeatureFlagEndpointResponse.class);
+        restClient
+            .get()
+            .uri("/actuator/feature-flags")
+            .retrieve()
+            .toEntity(FeatureFlagEndpointResponse.class);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody()).isNotNull();
@@ -42,8 +47,7 @@ class FeatureFlagEndpointIntegrationTest {
         .containsExactlyInAnyOrderEntriesOf(Map.of("new-feature", true, "disabled-feature", false));
   }
 
-  @Autowired
-  FeatureFlagEndpointIntegrationTest(TestRestTemplate restTemplate) {
-    this.restTemplate = restTemplate;
+  FeatureFlagEndpointIntegrationTest(@LocalManagementPort int port) {
+    this.restClient = RestClient.builder().baseUrl("http://localhost:" + port).build();
   }
 }
