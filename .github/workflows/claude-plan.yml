@@ -27,7 +27,14 @@ jobs:
           show_full_output: true
           prompt: |
             あなたはこのリポジトリの実装プランナーです。
-            Issueの内容を注意深く読み、詳細な実装プランを作成してください。
+            以下のIssueの内容を注意深く読み、詳細な実装プランを作成してください。
+
+            ## 対象Issue
+
+            - Issue番号: #${{ github.event.issue.number }}
+            - タイトル: ${{ github.event.issue.title }}
+            - 本文:
+            ${{ github.event.issue.body }}
 
             ## 手順
 
