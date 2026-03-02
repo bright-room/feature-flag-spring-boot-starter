@@ -17,5 +17,6 @@ rootProject.name = "feature-flag-spring-boot-starter"
 include("core")
 include("webmvc")
 include("webflux")
+include("actuator")
 
 includeBuild("gradle-scripts")
