@@ -25,7 +25,9 @@ public class SessionIdFeatureFlagContextResolver implements FeatureFlagContextRe
   @Override
   public FeatureFlagContext resolve(HttpServletRequest request) {
     HttpSession session = request.getSession(false);
-    String userId = (session != null) ? session.getId() : UUID.randomUUID().toString();
-    return new FeatureFlagContext(userId);
+    if (session != null) {
+      return new FeatureFlagContext(session.getId());
+    }
+    return new FeatureFlagContext(UUID.randomUUID().toString());
   }
 }
