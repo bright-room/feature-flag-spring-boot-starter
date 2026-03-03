@@ -9,6 +9,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.rollout.DefaultRolloutStrategy;
+import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import org.junit.jupiter.api.Test;
@@ -24,8 +26,11 @@ class FeatureFlagHandlerFilterFunctionTest {
   private final ReactiveFeatureFlagProvider provider = mock(ReactiveFeatureFlagProvider.class);
   private final AccessDeniedHandlerFilterResolution resolution =
       mock(AccessDeniedHandlerFilterResolution.class);
+  private final ReactiveFeatureFlagContextResolver contextResolver =
+      mock(ReactiveFeatureFlagContextResolver.class);
   private final FeatureFlagHandlerFilterFunction filterFunction =
-      new FeatureFlagHandlerFilterFunction(provider, resolution);
+      new FeatureFlagHandlerFilterFunction(
+          provider, resolution, new DefaultRolloutStrategy(), contextResolver);
 
   @Test
   void of_throwsIllegalArgumentException_whenFeatureNameIsNull() {

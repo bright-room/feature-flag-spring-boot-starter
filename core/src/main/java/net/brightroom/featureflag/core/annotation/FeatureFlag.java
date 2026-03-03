@@ -43,4 +43,15 @@ public @interface FeatureFlag {
    * @return the identifier of the feature flag; must be a non-empty string
    */
   String value();
+
+  /**
+   * Rollout percentage (0–100). 100 means fully enabled (default).
+   *
+   * <p>When less than 100, the feature is enabled only for a percentage of requests (or users, if a
+   * sticky {@code FeatureFlagContextResolver} is provided). When 0, the feature is effectively
+   * disabled for all requests even if the flag itself is enabled.
+   *
+   * @return the rollout percentage; must be between 0 and 100 inclusive
+   */
+  int rollout() default 100;
 }

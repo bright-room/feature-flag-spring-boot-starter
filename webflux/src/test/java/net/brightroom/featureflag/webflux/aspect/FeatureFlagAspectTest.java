@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Method;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.rollout.DefaultRolloutStrategy;
+import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -20,7 +22,10 @@ import reactor.test.StepVerifier;
 class FeatureFlagAspectTest {
 
   private final ReactiveFeatureFlagProvider provider = mock(ReactiveFeatureFlagProvider.class);
-  private final FeatureFlagAspect aspect = new FeatureFlagAspect(provider);
+  private final ReactiveFeatureFlagContextResolver contextResolver =
+      mock(ReactiveFeatureFlagContextResolver.class);
+  private final FeatureFlagAspect aspect =
+      new FeatureFlagAspect(provider, new DefaultRolloutStrategy(), contextResolver);
 
   static class TestController {
 

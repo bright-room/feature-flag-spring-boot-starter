@@ -1,9 +1,14 @@
 package net.brightroom.featureflag.webflux.autoconfigure;
 
+import java.util.UUID;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
+import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.properties.FeatureFlagPathPatterns;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
+import net.brightroom.featureflag.core.rollout.DefaultRolloutStrategy;
+import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect;
+import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.exception.FeatureFlagExceptionHandler;
 import net.brightroom.featureflag.webflux.filter.FeatureFlagHandlerFilterFunction;
 import net.brightroom.featureflag.webflux.provider.InMemoryReactiveFeatureFlagProvider;
@@ -50,8 +55,24 @@ public class FeatureFlagWebFluxAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  FeatureFlagAspect featureFlagAspect(ReactiveFeatureFlagProvider reactiveFeatureFlagProvider) {
-    return new FeatureFlagAspect(reactiveFeatureFlagProvider);
+  RolloutStrategy rolloutStrategy() {
+    return new DefaultRolloutStrategy();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  ReactiveFeatureFlagContextResolver reactiveFeatureFlagContextResolver() {
+    return request ->
+        reactor.core.publisher.Mono.just(new FeatureFlagContext(UUID.randomUUID().toString()));
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  FeatureFlagAspect featureFlagAspect(
+      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
+      RolloutStrategy rolloutStrategy,
+      ReactiveFeatureFlagContextResolver contextResolver) {
+    return new FeatureFlagAspect(reactiveFeatureFlagProvider, rolloutStrategy, contextResolver);
   }
 
   @Bean
@@ -64,9 +85,14 @@ public class FeatureFlagWebFluxAutoConfiguration {
   @ConditionalOnMissingBean
   FeatureFlagHandlerFilterFunction featureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution) {
+      AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution,
+      RolloutStrategy rolloutStrategy,
+      ReactiveFeatureFlagContextResolver contextResolver) {
     return new FeatureFlagHandlerFilterFunction(
-        reactiveFeatureFlagProvider, accessDeniedHandlerResolution);
+        reactiveFeatureFlagProvider,
+        accessDeniedHandlerResolution,
+        rolloutStrategy,
+        contextResolver);
   }
 
   FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {

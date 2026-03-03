@@ -1,9 +1,15 @@
 package net.brightroom.featureflag.webmvc.autoconfigure;
 
+import java.util.Optional;
+import java.util.UUID;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
+import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
+import net.brightroom.featureflag.core.rollout.DefaultRolloutStrategy;
+import net.brightroom.featureflag.core.rollout.RolloutStrategy;
+import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
 import net.brightroom.featureflag.webmvc.exception.FeatureFlagExceptionHandler;
 import net.brightroom.featureflag.webmvc.interceptor.FeatureFlagInterceptor;
 import net.brightroom.featureflag.webmvc.resolution.AccessDeniedInterceptResolution;
@@ -30,8 +36,23 @@ public class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
-  FeatureFlagInterceptor featureFlagInterceptor(FeatureFlagProvider featureFlagProvider) {
-    return new FeatureFlagInterceptor(featureFlagProvider);
+  @ConditionalOnMissingBean
+  RolloutStrategy rolloutStrategy() {
+    return new DefaultRolloutStrategy();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  FeatureFlagContextResolver featureFlagContextResolver() {
+    return request -> Optional.of(new FeatureFlagContext(UUID.randomUUID().toString()));
+  }
+
+  @Bean
+  FeatureFlagInterceptor featureFlagInterceptor(
+      FeatureFlagProvider featureFlagProvider,
+      RolloutStrategy rolloutStrategy,
+      FeatureFlagContextResolver contextResolver) {
+    return new FeatureFlagInterceptor(featureFlagProvider, rolloutStrategy, contextResolver);
   }
 
   @Bean

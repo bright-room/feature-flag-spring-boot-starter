@@ -1,13 +1,12 @@
 package net.brightroom.featureflag.webflux.filter;
 
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.rollout.RolloutStrategy;
+import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import org.springframework.web.reactive.function.server.HandlerFilterFunction;
-import org.springframework.web.reactive.function.server.HandlerFunction;
-import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
-import reactor.core.publisher.Mono;
 
 /**
  * A factory for {@link HandlerFilterFunction} that applies feature flag access control to
@@ -30,11 +29,15 @@ import reactor.core.publisher.Mono;
  * AccessDeniedHandlerFilterResolution} to build the denied response without invoking the handler.
  * The default response format follows {@code feature-flags.response.type} configuration, and can be
  * customized by providing a custom {@link AccessDeniedHandlerFilterResolution} bean.
+ *
+ * <p>Use {@link #of(String, int)} to enable gradual rollout for functional endpoints.
  */
 public class FeatureFlagHandlerFilterFunction {
 
   private final ReactiveFeatureFlagProvider reactiveFeatureFlagProvider;
   private final AccessDeniedHandlerFilterResolution resolution;
+  private final RolloutStrategy rolloutStrategy;
+  private final ReactiveFeatureFlagContextResolver contextResolver;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -44,6 +47,20 @@ public class FeatureFlagHandlerFilterFunction {
    * @throws IllegalArgumentException if {@code featureName} is null or empty
    */
   public HandlerFilterFunction<ServerResponse, ServerResponse> of(String featureName) {
+    return of(featureName, 100);
+  }
+
+  /**
+   * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag
+   * and rollout percentage.
+   *
+   * @param featureName the name of the feature flag to check; must not be null or empty
+   * @param rollout the rollout percentage (0–100); 100 means fully enabled
+   * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag
+   *     and rollout
+   * @throws IllegalArgumentException if {@code featureName} is null or empty
+   */
+  public HandlerFilterFunction<ServerResponse, ServerResponse> of(String featureName, int rollout) {
     if (featureName == null || featureName.isEmpty()) {
       throw new IllegalArgumentException(
           "featureName must not be null or empty. "
@@ -53,24 +70,37 @@ public class FeatureFlagHandlerFilterFunction {
         reactiveFeatureFlagProvider
             .isFeatureEnabled(featureName)
             .defaultIfEmpty(false)
-            .flatMap(enabled -> filterByFeatureEnabled(request, next, featureName, enabled));
-  }
-
-  private Mono<ServerResponse> filterByFeatureEnabled(
-      ServerRequest request,
-      HandlerFunction<ServerResponse> next,
-      String featureName,
-      boolean enabled) {
-    if (enabled) {
-      return next.handle(request);
-    }
-    return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
+            .flatMap(
+                enabled -> {
+                  if (!enabled) {
+                    return resolution.resolve(
+                        request, new FeatureFlagAccessDeniedException(featureName));
+                  }
+                  if (rollout < 100) {
+                    return contextResolver
+                        .resolve(request.exchange().getRequest())
+                        .flatMap(
+                            ctx -> {
+                              if (!rolloutStrategy.isInRollout(featureName, ctx, rollout)) {
+                                return resolution.resolve(
+                                    request, new FeatureFlagAccessDeniedException(featureName));
+                              }
+                              return next.handle(request);
+                            })
+                        .switchIfEmpty(next.handle(request));
+                  }
+                  return next.handle(request);
+                });
   }
 
   public FeatureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      AccessDeniedHandlerFilterResolution resolution) {
+      AccessDeniedHandlerFilterResolution resolution,
+      RolloutStrategy rolloutStrategy,
+      ReactiveFeatureFlagContextResolver contextResolver) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.resolution = resolution;
+    this.rolloutStrategy = rolloutStrategy;
+    this.contextResolver = contextResolver;
   }
 }
