@@ -33,10 +33,10 @@ This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides f
 
 ### Modules
 
-- **`core`** — Annotation, configuration properties, provider SPI, and shared resolution logic. Contains `@FeatureFlag` annotation, `FeatureFlagProperties` (`feature-flags.*` config prefix), `FeatureFlagProvider`/`MutableFeatureFlagProvider` SPI, and `ProblemDetailBuilder`/`HtmlResponseBuilder`. `FeatureFlagAutoConfiguration` bootstraps property binding only (no provider beans).
+- **`core`** — Annotation, configuration properties, provider SPI, and shared resolution logic. Contains `@FeatureFlag` annotation, `FeatureFlagProperties` (`feature-flags.*` config prefix), `FeatureFlagProvider`/`MutableFeatureFlagProvider` SPI (sync), `ReactiveFeatureFlagProvider`/`MutableReactiveFeatureFlagProvider` SPI (reactive, `reactor-core` is `compileOnly`), and `ProblemDetailBuilder`/`HtmlResponseBuilder`. `FeatureFlagAutoConfiguration` bootstraps property binding only (no provider beans).
 - **`webmvc`** — Spring MVC interceptor implementation. Depends on `core`. Registers `InMemoryFeatureFlagProvider` bean via `FeatureFlagMvcAutoConfiguration`.
 - **`webflux`** — Spring WebFlux AOP + HandlerFilterFunction implementation. Depends on `core`. Uses `ReactiveFeatureFlagProvider` and `FeatureFlagAspect` for annotation-based controllers, `FeatureFlagHandlerFilterFunction` for functional endpoints.
-- **`actuator`** — Runtime feature flag management via Spring Boot Actuator endpoint (`/actuator/feature-flags`). Registers `MutableInMemoryFeatureFlagProvider` bean and publishes `FeatureFlagChangedEvent` on flag changes. Auto-configured before webmvc/webflux.
+- **`actuator`** — Runtime feature flag management via Spring Boot Actuator endpoint (`/actuator/feature-flags`). Auto-configuration is split into `ServletConfiguration` (registers `MutableInMemoryFeatureFlagProvider` + `FeatureFlagEndpoint`) and `ReactiveConfiguration` (registers `MutableInMemoryReactiveFeatureFlagProvider` + `ReactiveFeatureFlagEndpoint`) via `@ConditionalOnWebApplication`. Publishes `FeatureFlagChangedEvent` on flag changes. Auto-configured before webmvc/webflux.
 - **`gradle-scripts`** — Composite build providing convention plugins: `spring-boot-starter`, `publish-plugin`, `spotless-java`, `spotless-kotlin`, `integration-test`.
 
 ### Request Flow
@@ -48,7 +48,7 @@ This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides f
 
 ### Extension Points
 
-- **Custom feature source**: Implement `FeatureFlagProvider` and register as a `@Bean`. The default `InMemoryFeatureFlagProvider` reads from `feature-flags.feature-names` in config and is **fail-closed by default** — feature names not present in the config are treated as disabled. Set `feature-flags.default-enabled: true` to switch to fail-open behavior. A custom bean replaces the default due to `@ConditionalOnMissingBean`.
+- **Custom feature source**: Implement `FeatureFlagProvider` (webmvc) or `ReactiveFeatureFlagProvider` (webflux) and register as a `@Bean`. The default `InMemoryFeatureFlagProvider` / `InMemoryReactiveFeatureFlagProvider` reads from `feature-flags.feature-names` in config and is **fail-closed by default** — feature names not present in the config are treated as disabled. Set `feature-flags.default-enabled: true` to switch to fail-open behavior. A custom bean replaces the default due to `@ConditionalOnMissingBean`.
 - **Custom denied response**: Define a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
 - **Gradual rollout**: Use `@FeatureFlag(value = "name", rollout = 50)` to enable a feature for a percentage of requests. Implement `FeatureFlagContextResolver` (webmvc) or `ReactiveFeatureFlagContextResolver` (webflux) for sticky rollout. Implement `RolloutStrategy` (webmvc) or `ReactiveRolloutStrategy` (webflux) to customize bucketing.
 

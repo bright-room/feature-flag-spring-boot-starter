@@ -135,7 +135,9 @@ By default, function management can be set in the configuration file, but it is 
 
 By changing the source of function management to a database, external file, etc., it is possible to control in real time.
 
-To change the source destination, simply implement the `FeatureFlagProvider` and register the bean.
+To change the source destination, simply implement the `FeatureFlagProvider` (Spring MVC) or `ReactiveFeatureFlagProvider` (Spring WebFlux) and register the bean.
+
+### Spring MVC
 
 ```java
 
@@ -164,6 +166,30 @@ class FeatureFlagExternalDataSourceProvider implements FeatureFlagProvider {
 @Mapper
 interface FeatureManagementMapper {
   Boolean check(@Param("feature") String feature);
+}
+```
+
+### Spring WebFlux
+
+```java
+@Component
+class ReactiveFeatureFlagExternalDataSourceProvider implements ReactiveFeatureFlagProvider {
+
+  FeatureManagementRepository featureManagementRepository;
+
+  @Override
+  public Mono<Boolean> isFeatureEnabled(String featureName) {
+    return featureManagementRepository.findByFeatureName(featureName)
+        .map(FeatureManagement::enabled)
+        // Choose your undefined-flag policy:
+        //   Mono.just(false) — fail-closed (recommended)
+        //   Mono.just(true) — fail-open
+        .defaultIfEmpty(false);
+  }
+
+  ReactiveFeatureFlagExternalDataSourceProvider(FeatureManagementRepository featureManagementRepository) {
+    this.featureManagementRepository = featureManagementRepository;
+  }
 }
 ```
 
@@ -443,6 +469,8 @@ Or secure the endpoint with Spring Security.
 ### Event integration
 
 A `FeatureFlagChangedEvent` is published every time a flag is updated via the actuator endpoint. Subscribe with `@EventListener` to react to changes (e.g., clearing caches, logging audit trails).
+
+> **WebFlux (reactive) environments:** The event is published synchronously on the calling thread, which may be the Netty event loop thread. Listeners must not perform blocking operations directly; use `@Async` or subscribe on `Schedulers.boundedElastic()` to offload blocking work.
 
 ```java
 @Component
