@@ -76,6 +76,14 @@ dependencies {
 }
 ```
 
+## Documentation
+
+| Topic | Docs |
+|-------|------|
+| Custom Access Denied Response | [docs/custom-access-denied-response.md](docs/custom-access-denied-response.md) |
+| Gradual Rollout | [docs/gradual-rollout.md](docs/gradual-rollout.md) |
+| Runtime Flag Management (Actuator) | [docs/actuator.md](docs/actuator.md) |
+
 ## Examples
 
 Runnable examples can be found in [feature-flag-spring-boot-starter-examples](https://github.com/bright-room/feature-flag-spring-boot-starter-examples).
@@ -219,82 +227,7 @@ feature-flags:
 
 ## Custom Access Denied Response
 
-### Spring MVC
-
-You can create a fully custom response by defining a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
-
-```java
-import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import org.springframework.core.annotation.Order;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-
-// CustomFeatureFlagExceptionHandler.java
-@ControllerAdvice
-@Order(0) // Ensure this handler takes priority over the library's default handler
-public class CustomFeatureFlagExceptionHandler {
-
-  @ExceptionHandler(FeatureFlagAccessDeniedException.class)
-  public ResponseEntity<String> handle(FeatureFlagAccessDeniedException e) {
-    return ResponseEntity.status(403)
-        .contentType(MediaType.TEXT_PLAIN)
-        .body("Feature '" + e.featureName() + "' is disabled.");
-  }
-}
-```
-
-### Spring WebFlux (Annotation-based controllers)
-
-You can create a fully custom response by defining a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
-
-```java
-import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-
-// CustomFeatureFlagExceptionHandler.java
-@ControllerAdvice
-@Order(0) // Ensure this handler takes priority over the library's default handler
-public class CustomFeatureFlagExceptionHandler {
-
-  @ExceptionHandler(FeatureFlagAccessDeniedException.class)
-  ResponseEntity<String> handle(FeatureFlagAccessDeniedException e) {
-    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-        .body("Feature '" + e.featureName() + "' is disabled.");
-  }
-}
-```
-
-### Spring WebFlux (Functional endpoints)
-
-Define an `AccessDeniedHandlerFilterResolution` bean to customize the response returned by the `HandlerFilterFunction`.
-
-```java
-import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.web.reactive.function.server.ServerResponse;
-
-// CustomHandlerFilterResolutionConfig.java
-@Configuration
-public class CustomHandlerFilterResolutionConfig {
-
-  @Bean
-  AccessDeniedHandlerFilterResolution customResolution() {
-    return (request, e) -> ServerResponse.status(HttpStatus.FORBIDDEN)
-        .contentType(MediaType.TEXT_PLAIN)
-        .bodyValue("Feature '" + e.featureName() + "' is disabled.");
-  }
-}
-```
+You can fully customize the response returned when a feature flag denies access. See [docs/custom-access-denied-response.md](docs/custom-access-denied-response.md) for Spring MVC and Spring WebFlux examples.
 
 ## Gradual Rollout
 
@@ -314,146 +247,11 @@ class BetaController {
 
 By default, rollout is **non-sticky** — each request is evaluated independently using a random identifier. This means the same user may see different behavior across requests.
 
-### Sticky Rollout
-
-To make rollout sticky (the same user always gets the same result), implement `FeatureFlagContextResolver` (Spring MVC) or `ReactiveFeatureFlagContextResolver` (Spring WebFlux) and register it as a `@Bean`.
-
-```java
-// Spring MVC
-@Component
-class UserBasedContextResolver implements FeatureFlagContextResolver {
-
-  @Override
-  public Optional<FeatureFlagContext> resolve(HttpServletRequest request) {
-    String userId = request.getHeader("X-User-Id");
-    if (userId == null) return Optional.empty(); // fail-open: skip rollout check
-    return Optional.of(new FeatureFlagContext(userId));
-  }
-}
-```
-
-```java
-// Spring WebFlux
-@Component
-class UserBasedReactiveContextResolver implements ReactiveFeatureFlagContextResolver {
-
-  @Override
-  public Mono<FeatureFlagContext> resolve(ServerHttpRequest request) {
-    String userId = request.getHeaders().getFirst("X-User-Id");
-    if (userId == null) return Mono.empty(); // fail-open: skip rollout check
-    return Mono.just(new FeatureFlagContext(userId));
-  }
-}
-```
-
-When the context resolver returns empty, the rollout check is skipped and the feature is treated as fully enabled (fail-open).
-
-### Custom Rollout Strategy
-
-To change how the rollout bucketing works, implement `RolloutStrategy` (Spring MVC) or `ReactiveRolloutStrategy` (Spring WebFlux) and register it as a `@Bean`.
-
-### WebFlux Functional Endpoints
-
-For functional endpoints, use `FeatureFlagHandlerFilterFunction.of(name, rollout)`:
-
-```java
-@Bean
-RouterFunction<ServerResponse> routes(FeatureFlagHandlerFilterFunction featureFlagFilter) {
-    return route()
-        .GET("/new-feature", handler::handle)
-        .filter(featureFlagFilter.of("new-feature", 50))
-        .build();
-}
-```
+For sticky rollout, custom rollout strategy, and WebFlux functional endpoints, see [docs/gradual-rollout.md](docs/gradual-rollout.md).
 
 ## Runtime Flag Management (Actuator)
 
-The `actuator` module provides a Spring Boot Actuator endpoint for reading and updating feature flags at runtime without restarting the application.
-
-### Setup
-
-1. Add the `actuator` dependency (see [Installation](#installation)).
-2. Expose the endpoint:
-
-```yaml
-management:
-  endpoints:
-    web:
-      exposure:
-        include: feature-flags
-```
-
-### Read all flags
-
-```
-GET /actuator/feature-flags
-```
-
-Response:
-
-```json
-{
-  "features": {
-    "hello-class": true,
-    "user-find": false
-  },
-  "defaultEnabled": false
-}
-```
-
-### Update a flag
-
-```
-POST /actuator/feature-flags
-Content-Type: application/json
-
-{
-  "featureName": "user-find",
-  "enabled": true
-}
-```
-
-Response:
-
-```json
-{
-  "features": {
-    "hello-class": true,
-    "user-find": true
-  },
-  "defaultEnabled": false
-}
-```
-
-If the flag does not exist, it is created with the given state.
-
-### Restricting access
-
-By default, both read and write operations are unrestricted. In production, consider restricting access:
-
-```yaml
-management:
-  endpoint:
-    feature-flags:
-      access: READ_ONLY
-```
-
-Or secure the endpoint with Spring Security.
-
-### Event integration
-
-A `FeatureFlagChangedEvent` is published every time a flag is updated via the actuator endpoint. Subscribe with `@EventListener` to react to changes (e.g., clearing caches, logging audit trails).
-
-```java
-@Component
-class FeatureFlagChangeListener {
-
-  @EventListener
-  void onFlagChanged(FeatureFlagChangedEvent event) {
-    log.info("Flag '{}' changed to {}", event.featureName(), event.enabled());
-  }
-}
-```
+The `actuator` module provides a Spring Boot Actuator endpoint for reading and updating feature flags at runtime without restarting the application. See [docs/actuator.md](docs/actuator.md) for setup and usage details.
 
 ## Contributing
 
