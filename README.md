@@ -34,6 +34,13 @@ See the [release notes](https://github.com/bright-room/feature-flag-spring-boot-
         <artifactId>webflux</artifactId>
         <version>${version}</version>
     </dependency>
+
+    <!-- Runtime flag management via Actuator (optional) -->
+    <dependency>
+        <groupId>net.bright-room.feature-flag-spring-boot-starter</groupId>
+        <artifactId>actuator</artifactId>
+        <version>${version}</version>
+    </dependency>
 </dependencies>
 ```
 
@@ -41,12 +48,15 @@ See the [release notes](https://github.com/bright-room/feature-flag-spring-boot-
 ```groovy
 dependencies {
     implementation 'net.bright-room.feature-flag-spring-boot-starter:core:${version}'
-    
+
     // Using Spring boot starter webmvc
     implementation 'net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}'
 
     // Using Spring boot starter webflux
     implementation 'net.bright-room.feature-flag-spring-boot-starter:webflux:${version}'
+
+    // Runtime flag management via Actuator (optional)
+    implementation 'net.bright-room.feature-flag-spring-boot-starter:actuator:${version}'
 }
 ```
 
@@ -54,12 +64,15 @@ dependencies {
 ```kotlin
 dependencies {
     implementation("net.bright-room.feature-flag-spring-boot-starter:core:${version}")
-    
+
     // Using Spring boot starter webmvc
     implementation("net.bright-room.feature-flag-spring-boot-starter:webmvc:${version}")
 
     // Using Spring boot starter webflux
     implementation("net.bright-room.feature-flag-spring-boot-starter:webflux:${version}")
+
+    // Runtime flag management via Actuator (optional)
+    implementation("net.bright-room.feature-flag-spring-boot-starter:actuator:${version}")
 }
 ```
 
@@ -263,7 +276,7 @@ Define an `AccessDeniedHandlerFilterResolution` bean to customize the response r
 
 ```java
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.webflux.configuration.AccessDeniedHandlerFilterResolution;
+import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -279,6 +292,165 @@ public class CustomHandlerFilterResolutionConfig {
     return (request, e) -> ServerResponse.status(HttpStatus.FORBIDDEN)
         .contentType(MediaType.TEXT_PLAIN)
         .bodyValue("Feature '" + e.featureName() + "' is disabled.");
+  }
+}
+```
+
+## Gradual Rollout
+
+Use the `rollout` attribute on `@FeatureFlag` to enable a feature for only a percentage of requests.
+
+```java
+@RestController
+class BetaController {
+
+  @GetMapping("/new-feature")
+  @FeatureFlag(value = "new-feature", rollout = 50) // enable for 50% of requests
+  String newFeature() {
+    return "You're in the rollout!";
+  }
+}
+```
+
+By default, rollout is **non-sticky** — each request is evaluated independently using a random identifier. This means the same user may see different behavior across requests.
+
+### Sticky Rollout
+
+To make rollout sticky (the same user always gets the same result), implement `FeatureFlagContextResolver` (Spring MVC) or `ReactiveFeatureFlagContextResolver` (Spring WebFlux) and register it as a `@Bean`.
+
+```java
+// Spring MVC
+@Component
+class UserBasedContextResolver implements FeatureFlagContextResolver {
+
+  @Override
+  public Optional<FeatureFlagContext> resolve(HttpServletRequest request) {
+    String userId = request.getHeader("X-User-Id");
+    if (userId == null) return Optional.empty(); // fail-open: skip rollout check
+    return Optional.of(new FeatureFlagContext(userId));
+  }
+}
+```
+
+```java
+// Spring WebFlux
+@Component
+class UserBasedReactiveContextResolver implements ReactiveFeatureFlagContextResolver {
+
+  @Override
+  public Mono<FeatureFlagContext> resolve(ServerHttpRequest request) {
+    String userId = request.getHeaders().getFirst("X-User-Id");
+    if (userId == null) return Mono.empty(); // fail-open: skip rollout check
+    return Mono.just(new FeatureFlagContext(userId));
+  }
+}
+```
+
+When the context resolver returns empty, the rollout check is skipped and the feature is treated as fully enabled (fail-open).
+
+### Custom Rollout Strategy
+
+To change how the rollout bucketing works, implement `RolloutStrategy` (Spring MVC) or `ReactiveRolloutStrategy` (Spring WebFlux) and register it as a `@Bean`.
+
+### WebFlux Functional Endpoints
+
+For functional endpoints, use `FeatureFlagHandlerFilterFunction.of(name, rollout)`:
+
+```java
+@Bean
+RouterFunction<ServerResponse> routes(FeatureFlagHandlerFilterFunction featureFlagFilter) {
+    return route()
+        .GET("/new-feature", handler::handle)
+        .filter(featureFlagFilter.of("new-feature", 50))
+        .build();
+}
+```
+
+## Runtime Flag Management (Actuator)
+
+The `actuator` module provides a Spring Boot Actuator endpoint for reading and updating feature flags at runtime without restarting the application.
+
+### Setup
+
+1. Add the `actuator` dependency (see [Installation](#installation)).
+2. Expose the endpoint:
+
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: feature-flags
+```
+
+### Read all flags
+
+```
+GET /actuator/feature-flags
+```
+
+Response:
+
+```json
+{
+  "features": {
+    "hello-class": true,
+    "user-find": false
+  },
+  "defaultEnabled": false
+}
+```
+
+### Update a flag
+
+```
+POST /actuator/feature-flags
+Content-Type: application/json
+
+{
+  "featureName": "user-find",
+  "enabled": true
+}
+```
+
+Response:
+
+```json
+{
+  "features": {
+    "hello-class": true,
+    "user-find": true
+  },
+  "defaultEnabled": false
+}
+```
+
+If the flag does not exist, it is created with the given state.
+
+### Restricting access
+
+By default, both read and write operations are unrestricted. In production, consider restricting access:
+
+```yaml
+management:
+  endpoint:
+    feature-flags:
+      access: READ_ONLY
+```
+
+Or secure the endpoint with Spring Security.
+
+### Event integration
+
+A `FeatureFlagChangedEvent` is published every time a flag is updated via the actuator endpoint. Subscribe with `@EventListener` to react to changes (e.g., clearing caches, logging audit trails).
+
+```java
+@Component
+class FeatureFlagChangeListener {
+
+  @EventListener
+  void onFlagChanged(FeatureFlagChangedEvent event) {
+    log.info("Flag '{}' changed to {}", event.featureName(), event.enabled());
   }
 }
 ```

@@ -49,6 +49,16 @@ class FeatureFlagInterceptorTest {
   // --- validateAnnotation ---
 
   @Test
+  void preHandle_throwsIllegalStateException_whenFeatureFlagValueIsEmpty() {
+    FeatureFlag annotation = featureFlagAnnotation("", 100);
+    HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
+
+    assertThatIllegalStateException()
+        .isThrownBy(() -> interceptor.preHandle(request, response, handlerMethod))
+        .withMessageContaining("non-empty value");
+  }
+
+  @Test
   void preHandle_throwsIllegalStateException_whenRolloutIsNegative() {
     FeatureFlag annotation = featureFlagAnnotation("my-feature", -1);
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
