@@ -1,6 +1,7 @@
 package net.brightroom.featureflag.webflux.provider;
 
 import java.util.Map;
+import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import reactor.core.publisher.Mono;
 
 /**
