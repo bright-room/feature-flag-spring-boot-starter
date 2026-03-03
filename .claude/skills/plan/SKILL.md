@@ -104,9 +104,28 @@ EOF
 | `webmvc` | 新規 / 変更 / なし | <概要> |
 | `webflux` | 新規 / 変更 / なし | <概要> |
 
+### パッケージ構成
+
+<!-- 変更・追加されるパッケージとクラスの構成を示す。新規追加は (new)、変更は (modify) で表記する -->
+
+```
+module/src/main/java/net/brightroom/featureflag/
+├── subpackage/
+│   ├── NewClass.java          (new)
+│   └── ExistingClass.java     (modify)
+└── another/
+    └── AnotherNewClass.java   (new)
+```
+
 ### 実装ステップ
 
-#### Step 1: <ステップのタイトル>
+<!-- 実装を Phase（論理的なまとまり）と Step（具体的な作業単位）に分割する -->
+
+#### Phase 1: <フェーズのタイトル>
+
+<!-- フェーズの目的・ゴールを簡潔に述べる -->
+
+##### Step 1: <ステップのタイトル>
 
 **対象**: `module/path/to/File.java`
 
@@ -116,7 +135,13 @@ EOF
 // コード例（必要な場合のみ）
 ```
 
-#### Step 2: <ステップのタイトル>
+##### Step 2: <ステップのタイトル>
+
+<!-- 同様のフォーマットで記述 -->
+
+#### Phase 2: <フェーズのタイトル>
+
+##### Step 1: <ステップのタイトル>
 
 <!-- 同様のフォーマットで記述 -->
 
