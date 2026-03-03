@@ -139,4 +139,58 @@ class FeatureFlagInterceptorTest {
 
     assertTrue(result);
   }
+
+  // --- rollout=0 boundary (L-3) ---
+
+  @Test
+  void preHandle_throwsFeatureFlagAccessDeniedException_whenRolloutIsZero() throws Exception {
+    FeatureFlag annotation = featureFlagAnnotation("my-feature", 0);
+    HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    FeatureFlagContext context = new FeatureFlagContext("user-1");
+    when(contextResolver.resolve(request)).thenReturn(Optional.of(context));
+    when(rolloutStrategy.isInRollout("my-feature", context, 0)).thenReturn(false);
+
+    assertThatThrownBy(() -> interceptor.preHandle(request, response, handlerMethod))
+        .isInstanceOf(FeatureFlagAccessDeniedException.class);
+  }
+
+  // --- class-level @FeatureFlag + rollout (L-4) ---
+
+  @FeatureFlag(value = "my-feature", rollout = 50)
+  static class RolloutAnnotatedController {}
+
+  private HandlerMethod handlerMethodWithClassAnnotation() {
+    HandlerMethod handlerMethod = mock(HandlerMethod.class);
+    when(handlerMethod.getMethodAnnotation(FeatureFlag.class)).thenReturn(null);
+    when(handlerMethod.getBeanType()).thenAnswer(inv -> RolloutAnnotatedController.class);
+    return handlerMethod;
+  }
+
+  @Test
+  void preHandle_returnsTrue_whenClassAnnotationWithRolloutAndContextInsideRollout()
+      throws Exception {
+    HandlerMethod handlerMethod = handlerMethodWithClassAnnotation();
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    FeatureFlagContext context = new FeatureFlagContext("user-1");
+    when(contextResolver.resolve(request)).thenReturn(Optional.of(context));
+    when(rolloutStrategy.isInRollout("my-feature", context, 50)).thenReturn(true);
+
+    boolean result = interceptor.preHandle(request, response, handlerMethod);
+
+    assertTrue(result);
+  }
+
+  @Test
+  void
+      preHandle_throwsFeatureFlagAccessDeniedException_whenClassAnnotationWithRolloutAndContextOutsideRollout() {
+    HandlerMethod handlerMethod = handlerMethodWithClassAnnotation();
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    FeatureFlagContext context = new FeatureFlagContext("user-1");
+    when(contextResolver.resolve(request)).thenReturn(Optional.of(context));
+    when(rolloutStrategy.isInRollout("my-feature", context, 50)).thenReturn(false);
+
+    assertThatThrownBy(() -> interceptor.preHandle(request, response, handlerMethod))
+        .isInstanceOf(FeatureFlagAccessDeniedException.class);
+  }
 }

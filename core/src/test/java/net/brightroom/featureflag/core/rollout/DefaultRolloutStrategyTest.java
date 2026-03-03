@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.core.rollout;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -66,17 +67,16 @@ class DefaultRolloutStrategyTest {
   }
 
   @Test
-  void isInRollout_returnsValidResult_forInputThatProducesIntegerMinValueHash() {
+  void isInRollout_doesNotThrow_forInputsThatMightProduceExtremeHashValues() {
     // This test guards against the Math.abs(Integer.MIN_VALUE) bug.
-    // We verify that no exception is thrown and the result is a valid boolean
-    // for any input. The fix uses Integer.remainderUnsigned() which handles
-    // all 32-bit hash values correctly.
-    for (int i = 0; i < 1000; i++) {
-      FeatureFlagContext ctx = new FeatureFlagContext("probe-" + i);
-      boolean result = strategy.isInRollout("feature", ctx, 50);
-      // Just assert that it's one of the two valid values — no exception, no negative bucket
-      assertTrue(result || !result);
-    }
+    // The fix uses Integer.remainderUnsigned() which handles all 32-bit hash values correctly.
+    assertDoesNotThrow(
+        () -> {
+          for (int i = 0; i < 1000; i++) {
+            FeatureFlagContext ctx = new FeatureFlagContext("probe-" + i);
+            strategy.isInRollout("feature", ctx, 50);
+          }
+        });
   }
 
   @Test

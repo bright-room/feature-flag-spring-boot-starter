@@ -51,7 +51,6 @@ public class FeatureFlagAspect {
               return Mono.deferContextual(
                   ctx -> {
                     ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-                    Mono<Object> proceedMono = proceedAsMono(joinPoint);
                     return shouldProceed(featureName, exchange, rollout)
                         .flatMap(
                             proceed -> {
@@ -59,7 +58,7 @@ public class FeatureFlagAspect {
                                 return Mono.error(
                                     new FeatureFlagAccessDeniedException(featureName));
                               }
-                              return proceedMono;
+                              return proceedAsMono(joinPoint);
                             });
                   });
             }
@@ -77,7 +76,6 @@ public class FeatureFlagAspect {
               return Flux.deferContextual(
                   ctx -> {
                     ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-                    Flux<Object> proceedFlux = proceedAsFlux(joinPoint);
                     return shouldProceed(featureName, exchange, rollout)
                         .flatMapMany(
                             proceed -> {
@@ -85,7 +83,7 @@ public class FeatureFlagAspect {
                                 return Flux.error(
                                     new FeatureFlagAccessDeniedException(featureName));
                               }
-                              return proceedFlux;
+                              return proceedAsFlux(joinPoint);
                             });
                   });
             }

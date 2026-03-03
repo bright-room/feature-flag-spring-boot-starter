@@ -23,6 +23,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
@@ -62,6 +64,21 @@ public class FeatureFlagWebFluxAutoConfiguration {
   @ConditionalOnMissingBean
   ReactiveFeatureFlagContextResolver reactiveFeatureFlagContextResolver() {
     return new RandomReactiveFeatureFlagContextResolver();
+  }
+
+  /**
+   * Propagates {@link ServerWebExchange} into the Reactor context so that {@link FeatureFlagAspect}
+   * can access it via {@code Mono.deferContextual} during rollout percentage checks.
+   *
+   * <p>Spring WebFlux does not automatically add {@link ServerWebExchange} to the Reactor context,
+   * so this filter bridges the gap between the servlet-style exchange object and the reactive
+   * context, enabling the aspect to resolve the request for sticky rollout without requiring
+   * constructor injection of the exchange.
+   */
+  @Bean
+  WebFilter featureFlagServerWebExchangeContextFilter() {
+    return (exchange, chain) ->
+        chain.filter(exchange).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange));
   }
 
   @Bean

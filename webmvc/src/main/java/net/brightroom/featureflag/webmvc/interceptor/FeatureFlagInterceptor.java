@@ -19,6 +19,15 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
   private final RolloutStrategy rolloutStrategy;
   private final FeatureFlagContextResolver contextResolver;
 
+  public FeatureFlagInterceptor(
+      FeatureFlagProvider featureFlagProvider,
+      RolloutStrategy rolloutStrategy,
+      FeatureFlagContextResolver contextResolver) {
+    this.featureFlagProvider = featureFlagProvider;
+    this.rolloutStrategy = rolloutStrategy;
+    this.contextResolver = contextResolver;
+  }
+
   @Override
   public boolean preHandle(
       @NonNull HttpServletRequest request,
@@ -52,7 +61,6 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
   }
 
   private void validateAnnotation(FeatureFlag annotation) {
-    if (annotation == null) return;
     if (annotation.value().isEmpty()) {
       throw new IllegalStateException(
           "@FeatureFlag must specify a non-empty value. "
@@ -75,14 +83,5 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
         && !rolloutStrategy.isInRollout(annotation.value(), context.get(), annotation.rollout())) {
       throw new FeatureFlagAccessDeniedException(annotation.value());
     }
-  }
-
-  public FeatureFlagInterceptor(
-      FeatureFlagProvider featureFlagProvider,
-      RolloutStrategy rolloutStrategy,
-      FeatureFlagContextResolver contextResolver) {
-    this.featureFlagProvider = featureFlagProvider;
-    this.rolloutStrategy = rolloutStrategy;
-    this.contextResolver = contextResolver;
   }
 }
