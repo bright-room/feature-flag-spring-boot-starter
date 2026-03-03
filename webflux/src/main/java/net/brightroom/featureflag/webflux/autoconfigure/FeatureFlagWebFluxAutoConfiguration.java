@@ -4,6 +4,8 @@ import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguratio
 import net.brightroom.featureflag.core.properties.FeatureFlagPathPatterns;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect;
+import net.brightroom.featureflag.webflux.context.RandomReactiveFeatureFlagContextResolver;
+import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.exception.FeatureFlagExceptionHandler;
 import net.brightroom.featureflag.webflux.filter.FeatureFlagHandlerFilterFunction;
 import net.brightroom.featureflag.webflux.provider.InMemoryReactiveFeatureFlagProvider;
@@ -12,6 +14,8 @@ import net.brightroom.featureflag.webflux.resolution.exceptionhandler.AccessDeni
 import net.brightroom.featureflag.webflux.resolution.exceptionhandler.AccessDeniedExceptionHandlerResolutionFactory;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolutionFactory;
+import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
+import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -19,6 +23,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
 
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
@@ -50,8 +56,39 @@ public class FeatureFlagWebFluxAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  FeatureFlagAspect featureFlagAspect(ReactiveFeatureFlagProvider reactiveFeatureFlagProvider) {
-    return new FeatureFlagAspect(reactiveFeatureFlagProvider);
+  ReactiveRolloutStrategy reactiveRolloutStrategy() {
+    return new DefaultReactiveRolloutStrategy();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  ReactiveFeatureFlagContextResolver reactiveFeatureFlagContextResolver() {
+    return new RandomReactiveFeatureFlagContextResolver();
+  }
+
+  /**
+   * Propagates {@link ServerWebExchange} into the Reactor context so that {@link FeatureFlagAspect}
+   * can access it via {@code Mono.deferContextual} during rollout percentage checks.
+   *
+   * <p>Spring WebFlux does not automatically add {@link ServerWebExchange} to the Reactor context,
+   * so this filter bridges the gap between the servlet-style exchange object and the reactive
+   * context, enabling the aspect to resolve the request for sticky rollout without requiring
+   * constructor injection of the exchange.
+   */
+  @Bean
+  WebFilter featureFlagServerWebExchangeContextFilter() {
+    return (exchange, chain) ->
+        chain.filter(exchange).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange));
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  FeatureFlagAspect featureFlagAspect(
+      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
+      ReactiveRolloutStrategy reactiveRolloutStrategy,
+      ReactiveFeatureFlagContextResolver contextResolver) {
+    return new FeatureFlagAspect(
+        reactiveFeatureFlagProvider, reactiveRolloutStrategy, contextResolver);
   }
 
   @Bean
@@ -64,9 +101,14 @@ public class FeatureFlagWebFluxAutoConfiguration {
   @ConditionalOnMissingBean
   FeatureFlagHandlerFilterFunction featureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution) {
+      AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution,
+      ReactiveRolloutStrategy reactiveRolloutStrategy,
+      ReactiveFeatureFlagContextResolver contextResolver) {
     return new FeatureFlagHandlerFilterFunction(
-        reactiveFeatureFlagProvider, accessDeniedHandlerResolution);
+        reactiveFeatureFlagProvider,
+        accessDeniedHandlerResolution,
+        reactiveRolloutStrategy,
+        contextResolver);
   }
 
   FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {

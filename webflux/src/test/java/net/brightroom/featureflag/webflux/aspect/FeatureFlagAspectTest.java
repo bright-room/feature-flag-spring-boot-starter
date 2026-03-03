@@ -8,11 +8,17 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Method;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
+import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
+import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -20,7 +26,15 @@ import reactor.test.StepVerifier;
 class FeatureFlagAspectTest {
 
   private final ReactiveFeatureFlagProvider provider = mock(ReactiveFeatureFlagProvider.class);
-  private final FeatureFlagAspect aspect = new FeatureFlagAspect(provider);
+  private final ReactiveFeatureFlagContextResolver contextResolver =
+      mock(ReactiveFeatureFlagContextResolver.class);
+  private final FeatureFlagAspect aspect =
+      new FeatureFlagAspect(provider, new DefaultReactiveRolloutStrategy(), contextResolver);
+
+  // Aspect with mocked rollout strategy for rollout-specific tests
+  private final ReactiveRolloutStrategy rolloutStrategy = mock(ReactiveRolloutStrategy.class);
+  private final FeatureFlagAspect aspectWithRollout =
+      new FeatureFlagAspect(provider, rolloutStrategy, contextResolver);
 
   static class TestController {
 
@@ -42,6 +56,26 @@ class FeatureFlagAspectTest {
     @FeatureFlag("some-feature")
     public Flux<String> fluxMethod() {
       return Flux.just("result1", "result2");
+    }
+
+    @FeatureFlag(value = "some-feature", rollout = 50)
+    public Mono<String> rolloutMonoMethod() {
+      return Mono.just("result");
+    }
+
+    @FeatureFlag(value = "some-feature", rollout = 50)
+    public Flux<String> rolloutFluxMethod() {
+      return Flux.just("result1", "result2");
+    }
+
+    @FeatureFlag(value = "some-feature", rollout = -1)
+    public Mono<String> negativeRolloutMethod() {
+      return Mono.just("result");
+    }
+
+    @FeatureFlag(value = "some-feature", rollout = 101)
+    public Mono<String> over100RolloutMethod() {
+      return Mono.just("result");
     }
   }
 
@@ -65,6 +99,36 @@ class FeatureFlagAspectTest {
     assertThatThrownBy(() -> aspect.checkFeatureFlag(joinPoint))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("non-empty value");
+  }
+
+  @Test
+  void checkFeatureFlag_throwsIllegalStateException_whenRolloutIsNegative() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("negativeRolloutMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+
+    assertThatThrownBy(() -> aspect.checkFeatureFlag(joinPoint))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("rollout must be between 0 and 100");
+  }
+
+  @Test
+  void checkFeatureFlag_throwsIllegalStateException_whenRolloutIsOver100() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("over100RolloutMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+
+    assertThatThrownBy(() -> aspect.checkFeatureFlag(joinPoint))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("rollout must be between 0 and 100");
   }
 
   @Test
@@ -141,6 +205,184 @@ class FeatureFlagAspectTest {
                 e instanceof FeatureFlagAccessDeniedException
                     && ((FeatureFlagAccessDeniedException) e).featureName().equals("some-feature"))
         .verify();
+  }
+
+  @Test
+  void checkFeatureFlag_returnsMonoError_whenRolloutCheckFails() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("rolloutMonoMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Mono.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+
+    FeatureFlagContext context = new FeatureFlagContext("user-1");
+    when(contextResolver.resolve(httpRequest)).thenReturn(Mono.just(context));
+    when(rolloutStrategy.isInRollout("some-feature", context, 50)).thenReturn(Mono.just(false));
+
+    Object result = aspectWithRollout.checkFeatureFlag(joinPoint);
+
+    StepVerifier.create(
+            ((Mono<?>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectErrorMatches(
+            e ->
+                e instanceof FeatureFlagAccessDeniedException
+                    && ((FeatureFlagAccessDeniedException) e).featureName().equals("some-feature"))
+        .verify();
+  }
+
+  @Test
+  void checkFeatureFlag_returnsMono_whenRolloutCheckPasses() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("rolloutMonoMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Mono.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(joinPoint.proceed()).thenReturn(Mono.just("result"));
+
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+
+    FeatureFlagContext context = new FeatureFlagContext("user-1");
+    when(contextResolver.resolve(httpRequest)).thenReturn(Mono.just(context));
+    when(rolloutStrategy.isInRollout("some-feature", context, 50)).thenReturn(Mono.just(true));
+
+    Object result = aspectWithRollout.checkFeatureFlag(joinPoint);
+
+    @SuppressWarnings("unchecked")
+    Mono<String> mono = (Mono<String>) result;
+    StepVerifier.create(mono.contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNext("result")
+        .verifyComplete();
+  }
+
+  @Test
+  void checkFeatureFlag_returnsMono_whenContextIsEmpty() throws Throwable {
+    // fail-open: when context is not available, rollout check is skipped
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("rolloutMonoMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Mono.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(joinPoint.proceed()).thenReturn(Mono.just("result"));
+
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+    when(contextResolver.resolve(httpRequest)).thenReturn(Mono.empty());
+
+    Object result = aspectWithRollout.checkFeatureFlag(joinPoint);
+
+    @SuppressWarnings("unchecked")
+    Mono<String> mono = (Mono<String>) result;
+    StepVerifier.create(mono.contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNext("result")
+        .verifyComplete();
+  }
+
+  @Test
+  void checkFeatureFlag_returnsFluxError_whenRolloutCheckFails() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("rolloutFluxMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Flux.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+
+    FeatureFlagContext context = new FeatureFlagContext("user-1");
+    when(contextResolver.resolve(httpRequest)).thenReturn(Mono.just(context));
+    when(rolloutStrategy.isInRollout("some-feature", context, 50)).thenReturn(Mono.just(false));
+
+    Object result = aspectWithRollout.checkFeatureFlag(joinPoint);
+
+    StepVerifier.create(
+            ((Flux<?>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectErrorMatches(
+            e ->
+                e instanceof FeatureFlagAccessDeniedException
+                    && ((FeatureFlagAccessDeniedException) e).featureName().equals("some-feature"))
+        .verify();
+  }
+
+  @Test
+  void checkFeatureFlag_returnsFlux_whenRolloutCheckPasses() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("rolloutFluxMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Flux.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(joinPoint.proceed()).thenReturn(Flux.just("result1", "result2"));
+
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+
+    FeatureFlagContext context = new FeatureFlagContext("user-1");
+    when(contextResolver.resolve(httpRequest)).thenReturn(Mono.just(context));
+    when(rolloutStrategy.isInRollout("some-feature", context, 50)).thenReturn(Mono.just(true));
+
+    Object result = aspectWithRollout.checkFeatureFlag(joinPoint);
+
+    @SuppressWarnings("unchecked")
+    Flux<String> flux = (Flux<String>) result;
+    StepVerifier.create(flux.contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNext("result1", "result2")
+        .verifyComplete();
+  }
+
+  @Test
+  void checkFeatureFlag_returnsFlux_whenContextIsEmpty() throws Throwable {
+    // fail-open: when context is not available, rollout check is skipped
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("rolloutFluxMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Flux.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(joinPoint.proceed()).thenReturn(Flux.just("result1", "result2"));
+
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+    when(contextResolver.resolve(httpRequest)).thenReturn(Mono.empty());
+
+    Object result = aspectWithRollout.checkFeatureFlag(joinPoint);
+
+    @SuppressWarnings("unchecked")
+    Flux<String> flux = (Flux<String>) result;
+    StepVerifier.create(flux.contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNext("result1", "result2")
+        .verifyComplete();
   }
 
   @Test
