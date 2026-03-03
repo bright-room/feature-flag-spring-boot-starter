@@ -80,6 +80,8 @@ dependencies {
 
 | Topic | Docs |
 |-------|------|
+| Response Types | [docs/response-types.md](docs/response-types.md) |
+| Custom Feature Flag Provider | [docs/custom-provider.md](docs/custom-provider.md) |
 | Custom Access Denied Response | [docs/custom-access-denied-response.md](docs/custom-access-denied-response.md) |
 | Gradual Rollout | [docs/gradual-rollout.md](docs/gradual-rollout.md) |
 | Runtime Flag Management (Actuator) | [docs/actuator.md](docs/actuator.md) |
@@ -137,93 +139,13 @@ class UserController {
 }
 ```
 
-## Change the source destination for function management
-
-By default, function management can be set in the configuration file, but it is also possible to change the source destination.
-
-By changing the source of function management to a database, external file, etc., it is possible to control in real time.
-
-To change the source destination, simply implement the `FeatureFlagProvider` and register the bean.
-
-```java
-
-// FeatureFlagExternalDataSourceProvider.java
-@Component
-class FeatureFlagExternalDataSourceProvider implements FeatureFlagProvider {
-
-  FeatureManagementMapper featureManagementMapper;
-
-  @Override
-  public boolean isFeatureEnabled(String featureName) {
-    Boolean enabled = featureManagementMapper.check(featureName);
-    // Choose your undefined-flag policy:
-    //   return false; — fail-closed: block access for undefined flags (recommended)
-    //   return true; — fail-open: allow access for undefined flags
-    if (enabled == null) return false;
-    return enabled;
-  }
-
-  FeatureFlagExternalDataSourceProvider(FeatureManagementMapper featureManagementMapper) {
-    this.featureManagementMapper = featureManagementMapper;
-  }
-}
-
-// FeatureManagementMapper.java
-@Mapper
-interface FeatureManagementMapper {
-  Boolean check(@Param("feature") String feature);
-}
-```
-
 ## Response Types
 
-When a feature flag is disabled, `FeatureFlagAccessDeniedException` is thrown and the response is returned with HTTP status `403 Forbidden`. The response format is selected by `feature-flags.response.type`.
+The response format when a feature flag denies access is selected by `feature-flags.response.type`. Supports `JSON` (default, RFC 7807), `PLAIN_TEXT`, and `HTML`. See [docs/response-types.md](docs/response-types.md) for details and examples.
 
-### JSON Response (default)
+## Custom Feature Flag Provider
 
-JSON responses follow the [RFC 7807 Problem Details](https://www.rfc-editor.org/rfc/rfc7807) format.
-
-```yaml
-feature-flags:
-  response:
-    type: JSON
-```
-
-Response body:
-
-```json
-{
-  "type": "https://github.com/bright-room/feature-flag-spring-boot-starter#response-types",
-  "title": "Feature flag access denied",
-  "detail": "Feature 'user-find' is not available",
-  "status": 403,
-  "instance": "/api/v2/find"
-}
-```
-
-### Plain Text Response
-
-```yaml
-feature-flags:
-  response:
-    type: PLAIN_TEXT
-```
-
-Response body:
-
-```
-Feature 'user-find' is not available
-```
-
-### HTML Response
-
-```yaml
-feature-flags:
-  response:
-    type: HTML
-```
-
-> **Note (Spring MVC only):** The HTML response is returned only when the client's `Accept` header includes `text/html` or `text/*`. If the client only accepts `application/json`, a `406 Not Acceptable` response is returned instead. In Spring WebFlux, the HTML response is always returned regardless of the `Accept` header.
+By default, feature flags are managed in the configuration file. You can change the source to a database or external service by implementing `FeatureFlagProvider`. See [docs/custom-provider.md](docs/custom-provider.md) for details.
 
 ## Custom Access Denied Response
 
@@ -231,27 +153,11 @@ You can fully customize the response returned when a feature flag denies access.
 
 ## Gradual Rollout
 
-Use the `rollout` attribute on `@FeatureFlag` to enable a feature for only a percentage of requests.
-
-```java
-@RestController
-class BetaController {
-
-  @GetMapping("/new-feature")
-  @FeatureFlag(value = "new-feature", rollout = 50) // enable for 50% of requests
-  String newFeature() {
-    return "You're in the rollout!";
-  }
-}
-```
-
-By default, rollout is **non-sticky** — each request is evaluated independently using a random identifier. This means the same user may see different behavior across requests.
-
-For sticky rollout, custom rollout strategy, and WebFlux functional endpoints, see [docs/gradual-rollout.md](docs/gradual-rollout.md).
+Use the `rollout` attribute on `@FeatureFlag` to enable a feature for only a percentage of requests. See [docs/gradual-rollout.md](docs/gradual-rollout.md) for details including sticky rollout, custom strategy, and WebFlux functional endpoints.
 
 ## Runtime Flag Management (Actuator)
 
-The `actuator` module provides a Spring Boot Actuator endpoint for reading and updating feature flags at runtime without restarting the application. See [docs/actuator.md](docs/actuator.md) for setup and usage details.
+The `actuator` module provides a Spring Boot Actuator endpoint for reading and updating feature flags at runtime. See [docs/actuator.md](docs/actuator.md) for setup and usage details.
 
 ## Contributing
 
