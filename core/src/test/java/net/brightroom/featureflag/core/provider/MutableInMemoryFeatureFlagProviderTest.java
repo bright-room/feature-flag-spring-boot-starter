@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Test;
@@ -83,10 +82,9 @@ class MutableInMemoryFeatureFlagProviderTest {
   }
 
   @Test
-  void concurrentWrites_doNotCorruptState() throws InterruptedException {
+  void concurrentWrites_doNotCorruptState() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
     int threadCount = 100;
-    var latch = new CountDownLatch(threadCount);
     List<String> flags = new ArrayList<>();
     for (int i = 0; i < threadCount; i++) {
       flags.add("flag-" + i);
@@ -94,18 +92,10 @@ class MutableInMemoryFeatureFlagProviderTest {
 
     try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
       for (String flag : flags) {
-        executor.submit(
-            () -> {
-              try {
-                provider.setFeatureEnabled(flag, true);
-              } finally {
-                latch.countDown();
-              }
-            });
+        executor.submit(() -> provider.setFeatureEnabled(flag, true));
       }
     }
 
-    latch.await();
     assertEquals(threadCount, provider.getFeatures().size());
     flags.forEach(flag -> assertTrue(provider.isFeatureEnabled(flag)));
   }

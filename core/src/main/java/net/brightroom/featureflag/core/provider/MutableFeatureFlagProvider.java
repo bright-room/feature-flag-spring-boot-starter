@@ -28,6 +28,11 @@ public interface MutableFeatureFlagProvider extends FeatureFlagProvider {
    *
    * <p>If the feature flag does not exist, it must be created with the given state.
    *
+   * <p><b>Note:</b> This method does not publish {@code FeatureFlagChangedEvent}. Event publishing
+   * is handled by the actuator endpoint ({@code FeatureFlagEndpoint}). If you call this method
+   * directly and need event notification, publish the event manually via {@code
+   * ApplicationEventPublisher}.
+   *
    * @param featureName the name of the feature flag to update
    * @param enabled {@code true} to enable the feature, {@code false} to disable it
    */

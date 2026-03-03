@@ -71,13 +71,15 @@ class FeatureFlagEndpointIntegrationTest {
 
   @Test
   void post_thenGet_persistsUpdateInMemory() throws Exception {
-    mockMvc.perform(
-        post("/actuator/feature-flags")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(
-                """
-                {"featureName": "feature-b", "enabled": true}
-                """));
+    mockMvc
+        .perform(
+            post("/actuator/feature-flags")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"featureName": "feature-b", "enabled": true}
+                    """))
+        .andExpect(status().isOk());
 
     mockMvc
         .perform(get("/actuator/feature-flags"))

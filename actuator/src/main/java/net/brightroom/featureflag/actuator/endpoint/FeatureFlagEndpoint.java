@@ -16,6 +16,10 @@ import org.springframework.context.ApplicationEventPublisher;
  *
  * <p>This endpoint is only registered when a {@link MutableFeatureFlagProvider} bean is present in
  * the application context (see {@code FeatureFlagActuatorAutoConfiguration}).
+ *
+ * <p>By default, both read and write operations are unrestricted. In production, consider
+ * restricting access via {@code management.endpoint.feature-flags.access=READ_ONLY} or securing the
+ * endpoint with Spring Security.
  */
 @Endpoint(id = "feature-flags", defaultAccess = Access.UNRESTRICTED)
 public class FeatureFlagEndpoint {
@@ -38,6 +42,9 @@ public class FeatureFlagEndpoint {
    * Updates the enabled state of a feature flag and publishes a {@link FeatureFlagChangedEvent}.
    *
    * <p>If the flag does not exist, it is created with the given state.
+   *
+   * <p><b>Note:</b> {@link FeatureFlagChangedEvent} is published on every invocation, regardless of
+   * whether the value actually changed.
    *
    * @param featureName the name of the feature flag to update
    * @param enabled the new enabled state
