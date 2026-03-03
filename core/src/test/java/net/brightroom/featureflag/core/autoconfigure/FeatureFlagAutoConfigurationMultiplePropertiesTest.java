@@ -2,7 +2,6 @@ package net.brightroom.featureflag.core.autoconfigure;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.List;
 import java.util.Map;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.properties.ResponseProperties;
@@ -20,24 +19,6 @@ import org.springframework.test.context.TestPropertySource;
 class FeatureFlagAutoConfigurationMultiplePropertiesTest {
 
   FeatureFlagProperties featureFlagProperties;
-
-  @SuppressWarnings("deprecation")
-  @Test
-  void shouldLoadMultipleIncludePathPatterns() {
-    List<String> pathPattern = featureFlagProperties.pathPatterns().includes();
-    assertEquals(2, pathPattern.size());
-    assertTrue(pathPattern.contains("/api/**"));
-    assertTrue(pathPattern.contains("/web/**"));
-  }
-
-  @SuppressWarnings("deprecation")
-  @Test
-  void shouldLoadMultipleExcludePathPatterns() {
-    List<String> pathPattern = featureFlagProperties.pathPatterns().excludes();
-    assertEquals(2, pathPattern.size());
-    assertTrue(pathPattern.contains("/internal/**"));
-    assertTrue(pathPattern.contains("/health/**"));
-  }
 
   @Test
   void shouldLoadMultipleFeatureFlags() {

@@ -2,9 +2,7 @@ package net.brightroom.featureflag.core.autoconfigure;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.List;
 import java.util.Map;
-import net.brightroom.featureflag.core.properties.FeatureFlagPathPatterns;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.properties.ResponseProperties;
 import net.brightroom.featureflag.core.properties.ResponseType;
@@ -19,17 +17,8 @@ class FeatureFlagAutoConfigurationEmptyPropertiesTest {
 
   FeatureFlagProperties featureFlagProperties;
 
-  @SuppressWarnings("deprecation")
   @Test
   void shouldBeEmptyWhenPropertiesAreNotProvided() {
-    FeatureFlagPathPatterns pathPatterns = featureFlagProperties.pathPatterns();
-
-    List<String> includes = pathPatterns.includes();
-    assertTrue(includes.isEmpty());
-
-    List<String> excludes = pathPatterns.excludes();
-    assertTrue(excludes.isEmpty());
-
     Map<String, Boolean> featureNames = featureFlagProperties.featureNames();
     assertTrue(featureNames.isEmpty());
 
