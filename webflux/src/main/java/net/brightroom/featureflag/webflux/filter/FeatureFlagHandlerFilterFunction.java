@@ -7,6 +7,7 @@ import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedH
 import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.springframework.web.reactive.function.server.HandlerFilterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import reactor.core.publisher.Mono;
 
 /**
  * A factory for {@link HandlerFilterFunction} that applies feature flag access control to
@@ -96,7 +97,7 @@ public class FeatureFlagHandlerFilterFunction {
                                           }
                                           return next.handle(request);
                                         }))
-                        .switchIfEmpty(next.handle(request));
+                        .switchIfEmpty(Mono.defer(() -> next.handle(request)));
                   }
                   return next.handle(request);
                 });
