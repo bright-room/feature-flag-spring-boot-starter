@@ -7,6 +7,12 @@ import org.springframework.context.ApplicationEvent;
  *
  * <p>Listeners can subscribe to this event via {@code @EventListener} to react to flag state
  * changes (e.g., clearing caches, logging audit trails, or updating dependent systems).
+ *
+ * <p><b>Reactive environments:</b> This event is published synchronously via {@link
+ * org.springframework.context.ApplicationEventPublisher} from the actuator endpoint's management
+ * thread. In WebFlux applications, listeners should avoid blocking the calling thread. If
+ * long-running or reactive work is needed in response to flag changes, offload it to a separate
+ * scheduler (e.g., {@code Schedulers.boundedElastic()}) or publish a message to a reactive stream.
  */
 public class FeatureFlagChangedEvent extends ApplicationEvent {
 
