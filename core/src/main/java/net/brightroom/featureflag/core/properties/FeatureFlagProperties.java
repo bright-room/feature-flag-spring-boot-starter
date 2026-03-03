@@ -21,23 +21,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "feature-flags")
 public class FeatureFlagProperties {
 
-  private FeatureFlagPathPatterns pathPatterns = new FeatureFlagPathPatterns();
   private Map<String, Boolean> featureNames = new HashMap<>();
   private ResponseProperties response = new ResponseProperties();
   private boolean defaultEnabled = false;
-
-  /**
-   * Returns the path patterns for feature flag interceptor registration.
-   *
-   * @return the path patterns
-   * @deprecated {@code feature-flags.path-patterns} has no effect. The interceptor is registered
-   *     for all paths ({@code /**}) unconditionally. Remove {@code path-patterns} from your
-   *     configuration. This method will be removed in the next major version.
-   */
-  @Deprecated
-  public FeatureFlagPathPatterns pathPatterns() {
-    return pathPatterns;
-  }
 
   /**
    * Returns the map of feature names and their enabled status.
@@ -65,11 +51,6 @@ public class FeatureFlagProperties {
    */
   public boolean defaultEnabled() {
     return defaultEnabled;
-  }
-
-  // for property binding
-  void setPathPatterns(FeatureFlagPathPatterns pathPatterns) {
-    this.pathPatterns = pathPatterns;
   }
 
   // for property binding
