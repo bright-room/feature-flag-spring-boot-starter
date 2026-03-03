@@ -52,6 +52,9 @@ public class FeatureFlagEndpoint {
    */
   @WriteOperation
   public FeatureFlagEndpointResponse updateFeature(String featureName, boolean enabled) {
+    if (featureName == null || featureName.isBlank()) {
+      throw new IllegalArgumentException("featureName must not be null or blank");
+    }
     provider.setFeatureEnabled(featureName, enabled);
     eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, enabled));
     return new FeatureFlagEndpointResponse(provider.getFeatures(), defaultEnabled);

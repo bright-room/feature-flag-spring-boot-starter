@@ -21,6 +21,7 @@ class FeatureFlagAutoConfigurationMultiplePropertiesTest {
 
   FeatureFlagProperties featureFlagProperties;
 
+  @SuppressWarnings("deprecation")
   @Test
   void shouldLoadMultipleIncludePathPatterns() {
     List<String> pathPattern = featureFlagProperties.pathPatterns().includes();
@@ -29,6 +30,7 @@ class FeatureFlagAutoConfigurationMultiplePropertiesTest {
     assertTrue(pathPattern.contains("/web/**"));
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   void shouldLoadMultipleExcludePathPatterns() {
     List<String> pathPattern = featureFlagProperties.pathPatterns().excludes();

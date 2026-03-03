@@ -19,6 +19,7 @@ class FeatureFlagAutoConfigurationEmptyPropertiesTest {
 
   FeatureFlagProperties featureFlagProperties;
 
+  @SuppressWarnings("deprecation")
   @Test
   void shouldBeEmptyWhenPropertiesAreNotProvided() {
     FeatureFlagPathPatterns pathPatterns = featureFlagProperties.pathPatterns();

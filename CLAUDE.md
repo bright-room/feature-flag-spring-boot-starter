@@ -29,13 +29,15 @@ Code formatting uses Google Java Format via Spotless. Always run `spotlessApply`
 
 ## Architecture
 
-This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides feature flag support for Spring MVC applications. It is published to Maven Central under group `net.bright-room.feature-flag-spring-boot-starter`.
+This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides feature flag support for Spring MVC and Spring WebFlux applications. It is published to Maven Central under group `net.bright-room.feature-flag-spring-boot-starter`.
 
 ### Modules
 
-- **`core`** — Annotation and configuration properties. Contains `@FeatureFlag` annotation and `FeatureFlagProperties` (`feature-flags.*` config prefix). `FeatureFlagAutoConfiguration` bootstraps property binding.
-- **`webmvc`** — Spring MVC interceptor implementation. Depends on `core`.
-- **`gradle-scripts`** — Composite build providing convention plugins: `spring-boot-starter`, `publish-plugin`, `spotless-java`, `spotless-kotlin`.
+- **`core`** — Annotation, configuration properties, provider SPI, and shared resolution logic. Contains `@FeatureFlag` annotation, `FeatureFlagProperties` (`feature-flags.*` config prefix), `FeatureFlagProvider`/`MutableFeatureFlagProvider` SPI, and `ProblemDetailBuilder`/`HtmlResponseBuilder`. `FeatureFlagAutoConfiguration` bootstraps property binding only (no provider beans).
+- **`webmvc`** — Spring MVC interceptor implementation. Depends on `core`. Registers `InMemoryFeatureFlagProvider` bean via `FeatureFlagMvcAutoConfiguration`.
+- **`webflux`** — Spring WebFlux AOP + HandlerFilterFunction implementation. Depends on `core`. Uses `ReactiveFeatureFlagProvider` and `FeatureFlagAspect` for annotation-based controllers, `FeatureFlagHandlerFilterFunction` for functional endpoints.
+- **`actuator`** — Runtime feature flag management via Spring Boot Actuator endpoint (`/actuator/feature-flags`). Registers `MutableInMemoryFeatureFlagProvider` bean and publishes `FeatureFlagChangedEvent` on flag changes. Auto-configured before webmvc/webflux.
+- **`gradle-scripts`** — Composite build providing convention plugins: `spring-boot-starter`, `publish-plugin`, `spotless-java`, `spotless-kotlin`, `integration-test`.
 
 ### Request Flow
 
@@ -48,13 +50,16 @@ This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides f
 
 - **Custom feature source**: Implement `FeatureFlagProvider` and register as a `@Bean`. The default `InMemoryFeatureFlagProvider` reads from `feature-flags.feature-names` in config and is **fail-closed by default** — feature names not present in the config are treated as disabled. Set `feature-flags.default-enabled: true` to switch to fail-open behavior. A custom bean replaces the default due to `@ConditionalOnMissingBean`.
 - **Custom denied response**: Define a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
+- **Gradual rollout**: Use `@FeatureFlag(value = "name", rollout = 50)` to enable a feature for a percentage of requests. Implement `FeatureFlagContextResolver` (webmvc) or `ReactiveFeatureFlagContextResolver` (webflux) for sticky rollout. Implement `RolloutStrategy` (webmvc) or `ReactiveRolloutStrategy` (webflux) to customize bucketing.
 
 ### Auto-configuration Registration
 
-Both modules use Spring Boot's `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` to register their `@AutoConfiguration` classes. Auto-configuration ordering is enforced with `after =` references:
+All modules use Spring Boot's `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` to register their `@AutoConfiguration` classes. Auto-configuration ordering is enforced with `after =` / `beforeName =` references:
 1. `FeatureFlagAutoConfiguration` (core)
-2. `FeatureFlagMvcAutoConfiguration` (webmvc)
-3. `FeatureFlagMvcInterceptorRegistrationAutoConfiguration` (webmvc)
+2. `FeatureFlagActuatorAutoConfiguration` (actuator) — before webmvc/webflux
+3. `FeatureFlagMvcAutoConfiguration` (webmvc)
+4. `FeatureFlagMvcInterceptorRegistrationAutoConfiguration` (webmvc)
+5. `FeatureFlagWebFluxAutoConfiguration` (webflux)
 
 ### Response Types
 

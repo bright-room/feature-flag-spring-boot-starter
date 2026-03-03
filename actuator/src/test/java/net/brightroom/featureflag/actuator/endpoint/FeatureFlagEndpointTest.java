@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.actuator.endpoint;
 
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,5 +91,35 @@ class FeatureFlagEndpointTest {
     assertEquals(2, keys.size());
     assertFalse(response.features().get("feature-a"));
     assertTrue(response.features().get("feature-b"));
+  }
+
+  @Test
+  void updateFeature_throwsIllegalArgumentException_whenFeatureNameIsNull() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
+    var endpoint = new FeatureFlagEndpoint(provider, false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.updateFeature(null, true))
+        .withMessageContaining("featureName must not be null or blank");
+  }
+
+  @Test
+  void updateFeature_throwsIllegalArgumentException_whenFeatureNameIsEmpty() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
+    var endpoint = new FeatureFlagEndpoint(provider, false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.updateFeature("", true))
+        .withMessageContaining("featureName must not be null or blank");
+  }
+
+  @Test
+  void updateFeature_throwsIllegalArgumentException_whenFeatureNameIsBlank() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
+    var endpoint = new FeatureFlagEndpoint(provider, false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.updateFeature("   ", true))
+        .withMessageContaining("featureName must not be null or blank");
   }
 }
