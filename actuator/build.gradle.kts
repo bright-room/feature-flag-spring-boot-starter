@@ -19,4 +19,6 @@ dependencies {
     integrationTestImplementation(libs.spring.boot.starter.test)
     integrationTestImplementation(libs.spring.boot.starter.webmvc)
     integrationTestImplementation(libs.spring.boot.starter.webmvc.test)
+    integrationTestImplementation(libs.spring.boot.starter.webflux)
+    integrationTestImplementation(libs.spring.boot.starter.webflux.test)
 }
