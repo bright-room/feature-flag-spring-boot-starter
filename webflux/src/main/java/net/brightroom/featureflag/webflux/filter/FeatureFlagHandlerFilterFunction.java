@@ -1,10 +1,10 @@
 package net.brightroom.featureflag.webflux.filter;
 
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
+import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.springframework.web.reactive.function.server.HandlerFilterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
@@ -36,7 +36,7 @@ public class FeatureFlagHandlerFilterFunction {
 
   private final ReactiveFeatureFlagProvider reactiveFeatureFlagProvider;
   private final AccessDeniedHandlerFilterResolution resolution;
-  private final RolloutStrategy rolloutStrategy;
+  private final ReactiveRolloutStrategy rolloutStrategy;
   private final ReactiveFeatureFlagContextResolver contextResolver;
 
   /**
@@ -58,13 +58,17 @@ public class FeatureFlagHandlerFilterFunction {
    * @param rollout the rollout percentage (0–100); 100 means fully enabled
    * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag
    *     and rollout
-   * @throws IllegalArgumentException if {@code featureName} is null or empty
+   * @throws IllegalArgumentException if {@code featureName} is null or empty, or if {@code rollout}
+   *     is not between 0 and 100
    */
   public HandlerFilterFunction<ServerResponse, ServerResponse> of(String featureName, int rollout) {
     if (featureName == null || featureName.isEmpty()) {
       throw new IllegalArgumentException(
           "featureName must not be null or empty. "
               + "An empty value causes fail-open behavior and allows access unconditionally.");
+    }
+    if (rollout < 0 || rollout > 100) {
+      throw new IllegalArgumentException("rollout must be between 0 and 100, but was: " + rollout);
     }
     return (request, next) ->
         reactiveFeatureFlagProvider
@@ -80,13 +84,18 @@ public class FeatureFlagHandlerFilterFunction {
                     return contextResolver
                         .resolve(request.exchange().getRequest())
                         .flatMap(
-                            ctx -> {
-                              if (!rolloutStrategy.isInRollout(featureName, ctx, rollout)) {
-                                return resolution.resolve(
-                                    request, new FeatureFlagAccessDeniedException(featureName));
-                              }
-                              return next.handle(request);
-                            })
+                            ctx ->
+                                rolloutStrategy
+                                    .isInRollout(featureName, ctx, rollout)
+                                    .flatMap(
+                                        inRollout -> {
+                                          if (!inRollout) {
+                                            return resolution.resolve(
+                                                request,
+                                                new FeatureFlagAccessDeniedException(featureName));
+                                          }
+                                          return next.handle(request);
+                                        }))
                         .switchIfEmpty(next.handle(request));
                   }
                   return next.handle(request);
@@ -96,7 +105,7 @@ public class FeatureFlagHandlerFilterFunction {
   public FeatureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       AccessDeniedHandlerFilterResolution resolution,
-      RolloutStrategy rolloutStrategy,
+      ReactiveRolloutStrategy rolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.resolution = resolution;

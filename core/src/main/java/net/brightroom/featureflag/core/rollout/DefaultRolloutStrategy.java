@@ -33,7 +33,7 @@ public class DefaultRolloutStrategy implements RolloutStrategy {
               | ((hash[1] & 0xFF) << 16)
               | ((hash[2] & 0xFF) << 8)
               | (hash[3] & 0xFF);
-      return Math.abs(value % 100);
+      return Integer.remainderUnsigned(value, 100);
     } catch (NoSuchAlgorithmException e) {
       throw new IllegalStateException("SHA-256 not available", e);
     }

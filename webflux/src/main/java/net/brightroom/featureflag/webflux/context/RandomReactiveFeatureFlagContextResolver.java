@@ -11,10 +11,11 @@ import reactor.core.publisher.Mono;
  * <p>This provides non-sticky (per-request probabilistic) rollout behavior. Each request
  * independently has a rollout-percentage chance of being included.
  *
- * <p>This class is package-private. Users interact with {@link ReactiveFeatureFlagContextResolver}
- * only.
+ * <p>This is the default implementation registered by auto-configuration. Users interact with
+ * {@link ReactiveFeatureFlagContextResolver} only.
  */
-class RandomReactiveFeatureFlagContextResolver implements ReactiveFeatureFlagContextResolver {
+public class RandomReactiveFeatureFlagContextResolver
+    implements ReactiveFeatureFlagContextResolver {
 
   @Override
   public Mono<FeatureFlagContext> resolve(ServerHttpRequest request) {

@@ -39,6 +39,9 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
     }
 
     FeatureFlag classAnnotation = handlerMethod.getBeanType().getAnnotation(FeatureFlag.class);
+    if (classAnnotation == null) {
+      return true;
+    }
     validateAnnotation(classAnnotation);
     if (checkFeatureFlag(classAnnotation)) {
       throw new FeatureFlagAccessDeniedException(classAnnotation.value());

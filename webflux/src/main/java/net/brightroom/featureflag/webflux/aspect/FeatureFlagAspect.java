@@ -3,9 +3,9 @@ package net.brightroom.featureflag.webflux.aspect;
 import java.lang.reflect.Method;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -20,7 +20,7 @@ import reactor.core.publisher.Mono;
 public class FeatureFlagAspect {
 
   private final ReactiveFeatureFlagProvider reactiveFeatureFlagProvider;
-  private final RolloutStrategy rolloutStrategy;
+  private final ReactiveRolloutStrategy rolloutStrategy;
   private final ReactiveFeatureFlagContextResolver contextResolver;
 
   @Around(
@@ -52,17 +52,15 @@ public class FeatureFlagAspect {
                   ctx -> {
                     ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
                     Mono<Object> proceedMono = proceedAsMono(joinPoint);
-                    return contextResolver
-                        .resolve(exchange.getRequest())
-                        .<Object>flatMap(
-                            context -> {
-                              if (!rolloutStrategy.isInRollout(featureName, context, rollout)) {
+                    return shouldProceed(featureName, exchange, rollout)
+                        .flatMap(
+                            proceed -> {
+                              if (!proceed) {
                                 return Mono.error(
                                     new FeatureFlagAccessDeniedException(featureName));
                               }
                               return proceedMono;
-                            })
-                        .switchIfEmpty(proceedMono);
+                            });
                   });
             }
             return proceedAsMono(joinPoint);
@@ -80,17 +78,15 @@ public class FeatureFlagAspect {
                   ctx -> {
                     ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
                     Flux<Object> proceedFlux = proceedAsFlux(joinPoint);
-                    return contextResolver
-                        .resolve(exchange.getRequest())
-                        .<Object>flatMapMany(
-                            context -> {
-                              if (!rolloutStrategy.isInRollout(featureName, context, rollout)) {
+                    return shouldProceed(featureName, exchange, rollout)
+                        .flatMapMany(
+                            proceed -> {
+                              if (!proceed) {
                                 return Flux.error(
                                     new FeatureFlagAccessDeniedException(featureName));
                               }
                               return proceedFlux;
-                            })
-                        .switchIfEmpty(proceedFlux);
+                            });
                   });
             }
             return proceedAsFlux(joinPoint);
@@ -103,6 +99,20 @@ public class FeatureFlagAspect {
             + ((MethodSignature) joinPoint.getSignature()).getMethod().getName()
             + "' requires a reactive return type (Mono or Flux). "
             + "Non-reactive return types are not supported.");
+  }
+
+  /**
+   * Resolves whether the request should proceed through the rollout check.
+   *
+   * <p>Returns {@code true} (proceed) when the context is empty (fail-open), or when the context is
+   * within the rollout bucket. Returns {@code false} when the context is outside the rollout
+   * bucket.
+   */
+  private Mono<Boolean> shouldProceed(String featureName, ServerWebExchange exchange, int rollout) {
+    return contextResolver
+        .resolve(exchange.getRequest())
+        .flatMap(context -> rolloutStrategy.isInRollout(featureName, context, rollout))
+        .defaultIfEmpty(true);
   }
 
   @SuppressWarnings("unchecked")
@@ -149,7 +159,7 @@ public class FeatureFlagAspect {
 
   public FeatureFlagAspect(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      RolloutStrategy rolloutStrategy,
+      ReactiveRolloutStrategy rolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.rolloutStrategy = rolloutStrategy;

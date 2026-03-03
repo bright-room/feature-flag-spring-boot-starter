@@ -9,9 +9,9 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Method;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.core.rollout.DefaultRolloutStrategy;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.Test;
@@ -25,7 +25,7 @@ class FeatureFlagAspectTest {
   private final ReactiveFeatureFlagContextResolver contextResolver =
       mock(ReactiveFeatureFlagContextResolver.class);
   private final FeatureFlagAspect aspect =
-      new FeatureFlagAspect(provider, new DefaultRolloutStrategy(), contextResolver);
+      new FeatureFlagAspect(provider, new DefaultReactiveRolloutStrategy(), contextResolver);
 
   static class TestController {
 

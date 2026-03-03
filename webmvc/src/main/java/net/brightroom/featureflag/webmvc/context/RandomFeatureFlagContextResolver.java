@@ -11,9 +11,10 @@ import net.brightroom.featureflag.core.context.FeatureFlagContext;
  * <p>This provides non-sticky (per-request probabilistic) rollout behavior. Each request
  * independently has a rollout-percentage chance of being included.
  *
- * <p>This class is package-private. Users interact with {@link FeatureFlagContextResolver} only.
+ * <p>This is the default implementation registered by auto-configuration. Users interact with
+ * {@link FeatureFlagContextResolver} only.
  */
-class RandomFeatureFlagContextResolver implements FeatureFlagContextResolver {
+public class RandomFeatureFlagContextResolver implements FeatureFlagContextResolver {
 
   @Override
   public Optional<FeatureFlagContext> resolve(HttpServletRequest request) {

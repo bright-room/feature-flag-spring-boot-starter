@@ -1,13 +1,10 @@
 package net.brightroom.featureflag.webflux.autoconfigure;
 
-import java.util.UUID;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
-import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.properties.FeatureFlagPathPatterns;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
-import net.brightroom.featureflag.core.rollout.DefaultRolloutStrategy;
-import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect;
+import net.brightroom.featureflag.webflux.context.RandomReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.exception.FeatureFlagExceptionHandler;
 import net.brightroom.featureflag.webflux.filter.FeatureFlagHandlerFilterFunction;
@@ -17,6 +14,8 @@ import net.brightroom.featureflag.webflux.resolution.exceptionhandler.AccessDeni
 import net.brightroom.featureflag.webflux.resolution.exceptionhandler.AccessDeniedExceptionHandlerResolutionFactory;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolutionFactory;
+import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
+import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -55,24 +54,24 @@ public class FeatureFlagWebFluxAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
-  RolloutStrategy rolloutStrategy() {
-    return new DefaultRolloutStrategy();
+  ReactiveRolloutStrategy reactiveRolloutStrategy() {
+    return new DefaultReactiveRolloutStrategy();
   }
 
   @Bean
   @ConditionalOnMissingBean
   ReactiveFeatureFlagContextResolver reactiveFeatureFlagContextResolver() {
-    return request ->
-        reactor.core.publisher.Mono.just(new FeatureFlagContext(UUID.randomUUID().toString()));
+    return new RandomReactiveFeatureFlagContextResolver();
   }
 
   @Bean
   @ConditionalOnMissingBean
   FeatureFlagAspect featureFlagAspect(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      RolloutStrategy rolloutStrategy,
+      ReactiveRolloutStrategy reactiveRolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver) {
-    return new FeatureFlagAspect(reactiveFeatureFlagProvider, rolloutStrategy, contextResolver);
+    return new FeatureFlagAspect(
+        reactiveFeatureFlagProvider, reactiveRolloutStrategy, contextResolver);
   }
 
   @Bean
@@ -86,12 +85,12 @@ public class FeatureFlagWebFluxAutoConfiguration {
   FeatureFlagHandlerFilterFunction featureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution,
-      RolloutStrategy rolloutStrategy,
+      ReactiveRolloutStrategy reactiveRolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver) {
     return new FeatureFlagHandlerFilterFunction(
         reactiveFeatureFlagProvider,
         accessDeniedHandlerResolution,
-        rolloutStrategy,
+        reactiveRolloutStrategy,
         contextResolver);
   }
 
