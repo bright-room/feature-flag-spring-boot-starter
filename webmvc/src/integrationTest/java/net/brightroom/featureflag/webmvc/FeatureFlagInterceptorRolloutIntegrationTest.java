@@ -11,6 +11,7 @@ import net.brightroom.featureflag.webmvc.configuration.FeatureFlagMvcTestAutoCon
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
 import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagClassRolloutController;
 import net.brightroom.featureflag.webmvc.endpoint.FeatureFlagRolloutController;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -83,11 +84,10 @@ class FeatureFlagInterceptorRolloutIntegrationTest {
   @Test
   void methodLevel_rolloutAllowed_returnsBody_whenInRollout() throws Exception {
     // When the fixed user is in rollout, the response body should be "Allowed"
-    if (IN_ROLLOUT_50) {
-      mockMvc
-          .perform(get("/test/rollout"))
-          .andExpect(status().isOk())
-          .andExpect(content().string("Allowed"));
-    }
+    Assumptions.assumeTrue(IN_ROLLOUT_50, "User not in rollout bucket");
+    mockMvc
+        .perform(get("/test/rollout"))
+        .andExpect(status().isOk())
+        .andExpect(content().string("Allowed"));
   }
 }

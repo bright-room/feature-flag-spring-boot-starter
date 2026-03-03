@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -78,7 +79,7 @@ class FeatureFlagInterceptorTest {
     boolean result = interceptor.preHandle(request, response, handlerMethod);
 
     assertTrue(result);
-    // contextResolver should not be called when rollout is 100
+    verifyNoInteractions(contextResolver);
   }
 
   @Test

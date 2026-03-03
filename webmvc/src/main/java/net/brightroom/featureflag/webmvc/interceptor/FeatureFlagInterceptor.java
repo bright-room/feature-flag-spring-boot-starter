@@ -2,7 +2,6 @@ package net.brightroom.featureflag.webmvc.interceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Objects;
 import java.util.Optional;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
@@ -73,11 +72,11 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
   }
 
   private boolean checkFeatureFlag(FeatureFlag annotation) {
-    return Objects.nonNull(annotation) && !featureFlagProvider.isFeatureEnabled(annotation.value());
+    return !featureFlagProvider.isFeatureEnabled(annotation.value());
   }
 
   private void checkRollout(HttpServletRequest request, FeatureFlag annotation) {
-    if (annotation == null || annotation.rollout() >= 100) return;
+    if (annotation.rollout() >= 100) return;
     Optional<FeatureFlagContext> context = contextResolver.resolve(request);
     if (context.isPresent()
         && !rolloutStrategy.isInRollout(annotation.value(), context.get(), annotation.rollout())) {
