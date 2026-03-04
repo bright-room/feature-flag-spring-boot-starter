@@ -4,6 +4,8 @@ import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguratio
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.InMemoryRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import net.brightroom.featureflag.core.rollout.DefaultRolloutStrategy;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
@@ -48,11 +50,19 @@ public class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean(RolloutPercentageProvider.class)
+  RolloutPercentageProvider rolloutPercentageProvider() {
+    return new InMemoryRolloutPercentageProvider(featureFlagProperties.rolloutPercentages());
+  }
+
+  @Bean
   FeatureFlagInterceptor featureFlagInterceptor(
       FeatureFlagProvider featureFlagProvider,
       RolloutStrategy rolloutStrategy,
-      FeatureFlagContextResolver contextResolver) {
-    return new FeatureFlagInterceptor(featureFlagProvider, rolloutStrategy, contextResolver);
+      FeatureFlagContextResolver contextResolver,
+      RolloutPercentageProvider rolloutPercentageProvider) {
+    return new FeatureFlagInterceptor(
+        featureFlagProvider, rolloutStrategy, contextResolver, rolloutPercentageProvider);
   }
 
   @Bean

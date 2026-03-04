@@ -6,9 +6,11 @@ feature-flags:
     excludes:
       - "/internal/**"
       - "/health/**"
-  feature-names:
-    f1: true
-    f2: false
+  features:
+    f1:
+      enabled: true
+    f2:
+      enabled: false
   default-enabled: true
   response:
     type: PLAIN_TEXT

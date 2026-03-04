@@ -25,8 +25,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
       "spring.main.web-application-type=reactive",
-      "feature-flags.feature-names.feature-a=true",
-      "feature-flags.feature-names.feature-b=false",
+      "feature-flags.features.feature-a.enabled=true",
+      "feature-flags.features.feature-b.enabled=false",
       "feature-flags.default-enabled=false",
       "management.endpoints.web.exposure.include=feature-flags"
     })

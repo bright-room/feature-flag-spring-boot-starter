@@ -29,7 +29,7 @@ import reactor.core.publisher.Mono;
  */
 @SpringBootTest(
     webEnvironment = WebEnvironment.RANDOM_PORT,
-    properties = {"feature-flags.feature-names.rollout-feature=true"})
+    properties = {"feature-flags.features.rollout-feature.enabled=true"})
 class FeatureFlagAspectRolloutIntegrationTest {
 
   private static final FeatureFlagContext FIXED_CONTEXT = new FeatureFlagContext("fixed-user-id");

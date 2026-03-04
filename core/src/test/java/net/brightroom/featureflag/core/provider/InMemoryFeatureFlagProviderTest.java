@@ -11,8 +11,8 @@ import org.springframework.test.context.TestPropertySource;
 @SpringBootTest(classes = FeatureFlagProviderTestConfiguration.class)
 @TestPropertySource(
     properties = {
-      "feature-flags.feature-names.experimental-stage-endpoint=true",
-      "feature-flags.feature-names.development-stage-endpoint=false",
+      "feature-flags.features.experimental-stage-endpoint.enabled=true",
+      "feature-flags.features.development-stage-endpoint.enabled=false",
       "feature-flags.response.type=json"
     })
 class InMemoryFeatureFlagProviderTest {

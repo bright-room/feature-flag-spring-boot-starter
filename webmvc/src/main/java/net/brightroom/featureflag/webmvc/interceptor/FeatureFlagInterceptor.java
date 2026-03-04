@@ -7,6 +7,7 @@ import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
 import org.jspecify.annotations.NonNull;
@@ -17,14 +18,17 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
   private final FeatureFlagProvider featureFlagProvider;
   private final RolloutStrategy rolloutStrategy;
   private final FeatureFlagContextResolver contextResolver;
+  private final RolloutPercentageProvider rolloutPercentageProvider;
 
   public FeatureFlagInterceptor(
       FeatureFlagProvider featureFlagProvider,
       RolloutStrategy rolloutStrategy,
-      FeatureFlagContextResolver contextResolver) {
+      FeatureFlagContextResolver contextResolver,
+      RolloutPercentageProvider rolloutPercentageProvider) {
     this.featureFlagProvider = featureFlagProvider;
     this.rolloutStrategy = rolloutStrategy;
     this.contextResolver = contextResolver;
+    this.rolloutPercentageProvider = rolloutPercentageProvider;
   }
 
   @Override
@@ -76,10 +80,14 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
   }
 
   private void checkRollout(HttpServletRequest request, FeatureFlag annotation) {
-    if (annotation.rollout() >= 100) return;
+    int rollout =
+        rolloutPercentageProvider
+            .getRolloutPercentage(annotation.value())
+            .orElse(annotation.rollout());
+    if (rollout >= 100) return;
     Optional<FeatureFlagContext> context = contextResolver.resolve(request);
     if (context.isPresent()
-        && !rolloutStrategy.isInRollout(annotation.value(), context.get(), annotation.rollout())) {
+        && !rolloutStrategy.isInRollout(annotation.value(), context.get(), rollout)) {
       throw new FeatureFlagAccessDeniedException(annotation.value());
     }
   }

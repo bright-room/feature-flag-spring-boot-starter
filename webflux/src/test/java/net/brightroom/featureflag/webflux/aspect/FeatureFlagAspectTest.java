@@ -11,6 +11,7 @@ import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
 import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
@@ -28,13 +29,20 @@ class FeatureFlagAspectTest {
   private final ReactiveFeatureFlagProvider provider = mock(ReactiveFeatureFlagProvider.class);
   private final ReactiveFeatureFlagContextResolver contextResolver =
       mock(ReactiveFeatureFlagContextResolver.class);
+  // Default: no rollout percentage configured in provider, falls back to annotation value
+  private final ReactiveRolloutPercentageProvider rolloutPercentageProvider =
+      mock(ReactiveRolloutPercentageProvider.class, invocation -> Mono.empty());
   private final FeatureFlagAspect aspect =
-      new FeatureFlagAspect(provider, new DefaultReactiveRolloutStrategy(), contextResolver);
+      new FeatureFlagAspect(
+          provider,
+          new DefaultReactiveRolloutStrategy(),
+          contextResolver,
+          rolloutPercentageProvider);
 
   // Aspect with mocked rollout strategy for rollout-specific tests
   private final ReactiveRolloutStrategy rolloutStrategy = mock(ReactiveRolloutStrategy.class);
   private final FeatureFlagAspect aspectWithRollout =
-      new FeatureFlagAspect(provider, rolloutStrategy, contextResolver);
+      new FeatureFlagAspect(provider, rolloutStrategy, contextResolver, rolloutPercentageProvider);
 
   static class TestController {
 

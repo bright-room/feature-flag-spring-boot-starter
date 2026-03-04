@@ -8,8 +8,14 @@ import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.MutableInMemoryRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.MutableReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.MutableRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -63,19 +69,36 @@ public class FeatureFlagActuatorAutoConfiguration {
     }
 
     /**
+     * Registers a {@link MutableInMemoryRolloutPercentageProvider} bean when no other {@link
+     * RolloutPercentageProvider} bean is already present.
+     *
+     * @return the mutable in-memory rollout percentage provider initialized from {@link
+     *     FeatureFlagProperties}
+     */
+    @Bean
+    @ConditionalOnMissingBean(RolloutPercentageProvider.class)
+    MutableInMemoryRolloutPercentageProvider mutableRolloutPercentageProvider() {
+      return new MutableInMemoryRolloutPercentageProvider(
+          featureFlagProperties.rolloutPercentages());
+    }
+
+    /**
      * Registers the {@link FeatureFlagEndpoint} bean when a {@link MutableFeatureFlagProvider} bean
      * is present.
      *
      * @param provider the mutable feature flag provider
+     * @param rolloutProvider the mutable rollout percentage provider
      * @param eventPublisher the publisher used to broadcast flag change events
      * @return the feature flag actuator endpoint
      */
     @Bean
     @ConditionalOnBean(MutableFeatureFlagProvider.class)
     FeatureFlagEndpoint featureFlagEndpoint(
-        MutableFeatureFlagProvider provider, ApplicationEventPublisher eventPublisher) {
+        MutableFeatureFlagProvider provider,
+        MutableRolloutPercentageProvider rolloutProvider,
+        ApplicationEventPublisher eventPublisher) {
       return new FeatureFlagEndpoint(
-          provider, featureFlagProperties.defaultEnabled(), eventPublisher);
+          provider, rolloutProvider, featureFlagProperties.defaultEnabled(), eventPublisher);
     }
 
     ServletConfiguration(FeatureFlagProperties featureFlagProperties) {
@@ -104,19 +127,36 @@ public class FeatureFlagActuatorAutoConfiguration {
     }
 
     /**
+     * Registers a {@link MutableInMemoryReactiveRolloutPercentageProvider} bean when no other
+     * {@link ReactiveRolloutPercentageProvider} bean is already present.
+     *
+     * @return the mutable in-memory reactive rollout percentage provider initialized from {@link
+     *     FeatureFlagProperties}
+     */
+    @Bean
+    @ConditionalOnMissingBean(ReactiveRolloutPercentageProvider.class)
+    MutableInMemoryReactiveRolloutPercentageProvider mutableReactiveRolloutPercentageProvider() {
+      return new MutableInMemoryReactiveRolloutPercentageProvider(
+          featureFlagProperties.rolloutPercentages());
+    }
+
+    /**
      * Registers the {@link ReactiveFeatureFlagEndpoint} bean when a {@link
      * MutableReactiveFeatureFlagProvider} bean is present.
      *
      * @param provider the mutable reactive feature flag provider
+     * @param rolloutProvider the mutable reactive rollout percentage provider
      * @param eventPublisher the publisher used to broadcast flag change events
      * @return the reactive feature flag actuator endpoint
      */
     @Bean
     @ConditionalOnBean(MutableReactiveFeatureFlagProvider.class)
     ReactiveFeatureFlagEndpoint reactiveFeatureFlagEndpoint(
-        MutableReactiveFeatureFlagProvider provider, ApplicationEventPublisher eventPublisher) {
+        MutableReactiveFeatureFlagProvider provider,
+        MutableReactiveRolloutPercentageProvider rolloutProvider,
+        ApplicationEventPublisher eventPublisher) {
       return new ReactiveFeatureFlagEndpoint(
-          provider, featureFlagProperties.defaultEnabled(), eventPublisher);
+          provider, rolloutProvider, featureFlagProperties.defaultEnabled(), eventPublisher);
     }
 
     ReactiveConfiguration(FeatureFlagProperties featureFlagProperties) {

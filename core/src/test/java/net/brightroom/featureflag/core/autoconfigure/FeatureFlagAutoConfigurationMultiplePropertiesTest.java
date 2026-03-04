@@ -29,6 +29,14 @@ class FeatureFlagAutoConfigurationMultiplePropertiesTest {
   }
 
   @Test
+  void shouldLoadRolloutPercentages() {
+    Map<String, Integer> rolloutPercentages = featureFlagProperties.rolloutPercentages();
+    assertEquals(2, rolloutPercentages.size());
+    assertEquals(100, rolloutPercentages.get("f1"));
+    assertEquals(100, rolloutPercentages.get("f2"));
+  }
+
+  @Test
   void shouldLoadDefaultEnabled() {
     assertTrue(featureFlagProperties.defaultEnabled());
   }
