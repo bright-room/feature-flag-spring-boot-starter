@@ -49,7 +49,7 @@ class FeatureFlagHandlerFilterFunctionCustomResolutionIntegrationTest {
   }
 
   @Test
-  void customResolutionTakesPriority_whenClassLevelFeatureIsDisabled() throws Exception {
+  void customResolutionTakesPriority_whenGroupedRouteFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/functional/test/disable"))
         .andExpect(status().is(HttpStatus.SERVICE_UNAVAILABLE.value()))

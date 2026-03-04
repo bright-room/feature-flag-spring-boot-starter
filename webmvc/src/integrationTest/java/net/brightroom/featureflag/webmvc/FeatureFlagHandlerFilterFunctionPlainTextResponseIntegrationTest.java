@@ -39,19 +39,21 @@ class FeatureFlagHandlerFilterFunctionPlainTextResponseIntegrationTest {
     mockMvc
         .perform(get("/functional/development-stage-endpoint"))
         .andExpect(status().isForbidden())
+        .andExpect(content().contentType("text/plain;charset=UTF-8"))
         .andExpect(content().string("Feature 'development-stage-endpoint' is not available"));
   }
 
   @Test
-  void shouldBlockAccess_whenClassLevelFeatureIsDisabled() throws Exception {
+  void shouldBlockAccess_whenGroupedRouteFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/functional/test/disable"))
         .andExpect(status().isForbidden())
+        .andExpect(content().contentType("text/plain;charset=UTF-8"))
         .andExpect(content().string("Feature 'disable-class-level-feature' is not available"));
   }
 
   @Test
-  void shouldAllowAccess_whenClassLevelFeatureIsEnabled() throws Exception {
+  void shouldAllowAccess_whenGroupedRouteFeatureIsEnabled() throws Exception {
     mockMvc
         .perform(get("/functional/test/enabled"))
         .andExpect(status().isOk())

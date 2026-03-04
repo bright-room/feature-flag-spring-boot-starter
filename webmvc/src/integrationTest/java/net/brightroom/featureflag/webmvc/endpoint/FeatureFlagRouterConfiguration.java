@@ -39,7 +39,7 @@ public class FeatureFlagRouterConfiguration {
   }
 
   @Bean
-  RouterFunction<ServerResponse> functionalClassLevelDisabledRoute() {
+  RouterFunction<ServerResponse> functionalDisabledGroupRoute() {
     return route()
         .GET("/functional/test/disable", req -> ServerResponse.ok().body("Not Allowed"))
         .filter(featureFlagFilter.of("disable-class-level-feature"))
@@ -47,7 +47,7 @@ public class FeatureFlagRouterConfiguration {
   }
 
   @Bean
-  RouterFunction<ServerResponse> functionalClassLevelEnabledRoute() {
+  RouterFunction<ServerResponse> functionalEnabledGroupRoute() {
     return route()
         .GET("/functional/test/enabled", req -> ServerResponse.ok().body("Allowed"))
         .filter(featureFlagFilter.of("enable-class-level-feature"))

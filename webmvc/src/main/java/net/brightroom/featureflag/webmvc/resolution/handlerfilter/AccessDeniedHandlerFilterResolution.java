@@ -23,6 +23,10 @@ import org.springframework.web.servlet.function.ServerResponse;
  *         .body("Access denied: " + e.featureName());
  * }
  * }</pre>
+ *
+ * <p>Note: {@code ServerResponse.BodyBuilder.body(Object)} declares {@code throws
+ * ServletException}. Wrap the call in a try-catch and rethrow as an unchecked exception if a
+ * checked exception is required at the call site.
  */
 public interface AccessDeniedHandlerFilterResolution {
 

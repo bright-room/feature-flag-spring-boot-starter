@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest
@@ -39,6 +40,7 @@ class FeatureFlagHandlerFilterFunctionJsonResponseIntegrationTest {
     mockMvc
         .perform(get("/functional/development-stage-endpoint"))
         .andExpect(status().isForbidden())
+        .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
         .andExpect(
             content()
                 .json(
@@ -54,10 +56,11 @@ class FeatureFlagHandlerFilterFunctionJsonResponseIntegrationTest {
   }
 
   @Test
-  void shouldBlockAccess_whenClassLevelFeatureIsDisabled() throws Exception {
+  void shouldBlockAccess_whenGroupedRouteFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/functional/test/disable"))
         .andExpect(status().isForbidden())
+        .andExpect(content().contentType(MediaType.APPLICATION_PROBLEM_JSON))
         .andExpect(
             content()
                 .json(
@@ -73,7 +76,7 @@ class FeatureFlagHandlerFilterFunctionJsonResponseIntegrationTest {
   }
 
   @Test
-  void shouldAllowAccess_whenClassLevelFeatureIsEnabled() throws Exception {
+  void shouldAllowAccess_whenGroupedRouteFeatureIsEnabled() throws Exception {
     mockMvc
         .perform(get("/functional/test/enabled"))
         .andExpect(status().isOk())

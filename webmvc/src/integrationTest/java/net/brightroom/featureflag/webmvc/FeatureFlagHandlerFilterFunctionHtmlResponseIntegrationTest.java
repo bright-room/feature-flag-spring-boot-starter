@@ -2,6 +2,7 @@ package net.brightroom.featureflag.webmvc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import net.brightroom.featureflag.webmvc.configuration.FeatureFlagMvcTestAutoConfiguration;
@@ -37,6 +38,7 @@ class FeatureFlagHandlerFilterFunctionHtmlResponseIntegrationTest {
         mockMvc
             .perform(get("/functional/development-stage-endpoint"))
             .andExpect(status().isForbidden())
+            .andExpect(content().contentType("text/html;charset=UTF-8"))
             .andReturn();
 
     Document doc = Jsoup.parse(mvcResult.getResponse().getContentAsString());
@@ -46,11 +48,12 @@ class FeatureFlagHandlerFilterFunctionHtmlResponseIntegrationTest {
   }
 
   @Test
-  void shouldBlockAccess_whenClassLevelFeatureIsDisabled() throws Exception {
+  void shouldBlockAccess_whenGroupedRouteFeatureIsDisabled() throws Exception {
     MvcResult mvcResult =
         mockMvc
             .perform(get("/functional/test/disable"))
             .andExpect(status().isForbidden())
+            .andExpect(content().contentType("text/html;charset=UTF-8"))
             .andReturn();
 
     Document doc = Jsoup.parse(mvcResult.getResponse().getContentAsString());
@@ -60,7 +63,7 @@ class FeatureFlagHandlerFilterFunctionHtmlResponseIntegrationTest {
   }
 
   @Test
-  void shouldAllowAccess_whenClassLevelFeatureIsEnabled() throws Exception {
+  void shouldAllowAccess_whenGroupedRouteFeatureIsEnabled() throws Exception {
     mockMvc.perform(get("/functional/test/enabled")).andExpect(status().isOk());
   }
 
