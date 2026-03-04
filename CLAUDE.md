@@ -37,6 +37,9 @@ This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides f
 - **`webmvc`** — Spring MVC interceptor implementation. Depends on `core`. Registers `InMemoryFeatureFlagProvider` bean via `FeatureFlagMvcAutoConfiguration`.
 - **`webflux`** — Spring WebFlux AOP + HandlerFilterFunction implementation. Depends on `core`. Uses `ReactiveFeatureFlagProvider` and `FeatureFlagAspect` for annotation-based controllers, `FeatureFlagHandlerFilterFunction` for functional endpoints.
 - **`actuator`** — Runtime feature flag management via Spring Boot Actuator endpoint (`/actuator/feature-flags`). Auto-configuration is split into `ServletConfiguration` (registers `MutableInMemoryFeatureFlagProvider` + `FeatureFlagEndpoint`) and `ReactiveConfiguration` (registers `MutableInMemoryReactiveFeatureFlagProvider` + `ReactiveFeatureFlagEndpoint`) via `@ConditionalOnWebApplication`. Publishes `FeatureFlagChangedEvent` on flag changes. Auto-configured before webmvc/webflux.
+  - `GET /actuator/feature-flags` — returns all flags: `{ "features": [{ "featureName": "x", "enabled": true }, ...], "defaultEnabled": false }`
+  - `GET /actuator/feature-flags/{featureName}` — returns a single flag: `{ "featureName": "x", "enabled": true }`. If the flag is not defined, `enabled` reflects the `defaultEnabled` policy.
+  - `POST /actuator/feature-flags` (body: `{ "featureName": "x", "enabled": true }`) — updates a flag and returns the full flags response. **Breaking change from pre-#164**: `features` was `Map<String, Boolean>` and is now `List<{ featureName, enabled }>` to support the individual-flag endpoint.
 - **`gradle-scripts`** — Composite build providing convention plugins: `spring-boot-starter`, `publish-plugin`, `spotless-java`, `spotless-kotlin`, `integration-test`.
 
 ### Request Flow

@@ -37,12 +37,7 @@ public class ReactiveFeatureFlagEndpoint {
    */
   @ReadOperation
   public FeatureFlagsEndpointResponse features() {
-    var features = provider.getFeatures().block();
-    var featureList =
-        features.entrySet().stream()
-            .map(e -> new FeatureFlagEndpointResponse(e.getKey(), e.getValue()))
-            .toList();
-    return new FeatureFlagsEndpointResponse(featureList, defaultEnabled);
+    return buildFlagsResponse();
   }
 
   /**
@@ -56,7 +51,7 @@ public class ReactiveFeatureFlagEndpoint {
   @ReadOperation
   public FeatureFlagEndpointResponse feature(@Selector String featureName) {
     var enabled = provider.isFeatureEnabled(featureName).block();
-    return new FeatureFlagEndpointResponse(featureName, enabled);
+    return new FeatureFlagEndpointResponse(featureName, Boolean.TRUE.equals(enabled));
   }
 
   /**
@@ -78,6 +73,10 @@ public class ReactiveFeatureFlagEndpoint {
     }
     provider.setFeatureEnabled(featureName, enabled).block();
     eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, enabled));
+    return buildFlagsResponse();
+  }
+
+  private FeatureFlagsEndpointResponse buildFlagsResponse() {
     var features = provider.getFeatures().block();
     var featureList =
         features.entrySet().stream()

@@ -36,11 +36,7 @@ public class FeatureFlagEndpoint {
    */
   @ReadOperation
   public FeatureFlagsEndpointResponse features() {
-    var featureList =
-        provider.getFeatures().entrySet().stream()
-            .map(e -> new FeatureFlagEndpointResponse(e.getKey(), e.getValue()))
-            .toList();
-    return new FeatureFlagsEndpointResponse(featureList, defaultEnabled);
+    return buildFlagsResponse();
   }
 
   /**
@@ -75,6 +71,10 @@ public class FeatureFlagEndpoint {
     }
     provider.setFeatureEnabled(featureName, enabled);
     eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, enabled));
+    return buildFlagsResponse();
+  }
+
+  private FeatureFlagsEndpointResponse buildFlagsResponse() {
     var featureList =
         provider.getFeatures().entrySet().stream()
             .map(e -> new FeatureFlagEndpointResponse(e.getKey(), e.getValue()))
