@@ -82,7 +82,7 @@ class FeatureFlagInterceptorHtmlResponseIntegrationTest {
   @Test
   void shouldAllowAccess_whenNoFeatureFlagAnnotationOnController() throws Exception {
     MvcResult mvcResult =
-        mockMvc.perform(get("/view/test/no-annotation")).andExpect(status().isOk()).andReturn();
+        mockMvc.perform(get("/test/no-annotation")).andExpect(status().isOk()).andReturn();
 
     MockHttpServletResponse response = mvcResult.getResponse();
     String htmlContent = response.getContentAsString();
@@ -99,7 +99,7 @@ class FeatureFlagInterceptorHtmlResponseIntegrationTest {
   @Test
   void shouldBlockAccess_whenClassLevelFeatureIsDisabled() throws Exception {
     MvcResult mvcResult =
-        mockMvc.perform(get("/view/test/disable")).andExpect(status().isForbidden()).andReturn();
+        mockMvc.perform(get("/test/disable")).andExpect(status().isForbidden()).andReturn();
 
     String htmlContent = mvcResult.getResponse().getContentAsString();
     Document doc = Jsoup.parse(htmlContent);
@@ -112,7 +112,7 @@ class FeatureFlagInterceptorHtmlResponseIntegrationTest {
   @Test
   void shouldAllowAccess_whenNoFeatureFlagAnnotation() throws Exception {
     MvcResult mvcResult =
-        mockMvc.perform(get("/view/test/enabled")).andExpect(status().isOk()).andReturn();
+        mockMvc.perform(get("/test/enabled")).andExpect(status().isOk()).andReturn();
 
     MockHttpServletResponse response = mvcResult.getResponse();
     String htmlContent = response.getContentAsString();
