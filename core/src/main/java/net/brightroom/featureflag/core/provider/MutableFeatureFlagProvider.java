@@ -37,4 +37,19 @@ public interface MutableFeatureFlagProvider extends FeatureFlagProvider {
    * @param enabled {@code true} to enable the feature, {@code false} to disable it
    */
   void setFeatureEnabled(String featureName, boolean enabled);
+
+  /**
+   * Removes the specified feature flag from this provider.
+   *
+   * <p>After removal, {@link #isFeatureEnabled(String)} for this flag will return the default
+   * enabled value. If the flag does not exist, this method is a no-op.
+   *
+   * <p><b>Note:</b> This method does not publish {@code FeatureFlagRemovedEvent}. Event publishing
+   * is handled by the actuator endpoint ({@code FeatureFlagEndpoint}). If you call this method
+   * directly and need event notification, publish the event manually via {@code
+   * ApplicationEventPublisher}.
+   *
+   * @param featureName the name of the feature flag to remove
+   */
+  void removeFeature(String featureName);
 }

@@ -33,4 +33,13 @@ public interface MutableRolloutPercentageProvider extends RolloutPercentageProvi
    * @param percentage the new rollout percentage (0–100)
    */
   void setRolloutPercentage(String featureName, int percentage);
+
+  /**
+   * Removes the rollout percentage for the specified feature flag.
+   *
+   * <p>If the feature flag does not have a configured rollout percentage, this method is a no-op.
+   *
+   * @param featureName the name of the feature flag whose rollout percentage to remove
+   */
+  void removeRolloutPercentage(String featureName);
 }
