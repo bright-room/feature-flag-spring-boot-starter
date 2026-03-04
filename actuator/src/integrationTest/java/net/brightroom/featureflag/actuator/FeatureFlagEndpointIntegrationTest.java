@@ -3,6 +3,8 @@ package net.brightroom.featureflag.actuator;
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -12,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.brightroom.featureflag.actuator.configuration.FeatureFlagActuatorTestAutoConfiguration;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
+import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -227,6 +230,50 @@ class FeatureFlagEndpointIntegrationTest {
     assertEquals(70, event.rolloutPercentage());
   }
 
+  @Test
+  void delete_returnsNoContent() throws Exception {
+    mockMvc.perform(delete("/actuator/feature-flags/feature-a")).andExpect(status().isNoContent());
+  }
+
+  @Test
+  void delete_thenGet_flagIsRemoved() throws Exception {
+    mockMvc.perform(delete("/actuator/feature-flags/feature-a")).andExpect(status().isNoContent());
+
+    mockMvc
+        .perform(get("/actuator/feature-flags"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.features[?(@.featureName == 'feature-a')]").isEmpty());
+  }
+
+  @Test
+  void delete_thenGetWithSelector_returnsDefaultEnabled() throws Exception {
+    mockMvc.perform(delete("/actuator/feature-flags/feature-a")).andExpect(status().isNoContent());
+
+    mockMvc
+        .perform(get("/actuator/feature-flags/feature-a"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.featureName").value("feature-a"))
+        .andExpect(jsonPath("$.enabled").value(false));
+  }
+
+  @Test
+  void delete_isIdempotent_forNonexistentFlag() throws Exception {
+    mockMvc
+        .perform(delete("/actuator/feature-flags/nonexistent"))
+        .andExpect(status().isNoContent());
+  }
+
+  @Test
+  void delete_publishesFeatureFlagRemovedEvent() throws Exception {
+    mockMvc.perform(delete("/actuator/feature-flags/feature-a")).andExpect(status().isNoContent());
+
+    assertEquals(1, eventCapture.removedEvents().size());
+    var event = eventCapture.removedEvents().get(0);
+    assertEquals("feature-a", event.featureName());
+    assertNotNull(event.getSource());
+    assertTrue(eventCapture.events().isEmpty());
+  }
+
   @Autowired
   FeatureFlagEndpointIntegrationTest(MockMvc mockMvc, EventCapture eventCapture) {
     this.mockMvc = mockMvc;
@@ -237,18 +284,29 @@ class FeatureFlagEndpointIntegrationTest {
   static class EventCapture {
 
     private final List<FeatureFlagChangedEvent> captured = new ArrayList<>();
+    private final List<FeatureFlagRemovedEvent> capturedRemoved = new ArrayList<>();
 
     @EventListener
     void onEvent(FeatureFlagChangedEvent event) {
       captured.add(event);
     }
 
+    @EventListener
+    void onEvent(FeatureFlagRemovedEvent event) {
+      capturedRemoved.add(event);
+    }
+
     List<FeatureFlagChangedEvent> events() {
       return List.copyOf(captured);
     }
 
+    List<FeatureFlagRemovedEvent> removedEvents() {
+      return List.copyOf(capturedRemoved);
+    }
+
     void clear() {
       captured.clear();
+      capturedRemoved.clear();
     }
   }
 }
