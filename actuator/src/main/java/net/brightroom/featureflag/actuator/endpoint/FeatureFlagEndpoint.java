@@ -2,6 +2,8 @@ package net.brightroom.featureflag.actuator.endpoint;
 
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.MutableRolloutPercentageProvider;
+import org.jspecify.annotations.Nullable;
 import org.springframework.boot.actuate.endpoint.Access;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
@@ -26,6 +28,7 @@ import org.springframework.context.ApplicationEventPublisher;
 public class FeatureFlagEndpoint {
 
   private final MutableFeatureFlagProvider provider;
+  private final MutableRolloutPercentageProvider rolloutProvider;
   private final boolean defaultEnabled;
   private final ApplicationEventPublisher eventPublisher;
 
@@ -49,11 +52,15 @@ public class FeatureFlagEndpoint {
    */
   @ReadOperation
   public FeatureFlagEndpointResponse feature(@Selector String featureName) {
-    return new FeatureFlagEndpointResponse(featureName, provider.isFeatureEnabled(featureName));
+    return new FeatureFlagEndpointResponse(
+        featureName,
+        provider.isFeatureEnabled(featureName),
+        rolloutProvider.getRolloutPercentage(featureName).orElse(100));
   }
 
   /**
-   * Updates the enabled state of a feature flag and publishes a {@link FeatureFlagChangedEvent}.
+   * Updates the enabled state and optionally the rollout percentage of a feature flag, then
+   * publishes a {@link FeatureFlagChangedEvent}.
    *
    * <p>If the flag does not exist, it is created with the given state.
    *
@@ -62,22 +69,35 @@ public class FeatureFlagEndpoint {
    *
    * @param featureName the name of the feature flag to update
    * @param enabled the new enabled state
+   * @param rollout the new rollout percentage (0–100), or {@code null} to leave unchanged
    * @return a response reflecting the updated state of all flags
    */
   @WriteOperation
-  public FeatureFlagsEndpointResponse updateFeature(String featureName, boolean enabled) {
+  public FeatureFlagsEndpointResponse updateFeature(
+      String featureName, boolean enabled, @Nullable Integer rollout) {
     if (featureName == null || featureName.isBlank()) {
       throw new IllegalArgumentException("featureName must not be null or blank");
     }
     provider.setFeatureEnabled(featureName, enabled);
-    eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, enabled));
+    if (rollout != null) {
+      if (rollout < 0 || rollout > 100) {
+        throw new IllegalArgumentException(
+            "rollout must be between 0 and 100, but was: " + rollout);
+      }
+      rolloutProvider.setRolloutPercentage(featureName, rollout);
+    }
+    eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, enabled, rollout));
     return buildFlagsResponse();
   }
 
   private FeatureFlagsEndpointResponse buildFlagsResponse() {
+    var rolloutPercentages = rolloutProvider.getRolloutPercentages();
     var featureList =
         provider.getFeatures().entrySet().stream()
-            .map(e -> new FeatureFlagEndpointResponse(e.getKey(), e.getValue()))
+            .map(
+                e ->
+                    new FeatureFlagEndpointResponse(
+                        e.getKey(), e.getValue(), rolloutPercentages.getOrDefault(e.getKey(), 100)))
             .toList();
     return new FeatureFlagsEndpointResponse(featureList, defaultEnabled);
   }
@@ -86,14 +106,17 @@ public class FeatureFlagEndpoint {
    * Constructs a {@code FeatureFlagEndpoint}.
    *
    * @param provider the mutable feature flag provider
+   * @param rolloutProvider the mutable rollout percentage provider
    * @param defaultEnabled the default-enabled value to include in responses
    * @param eventPublisher the publisher used to broadcast flag change events
    */
   public FeatureFlagEndpoint(
       MutableFeatureFlagProvider provider,
+      MutableRolloutPercentageProvider rolloutProvider,
       boolean defaultEnabled,
       ApplicationEventPublisher eventPublisher) {
     this.provider = provider;
+    this.rolloutProvider = rolloutProvider;
     this.defaultEnabled = defaultEnabled;
     this.eventPublisher = eventPublisher;
   }

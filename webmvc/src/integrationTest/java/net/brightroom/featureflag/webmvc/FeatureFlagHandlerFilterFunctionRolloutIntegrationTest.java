@@ -33,7 +33,7 @@ import org.springframework.web.servlet.function.ServerResponse;
  *       via {@code ServerRequest.servletRequest()} in the MVC pipeline.
  * </ul>
  */
-@WebMvcTest(properties = {"feature-flags.feature-names.rollout-feature=true"})
+@WebMvcTest(properties = {"feature-flags.features.rollout-feature.enabled=true"})
 @Import({
   FeatureFlagMvcTestAutoConfiguration.class,
   FeatureFlagHandlerFilterFunctionRolloutIntegrationTest.FixedContextResolverConfig.class,

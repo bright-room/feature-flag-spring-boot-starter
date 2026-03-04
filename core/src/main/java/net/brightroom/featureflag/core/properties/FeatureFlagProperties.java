@@ -7,31 +7,63 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Properties for feature flag configuration.
  *
- * <p>These properties are used to define the default enabled status for specific features.
+ * <p>These properties are used to define the enabled status and rollout percentage for specific
+ * features.
  *
  * <p>Configuration example in {@code application.yml}:
  *
  * <pre>{@code
  * feature-flags:
- *   feature-names:
- *     "new-feature": true
- *     "beta-feature": false
+ *   features:
+ *     new-feature:
+ *       enabled: true
+ *       rollout: 50
+ *     beta-feature:
+ *       enabled: true
+ *       rollout: 25
+ *     simple-feature:
+ *       enabled: true
  * }</pre>
  */
 @ConfigurationProperties(prefix = "feature-flags")
 public class FeatureFlagProperties {
 
-  private Map<String, Boolean> featureNames = new HashMap<>();
+  private Map<String, FeatureConfiguration> features = new HashMap<>();
   private ResponseProperties response = new ResponseProperties();
   private boolean defaultEnabled = false;
 
   /**
-   * Returns the map of feature names and their enabled status.
+   * Returns a map of feature names and their enabled status, derived from {@code features}.
    *
-   * @return the map of features
+   * <p>This is a convenience view for components that only need enabled/disabled status (e.g.,
+   * {@code FeatureFlagProvider} initialization).
+   *
+   * @return an immutable map of feature names to their enabled states
    */
   public Map<String, Boolean> featureNames() {
-    return Map.copyOf(featureNames);
+    var result = new HashMap<String, Boolean>();
+    features.forEach((name, config) -> result.put(name, config.enabled()));
+    return Map.copyOf(result);
+  }
+
+  /**
+   * Returns a map of feature names and their rollout percentages, derived from {@code features}.
+   *
+   * @return an immutable map of feature names to their rollout percentages
+   */
+  public Map<String, Integer> rolloutPercentages() {
+    var result = new HashMap<String, Integer>();
+    features.forEach((name, config) -> result.put(name, config.rollout()));
+    return Map.copyOf(result);
+  }
+
+  /**
+   * Returns the full feature configuration map.
+   *
+   * @return an immutable map of feature names to their {@link FeatureConfiguration}
+   */
+  public Map<String, FeatureConfiguration> features() {
+    return Map.copyOf(features);
   }
 
   /**
@@ -54,8 +86,8 @@ public class FeatureFlagProperties {
   }
 
   // for property binding
-  void setFeatureNames(Map<String, Boolean> featureNames) {
-    this.featureNames = featureNames;
+  void setFeatures(Map<String, FeatureConfiguration> features) {
+    this.features = features;
   }
 
   // for property binding

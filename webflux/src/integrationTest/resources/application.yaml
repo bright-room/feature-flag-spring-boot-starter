@@ -1,8 +1,12 @@
 feature-flags:
-  feature-names:
-    experimental-stage-endpoint: true
-    development-stage-endpoint: false
-    enable-class-level-feature: true
-    disable-class-level-feature: false
+  features:
+    experimental-stage-endpoint:
+      enabled: true
+    development-stage-endpoint:
+      enabled: false
+    enable-class-level-feature:
+      enabled: true
+    disable-class-level-feature:
+      enabled: false
   response:
     type: json

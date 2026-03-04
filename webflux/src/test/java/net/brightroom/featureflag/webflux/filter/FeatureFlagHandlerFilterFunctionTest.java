@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
@@ -32,14 +33,21 @@ class FeatureFlagHandlerFilterFunctionTest {
       mock(AccessDeniedHandlerFilterResolution.class);
   private final ReactiveFeatureFlagContextResolver contextResolver =
       mock(ReactiveFeatureFlagContextResolver.class);
+  private final ReactiveRolloutPercentageProvider rolloutPercentageProvider =
+      mock(ReactiveRolloutPercentageProvider.class);
   private final FeatureFlagHandlerFilterFunction filterFunction =
       new FeatureFlagHandlerFilterFunction(
-          provider, resolution, new DefaultReactiveRolloutStrategy(), contextResolver);
+          provider,
+          resolution,
+          new DefaultReactiveRolloutStrategy(),
+          contextResolver,
+          rolloutPercentageProvider);
 
   // Filter function with mocked rollout strategy for rollout-specific tests
   private final ReactiveRolloutStrategy rolloutStrategy = mock(ReactiveRolloutStrategy.class);
   private final FeatureFlagHandlerFilterFunction filterFunctionWithRollout =
-      new FeatureFlagHandlerFilterFunction(provider, resolution, rolloutStrategy, contextResolver);
+      new FeatureFlagHandlerFilterFunction(
+          provider, resolution, rolloutStrategy, contextResolver, rolloutPercentageProvider);
 
   @Test
   void of_throwsIllegalArgumentException_whenFeatureNameIsNull() {
@@ -73,6 +81,7 @@ class FeatureFlagHandlerFilterFunctionTest {
   @SuppressWarnings("unchecked")
   void of_delegatesToNext_whenFeatureEnabled() {
     when(provider.isFeatureEnabled("my-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature")).thenReturn(Mono.empty());
     ServerRequest request = mock(ServerRequest.class);
     HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
     ServerResponse okResponse = mock(ServerResponse.class);
@@ -106,6 +115,7 @@ class FeatureFlagHandlerFilterFunctionTest {
   @SuppressWarnings("unchecked")
   void of_delegatesToNext_whenRolloutCheckPasses() {
     when(provider.isFeatureEnabled("my-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature")).thenReturn(Mono.empty());
 
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
@@ -134,6 +144,7 @@ class FeatureFlagHandlerFilterFunctionTest {
   @SuppressWarnings("unchecked")
   void of_delegatesToResolution_whenRolloutCheckFails() {
     when(provider.isFeatureEnabled("my-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature")).thenReturn(Mono.empty());
 
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
@@ -164,6 +175,7 @@ class FeatureFlagHandlerFilterFunctionTest {
   void of_delegatesToNext_whenContextIsEmpty() {
     // fail-open: when context is not available, rollout check is skipped
     when(provider.isFeatureEnabled("my-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature")).thenReturn(Mono.empty());
 
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);

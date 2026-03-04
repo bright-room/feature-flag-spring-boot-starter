@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -22,6 +23,7 @@ public class FeatureFlagAspect {
   private final ReactiveFeatureFlagProvider reactiveFeatureFlagProvider;
   private final ReactiveRolloutStrategy rolloutStrategy;
   private final ReactiveFeatureFlagContextResolver contextResolver;
+  private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
 
   @Around(
       "@within(net.brightroom.featureflag.core.annotation.FeatureFlag) || "
@@ -35,9 +37,13 @@ public class FeatureFlagAspect {
     validateAnnotation(annotation);
 
     String featureName = annotation.value();
-    int rollout = annotation.rollout();
+    int annotationRollout = annotation.rollout();
     Mono<Boolean> enabledMono =
         reactiveFeatureFlagProvider.isFeatureEnabled(featureName).defaultIfEmpty(false);
+    Mono<Integer> rolloutMono =
+        rolloutPercentageProvider
+            .getRolloutPercentage(featureName)
+            .defaultIfEmpty(annotationRollout);
 
     Class<?> returnType = ((MethodSignature) joinPoint.getSignature()).getReturnType();
 
@@ -47,22 +53,25 @@ public class FeatureFlagAspect {
             if (!enabled) {
               return Mono.error(new FeatureFlagAccessDeniedException(featureName));
             }
-            if (rollout < 100) {
-              return Mono.deferContextual(
-                  ctx -> {
-                    ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-                    return shouldProceed(featureName, exchange, rollout)
-                        .flatMap(
-                            proceed -> {
-                              if (!proceed) {
-                                return Mono.error(
-                                    new FeatureFlagAccessDeniedException(featureName));
-                              }
-                              return proceedAsMono(joinPoint);
-                            });
-                  });
-            }
-            return proceedAsMono(joinPoint);
+            return rolloutMono.flatMap(
+                rollout -> {
+                  if (rollout < 100) {
+                    return Mono.deferContextual(
+                        ctx -> {
+                          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
+                          return shouldProceed(featureName, exchange, rollout)
+                              .flatMap(
+                                  proceed -> {
+                                    if (!proceed) {
+                                      return Mono.error(
+                                          new FeatureFlagAccessDeniedException(featureName));
+                                    }
+                                    return proceedAsMono(joinPoint);
+                                  });
+                        });
+                  }
+                  return proceedAsMono(joinPoint);
+                });
           });
     }
 
@@ -72,22 +81,25 @@ public class FeatureFlagAspect {
             if (!enabled) {
               return Flux.error(new FeatureFlagAccessDeniedException(featureName));
             }
-            if (rollout < 100) {
-              return Flux.deferContextual(
-                  ctx -> {
-                    ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-                    return shouldProceed(featureName, exchange, rollout)
-                        .flatMapMany(
-                            proceed -> {
-                              if (!proceed) {
-                                return Flux.error(
-                                    new FeatureFlagAccessDeniedException(featureName));
-                              }
-                              return proceedAsFlux(joinPoint);
-                            });
-                  });
-            }
-            return proceedAsFlux(joinPoint);
+            return rolloutMono.flatMapMany(
+                rollout -> {
+                  if (rollout < 100) {
+                    return Flux.deferContextual(
+                        ctx -> {
+                          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
+                          return shouldProceed(featureName, exchange, rollout)
+                              .flatMapMany(
+                                  proceed -> {
+                                    if (!proceed) {
+                                      return Flux.error(
+                                          new FeatureFlagAccessDeniedException(featureName));
+                                    }
+                                    return proceedAsFlux(joinPoint);
+                                  });
+                        });
+                  }
+                  return proceedAsFlux(joinPoint);
+                });
           });
     }
 
@@ -158,9 +170,11 @@ public class FeatureFlagAspect {
   public FeatureFlagAspect(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       ReactiveRolloutStrategy rolloutStrategy,
-      ReactiveFeatureFlagContextResolver contextResolver) {
+      ReactiveFeatureFlagContextResolver contextResolver,
+      ReactiveRolloutPercentageProvider rolloutPercentageProvider) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.rolloutStrategy = rolloutStrategy;
     this.contextResolver = contextResolver;
+    this.rolloutPercentageProvider = rolloutPercentageProvider;
   }
 }

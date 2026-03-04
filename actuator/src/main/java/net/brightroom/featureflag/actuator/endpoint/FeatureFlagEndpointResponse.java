@@ -7,5 +7,6 @@ package net.brightroom.featureflag.actuator.endpoint;
  *
  * @param featureName the name of the feature flag
  * @param enabled the current enabled state of the feature flag
+ * @param rollout the current rollout percentage (0–100) of the feature flag
  */
-public record FeatureFlagEndpointResponse(String featureName, boolean enabled) {}
+public record FeatureFlagEndpointResponse(String featureName, boolean enabled, int rollout) {}

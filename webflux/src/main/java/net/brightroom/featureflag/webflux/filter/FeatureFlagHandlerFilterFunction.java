@@ -2,6 +2,7 @@ package net.brightroom.featureflag.webflux.filter;
 
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
@@ -39,6 +40,7 @@ public class FeatureFlagHandlerFilterFunction {
   private final AccessDeniedHandlerFilterResolution resolution;
   private final ReactiveRolloutStrategy rolloutStrategy;
   private final ReactiveFeatureFlagContextResolver contextResolver;
+  private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -55,21 +57,28 @@ public class FeatureFlagHandlerFilterFunction {
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag
    * and rollout percentage.
    *
+   * <p>The rollout percentage is resolved from the {@link ReactiveRolloutPercentageProvider} first.
+   * If no rollout percentage is configured in the provider, the {@code rolloutFallback} argument is
+   * used as a fallback.
+   *
    * @param featureName the name of the feature flag to check; must not be null or empty
-   * @param rollout the rollout percentage (0–100); 100 means fully enabled
+   * @param rolloutFallback the fallback rollout percentage (0–100) when no value is configured in
+   *     the provider; 100 means fully enabled
    * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag
    *     and rollout
-   * @throws IllegalArgumentException if {@code featureName} is null or empty, or if {@code rollout}
-   *     is not between 0 and 100
+   * @throws IllegalArgumentException if {@code featureName} is null or empty, or if {@code
+   *     rolloutFallback} is not between 0 and 100
    */
-  public HandlerFilterFunction<ServerResponse, ServerResponse> of(String featureName, int rollout) {
+  public HandlerFilterFunction<ServerResponse, ServerResponse> of(
+      String featureName, int rolloutFallback) {
     if (featureName == null || featureName.isEmpty()) {
       throw new IllegalArgumentException(
           "featureName must not be null or empty. "
               + "An empty value causes fail-open behavior and allows access unconditionally.");
     }
-    if (rollout < 0 || rollout > 100) {
-      throw new IllegalArgumentException("rollout must be between 0 and 100, but was: " + rollout);
+    if (rolloutFallback < 0 || rolloutFallback > 100) {
+      throw new IllegalArgumentException(
+          "rollout must be between 0 and 100, but was: " + rolloutFallback);
     }
     return (request, next) ->
         reactiveFeatureFlagProvider
@@ -81,25 +90,32 @@ public class FeatureFlagHandlerFilterFunction {
                     return resolution.resolve(
                         request, new FeatureFlagAccessDeniedException(featureName));
                   }
-                  if (rollout < 100) {
-                    return contextResolver
-                        .resolve(request.exchange().getRequest())
-                        .flatMap(
-                            ctx ->
-                                rolloutStrategy
-                                    .isInRollout(featureName, ctx, rollout)
-                                    .flatMap(
-                                        inRollout -> {
-                                          if (!inRollout) {
-                                            return resolution.resolve(
-                                                request,
-                                                new FeatureFlagAccessDeniedException(featureName));
-                                          }
-                                          return next.handle(request);
-                                        }))
-                        .switchIfEmpty(Mono.defer(() -> next.handle(request)));
-                  }
-                  return next.handle(request);
+                  return rolloutPercentageProvider
+                      .getRolloutPercentage(featureName)
+                      .defaultIfEmpty(rolloutFallback)
+                      .flatMap(
+                          rollout -> {
+                            if (rollout < 100) {
+                              return contextResolver
+                                  .resolve(request.exchange().getRequest())
+                                  .flatMap(
+                                      ctx ->
+                                          rolloutStrategy
+                                              .isInRollout(featureName, ctx, rollout)
+                                              .flatMap(
+                                                  inRollout -> {
+                                                    if (!inRollout) {
+                                                      return resolution.resolve(
+                                                          request,
+                                                          new FeatureFlagAccessDeniedException(
+                                                              featureName));
+                                                    }
+                                                    return next.handle(request);
+                                                  }))
+                                  .switchIfEmpty(Mono.defer(() -> next.handle(request)));
+                            }
+                            return next.handle(request);
+                          });
                 });
   }
 
@@ -107,10 +123,12 @@ public class FeatureFlagHandlerFilterFunction {
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       AccessDeniedHandlerFilterResolution resolution,
       ReactiveRolloutStrategy rolloutStrategy,
-      ReactiveFeatureFlagContextResolver contextResolver) {
+      ReactiveFeatureFlagContextResolver contextResolver,
+      ReactiveRolloutPercentageProvider rolloutPercentageProvider) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.resolution = resolution;
     this.rolloutStrategy = rolloutStrategy;
     this.contextResolver = contextResolver;
+    this.rolloutPercentageProvider = rolloutPercentageProvider;
   }
 }

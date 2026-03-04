@@ -33,7 +33,7 @@ import org.springframework.test.web.servlet.ResultMatcher;
  * </ul>
  */
 @WebMvcTest(
-    properties = {"feature-flags.feature-names.rollout-feature=true"},
+    properties = {"feature-flags.features.rollout-feature.enabled=true"},
     controllers = {FeatureFlagRolloutController.class, FeatureFlagClassRolloutController.class})
 @Import({
   FeatureFlagMvcTestAutoConfiguration.class,

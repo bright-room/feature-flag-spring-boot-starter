@@ -6,12 +6,14 @@ import static org.assertj.core.groups.Tuple.tuple;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,12 +28,17 @@ class ReactiveFeatureFlagEndpointTest {
 
   @Mock ApplicationEventPublisher eventPublisher;
 
+  private MutableInMemoryReactiveRolloutPercentageProvider emptyRolloutProvider() {
+    return new MutableInMemoryReactiveRolloutPercentageProvider(Map.of());
+  }
+
   @Test
   void features_returnsAllFlagsAndDefaultEnabled() {
     var provider =
         new MutableInMemoryReactiveFeatureFlagProvider(
             Map.of("feature-a", true, "feature-b", false), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
     var response = endpoint.features();
 
@@ -44,9 +51,10 @@ class ReactiveFeatureFlagEndpointTest {
   @Test
   void updateFeature_updatesExistingFlagAndReturnsUpdatedState() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
-    var response = endpoint.updateFeature("feature-a", false);
+    var response = endpoint.updateFeature("feature-a", false, null);
 
     assertThat(response.features())
         .filteredOn(f -> f.featureName().equals("feature-a"))
@@ -57,9 +65,10 @@ class ReactiveFeatureFlagEndpointTest {
   @Test
   void updateFeature_publishesFeatureFlagChangedEvent() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
-    endpoint.updateFeature("feature-a", false);
+    endpoint.updateFeature("feature-a", false, null);
 
     var captor = ArgumentCaptor.forClass(FeatureFlagChangedEvent.class);
     verify(eventPublisher).publishEvent(captor.capture());
@@ -70,9 +79,10 @@ class ReactiveFeatureFlagEndpointTest {
   @Test
   void updateFeature_addsNewFlagNotPreviouslyDefined() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
-    var response = endpoint.updateFeature("new-flag", true);
+    var response = endpoint.updateFeature("new-flag", true, null);
 
     assertThat(response.features())
         .filteredOn(f -> f.featureName().equals("new-flag"))
@@ -83,7 +93,8 @@ class ReactiveFeatureFlagEndpointTest {
   @Test
   void features_returnsDefaultEnabled_true_whenConfigured() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), true);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, true, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), true, eventPublisher);
 
     var response = endpoint.features();
 
@@ -95,9 +106,10 @@ class ReactiveFeatureFlagEndpointTest {
     var provider =
         new MutableInMemoryReactiveFeatureFlagProvider(
             Map.of("feature-a", true, "feature-b", true), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
-    var response = endpoint.updateFeature("feature-a", false);
+    var response = endpoint.updateFeature("feature-a", false, null);
 
     assertEquals(2, response.features().size());
     assertThat(response.features())
@@ -108,37 +120,41 @@ class ReactiveFeatureFlagEndpointTest {
   @Test
   void updateFeature_throwsIllegalArgumentException_whenFeatureNameIsNull() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
     assertThatIllegalArgumentException()
-        .isThrownBy(() -> endpoint.updateFeature(null, true))
+        .isThrownBy(() -> endpoint.updateFeature(null, true, null))
         .withMessageContaining("featureName must not be null or blank");
   }
 
   @Test
   void updateFeature_throwsIllegalArgumentException_whenFeatureNameIsEmpty() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
     assertThatIllegalArgumentException()
-        .isThrownBy(() -> endpoint.updateFeature("", true))
+        .isThrownBy(() -> endpoint.updateFeature("", true, null))
         .withMessageContaining("featureName must not be null or blank");
   }
 
   @Test
   void updateFeature_throwsIllegalArgumentException_whenFeatureNameIsBlank() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
     assertThatIllegalArgumentException()
-        .isThrownBy(() -> endpoint.updateFeature("   ", true))
+        .isThrownBy(() -> endpoint.updateFeature("   ", true, null))
         .withMessageContaining("featureName must not be null or blank");
   }
 
   @Test
   void feature_returnsEnabledFlag() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
     var response = endpoint.feature("feature-a");
 
@@ -150,7 +166,8 @@ class ReactiveFeatureFlagEndpointTest {
   void feature_returnsDisabledFlag() {
     var provider =
         new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", false), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
     var response = endpoint.feature("feature-a");
 
@@ -161,7 +178,8 @@ class ReactiveFeatureFlagEndpointTest {
   @Test
   void feature_returnsDefaultEnabled_whenFlagIsUndefined() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
     var response = endpoint.feature("undefined-flag");
 
@@ -172,7 +190,8 @@ class ReactiveFeatureFlagEndpointTest {
   @Test
   void feature_returnsDefaultEnabled_true_whenFlagIsUndefined_andDefaultEnabledIsTrue() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), true);
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, true, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), true, eventPublisher);
 
     var response = endpoint.feature("undefined-flag");
 
@@ -182,9 +201,10 @@ class ReactiveFeatureFlagEndpointTest {
 
   @Test
   void features_returnsEmptyList_whenProviderReturnsMonoEmpty() {
-    var provider = org.mockito.Mockito.mock(MutableReactiveFeatureFlagProvider.class);
+    var provider = mock(MutableReactiveFeatureFlagProvider.class);
     when(provider.getFeatures()).thenReturn(Mono.empty());
-    var endpoint = new ReactiveFeatureFlagEndpoint(provider, false, eventPublisher);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
     var response = endpoint.features();
 

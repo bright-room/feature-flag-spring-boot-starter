@@ -2,7 +2,9 @@ package net.brightroom.featureflag.webflux.autoconfigure;
 
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
+import net.brightroom.featureflag.core.provider.InMemoryReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect;
 import net.brightroom.featureflag.webflux.context.RandomReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
@@ -60,6 +62,13 @@ public class FeatureFlagWebFluxAutoConfiguration {
     return new RandomReactiveFeatureFlagContextResolver();
   }
 
+  @Bean
+  @ConditionalOnMissingBean(ReactiveRolloutPercentageProvider.class)
+  ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider() {
+    return new InMemoryReactiveRolloutPercentageProvider(
+        featureFlagProperties.rolloutPercentages());
+  }
+
   /**
    * Propagates {@link ServerWebExchange} into the Reactor context so that {@link FeatureFlagAspect}
    * can access it via {@code Mono.deferContextual} during rollout percentage checks.
@@ -80,9 +89,13 @@ public class FeatureFlagWebFluxAutoConfiguration {
   FeatureFlagAspect featureFlagAspect(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       ReactiveRolloutStrategy reactiveRolloutStrategy,
-      ReactiveFeatureFlagContextResolver contextResolver) {
+      ReactiveFeatureFlagContextResolver contextResolver,
+      ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider) {
     return new FeatureFlagAspect(
-        reactiveFeatureFlagProvider, reactiveRolloutStrategy, contextResolver);
+        reactiveFeatureFlagProvider,
+        reactiveRolloutStrategy,
+        contextResolver,
+        reactiveRolloutPercentageProvider);
   }
 
   @Bean
@@ -97,12 +110,14 @@ public class FeatureFlagWebFluxAutoConfiguration {
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution,
       ReactiveRolloutStrategy reactiveRolloutStrategy,
-      ReactiveFeatureFlagContextResolver contextResolver) {
+      ReactiveFeatureFlagContextResolver contextResolver,
+      ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider) {
     return new FeatureFlagHandlerFilterFunction(
         reactiveFeatureFlagProvider,
         accessDeniedHandlerResolution,
         reactiveRolloutStrategy,
-        contextResolver);
+        contextResolver,
+        reactiveRolloutPercentageProvider);
   }
 
   FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {

@@ -19,9 +19,9 @@
       }
     },
     {
-      "name": "feature-flags.feature-names",
-      "type": "java.util.Map<java.lang.String,java.lang.Boolean>",
-      "description": "Feature flag settings."
+      "name": "feature-flags.features",
+      "type": "java.util.Map<java.lang.String,net.brightroom.featureflag.core.properties.FeatureConfiguration>",
+      "description": "Per-feature configuration including enabled state and rollout percentage."
     },
     {
       "name": "feature-flags.response.type",
