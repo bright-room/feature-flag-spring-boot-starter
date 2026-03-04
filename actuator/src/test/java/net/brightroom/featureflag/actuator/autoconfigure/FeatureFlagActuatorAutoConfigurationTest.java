@@ -3,6 +3,7 @@ package net.brightroom.featureflag.actuator.autoconfigure;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
+import java.util.OptionalInt;
 import java.util.concurrent.ConcurrentHashMap;
 import net.brightroom.featureflag.actuator.endpoint.FeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.endpoint.ReactiveFeatureFlagEndpoint;
@@ -12,8 +13,14 @@ import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.MutableInMemoryRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.MutableReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.MutableRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -38,6 +45,7 @@ class FeatureFlagActuatorAutoConfigurationTest {
       contextRunner.run(
           context -> {
             assertThat(context).hasSingleBean(MutableInMemoryFeatureFlagProvider.class);
+            assertThat(context).hasSingleBean(MutableInMemoryRolloutPercentageProvider.class);
             assertThat(context).hasSingleBean(FeatureFlagEndpoint.class);
             assertThat(context).doesNotHaveBean(ReactiveFeatureFlagEndpoint.class);
           });
@@ -52,6 +60,7 @@ class FeatureFlagActuatorAutoConfigurationTest {
               context -> {
                 assertThat(context).doesNotHaveBean(FeatureFlagEndpoint.class);
                 assertThat(context).doesNotHaveBean(MutableInMemoryFeatureFlagProvider.class);
+                assertThat(context).hasSingleBean(MutableInMemoryRolloutPercentageProvider.class);
               });
     }
 
@@ -66,6 +75,19 @@ class FeatureFlagActuatorAutoConfigurationTest {
                 assertThat(context).doesNotHaveBean(MutableInMemoryFeatureFlagProvider.class);
                 assertThat(context.getBean(MutableFeatureFlagProvider.class))
                     .isSameAs(customProvider);
+              });
+    }
+
+    @Test
+    void customRolloutProvider_defaultRolloutProviderNotRegistered() {
+      var customRolloutProvider = new StubMutableRolloutPercentageProvider();
+      contextRunner
+          .withBean(MutableRolloutPercentageProvider.class, () -> customRolloutProvider)
+          .run(
+              context -> {
+                assertThat(context).doesNotHaveBean(MutableInMemoryRolloutPercentageProvider.class);
+                assertThat(context.getBean(RolloutPercentageProvider.class))
+                    .isSameAs(customRolloutProvider);
               });
     }
   }
@@ -85,6 +107,8 @@ class FeatureFlagActuatorAutoConfigurationTest {
       contextRunner.run(
           context -> {
             assertThat(context).hasSingleBean(MutableInMemoryReactiveFeatureFlagProvider.class);
+            assertThat(context)
+                .hasSingleBean(MutableInMemoryReactiveRolloutPercentageProvider.class);
             assertThat(context).hasSingleBean(ReactiveFeatureFlagEndpoint.class);
             assertThat(context).doesNotHaveBean(FeatureFlagEndpoint.class);
           });
@@ -114,6 +138,20 @@ class FeatureFlagActuatorAutoConfigurationTest {
                     .doesNotHaveBean(MutableInMemoryReactiveFeatureFlagProvider.class);
                 assertThat(context.getBean(MutableReactiveFeatureFlagProvider.class))
                     .isSameAs(customProvider);
+              });
+    }
+
+    @Test
+    void customReactiveRolloutProvider_defaultReactiveRolloutProviderNotRegistered() {
+      var customRolloutProvider = new StubMutableReactiveRolloutPercentageProvider();
+      contextRunner
+          .withBean(MutableReactiveRolloutPercentageProvider.class, () -> customRolloutProvider)
+          .run(
+              context -> {
+                assertThat(context)
+                    .doesNotHaveBean(MutableInMemoryReactiveRolloutPercentageProvider.class);
+                assertThat(context.getBean(ReactiveRolloutPercentageProvider.class))
+                    .isSameAs(customRolloutProvider);
               });
     }
   }
@@ -157,6 +195,49 @@ class FeatureFlagActuatorAutoConfigurationTest {
     public Mono<Void> setFeatureEnabled(String featureName, boolean enabled) {
       store.put(featureName, enabled);
       return Mono.empty();
+    }
+  }
+
+  static class StubMutableRolloutPercentageProvider implements MutableRolloutPercentageProvider {
+
+    private final Map<String, Integer> store = new ConcurrentHashMap<>();
+
+    @Override
+    public OptionalInt getRolloutPercentage(String featureName) {
+      Integer pct = store.get(featureName);
+      return pct != null ? OptionalInt.of(pct) : OptionalInt.empty();
+    }
+
+    @Override
+    public Map<String, Integer> getRolloutPercentages() {
+      return Map.copyOf(store);
+    }
+
+    @Override
+    public void setRolloutPercentage(String featureName, int percentage) {
+      store.put(featureName, percentage);
+    }
+  }
+
+  static class StubMutableReactiveRolloutPercentageProvider
+      implements MutableReactiveRolloutPercentageProvider {
+
+    private final Map<String, Integer> store = new ConcurrentHashMap<>();
+
+    @Override
+    public Mono<Integer> getRolloutPercentage(String featureName) {
+      Integer pct = store.get(featureName);
+      return pct != null ? Mono.just(pct) : Mono.empty();
+    }
+
+    @Override
+    public Mono<Map<String, Integer>> getRolloutPercentages() {
+      return Mono.just(Map.copyOf(store));
+    }
+
+    @Override
+    public void setRolloutPercentage(String featureName, int percentage) {
+      store.put(featureName, percentage);
     }
   }
 }
