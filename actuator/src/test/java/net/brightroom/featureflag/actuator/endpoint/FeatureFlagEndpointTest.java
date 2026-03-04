@@ -2,9 +2,11 @@ package net.brightroom.featureflag.actuator.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.groups.Tuple.tuple;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 
@@ -178,5 +180,122 @@ class FeatureFlagEndpointTest {
 
     assertEquals("undefined-flag", response.featureName());
     assertTrue(response.enabled());
+  }
+
+  @Test
+  void features_returnsRolloutPercentagesFromProvider() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var rolloutProvider = new MutableInMemoryRolloutPercentageProvider(Map.of("feature-a", 50));
+    var endpoint = new FeatureFlagEndpoint(provider, rolloutProvider, false, eventPublisher);
+
+    var response = endpoint.features();
+
+    assertThat(response.features())
+        .filteredOn(f -> f.featureName().equals("feature-a"))
+        .extracting(FeatureFlagEndpointResponse::rollout)
+        .containsExactly(50);
+  }
+
+  @Test
+  void features_returnsDefaultRollout100_whenNotConfigured() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    var response = endpoint.features();
+
+    assertThat(response.features())
+        .filteredOn(f -> f.featureName().equals("feature-a"))
+        .extracting(FeatureFlagEndpointResponse::rollout)
+        .containsExactly(100);
+  }
+
+  @Test
+  void feature_returnsRolloutPercentageFromProvider() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var rolloutProvider = new MutableInMemoryRolloutPercentageProvider(Map.of("feature-a", 75));
+    var endpoint = new FeatureFlagEndpoint(provider, rolloutProvider, false, eventPublisher);
+
+    var response = endpoint.feature("feature-a");
+
+    assertEquals(75, response.rollout());
+  }
+
+  @Test
+  void feature_returnsDefaultRollout100_whenNotConfigured() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    var response = endpoint.feature("feature-a");
+
+    assertEquals(100, response.rollout());
+  }
+
+  @Test
+  void updateFeature_updatesRolloutPercentage() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var rolloutProvider = new MutableInMemoryRolloutPercentageProvider(Map.of());
+    var endpoint = new FeatureFlagEndpoint(provider, rolloutProvider, false, eventPublisher);
+
+    var response = endpoint.updateFeature("feature-a", true, 50);
+
+    assertThat(response.features())
+        .filteredOn(f -> f.featureName().equals("feature-a"))
+        .extracting(FeatureFlagEndpointResponse::rollout)
+        .containsExactly(50);
+  }
+
+  @Test
+  void updateFeature_publishesEventWithRolloutPercentage() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    endpoint.updateFeature("feature-a", true, 60);
+
+    var captor = ArgumentCaptor.forClass(FeatureFlagChangedEvent.class);
+    verify(eventPublisher).publishEvent(captor.capture());
+    assertTrue(captor.getValue().enabled());
+    assertEquals(60, captor.getValue().rolloutPercentage());
+  }
+
+  @Test
+  void updateFeature_publishesEventWithNullRollout_whenRolloutNotSpecified() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    endpoint.updateFeature("feature-a", true, null);
+
+    var captor = ArgumentCaptor.forClass(FeatureFlagChangedEvent.class);
+    verify(eventPublisher).publishEvent(captor.capture());
+    assertNull(captor.getValue().rolloutPercentage());
+  }
+
+  @Test
+  void updateFeature_throwsIllegalArgumentException_whenRolloutIsNegative() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
+    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.updateFeature("feature-a", true, -1))
+        .withMessageContaining("rollout must be between 0 and 100");
+  }
+
+  @Test
+  void updateFeature_throwsIllegalArgumentException_whenRolloutExceeds100() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
+    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.updateFeature("feature-a", true, 101))
+        .withMessageContaining("rollout must be between 0 and 100");
+  }
+
+  @Test
+  void updateFeature_acceptsBoundaryRolloutValues() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var rolloutProvider = new MutableInMemoryRolloutPercentageProvider(Map.of());
+    var endpoint = new FeatureFlagEndpoint(provider, rolloutProvider, false, eventPublisher);
+
+    assertThatNoException().isThrownBy(() -> endpoint.updateFeature("feature-a", true, 0));
+    assertThatNoException().isThrownBy(() -> endpoint.updateFeature("feature-a", true, 100));
   }
 }
