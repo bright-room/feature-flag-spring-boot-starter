@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class NoFeatureFlagViewController {
 
-  @GetMapping("/test/no-annotation")
+  @GetMapping("/view/test/no-annotation")
   String noAnnotation() {
     return "no-annotation";
   }
