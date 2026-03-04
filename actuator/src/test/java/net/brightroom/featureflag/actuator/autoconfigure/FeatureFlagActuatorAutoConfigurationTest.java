@@ -174,6 +174,11 @@ class FeatureFlagActuatorAutoConfigurationTest {
     public void setFeatureEnabled(String featureName, boolean enabled) {
       store.put(featureName, enabled);
     }
+
+    @Override
+    public boolean removeFeature(String featureName) {
+      return store.remove(featureName) != null;
+    }
   }
 
   static class StubMutableReactiveFeatureFlagProvider
@@ -196,6 +201,11 @@ class FeatureFlagActuatorAutoConfigurationTest {
       store.put(featureName, enabled);
       return Mono.empty();
     }
+
+    @Override
+    public Mono<Boolean> removeFeature(String featureName) {
+      return Mono.just(store.remove(featureName) != null);
+    }
   }
 
   static class StubMutableRolloutPercentageProvider implements MutableRolloutPercentageProvider {
@@ -216,6 +226,11 @@ class FeatureFlagActuatorAutoConfigurationTest {
     @Override
     public void setRolloutPercentage(String featureName, int percentage) {
       store.put(featureName, percentage);
+    }
+
+    @Override
+    public void removeRolloutPercentage(String featureName) {
+      store.remove(featureName);
     }
   }
 
@@ -238,6 +253,11 @@ class FeatureFlagActuatorAutoConfigurationTest {
     @Override
     public void setRolloutPercentage(String featureName, int percentage) {
       store.put(featureName, percentage);
+    }
+
+    @Override
+    public void removeRolloutPercentage(String featureName) {
+      store.remove(featureName);
     }
   }
 }

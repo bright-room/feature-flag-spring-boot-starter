@@ -10,10 +10,12 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
+import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
@@ -341,5 +343,103 @@ class ReactiveFeatureFlagEndpointTest {
 
     assertThatNoException().isThrownBy(() -> endpoint.updateFeature("feature-a", true, 0));
     assertThatNoException().isThrownBy(() -> endpoint.updateFeature("feature-a", true, 100));
+  }
+
+  @Test
+  void deleteFeature_removesFlagFromProvider() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    endpoint.deleteFeature("feature-a");
+
+    assertFalse(provider.isFeatureEnabled("feature-a").block());
+    assertTrue(provider.getFeatures().block().isEmpty());
+  }
+
+  @Test
+  void deleteFeature_publishesFeatureFlagRemovedEvent() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    endpoint.deleteFeature("feature-a");
+
+    var captor = ArgumentCaptor.forClass(FeatureFlagRemovedEvent.class);
+    verify(eventPublisher).publishEvent(captor.capture());
+    assertEquals("feature-a", captor.getValue().featureName());
+  }
+
+  @Test
+  void deleteFeature_removesRolloutPercentage() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
+    var rolloutProvider =
+        new MutableInMemoryReactiveRolloutPercentageProvider(Map.of("feature-a", 50));
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, rolloutProvider, false, eventPublisher);
+
+    endpoint.deleteFeature("feature-a");
+
+    assertTrue(rolloutProvider.getRolloutPercentages().block().isEmpty());
+  }
+
+  @Test
+  void deleteFeature_thenFeatures_excludesDeletedFlag() {
+    var provider =
+        new MutableInMemoryReactiveFeatureFlagProvider(
+            Map.of("feature-a", true, "feature-b", false), false);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    endpoint.deleteFeature("feature-a");
+
+    var response = endpoint.features();
+    assertThat(response.features())
+        .extracting(FeatureFlagEndpointResponse::featureName)
+        .containsExactly("feature-b");
+  }
+
+  @Test
+  void deleteFeature_isIdempotent_whenFlagDoesNotExist() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatNoException().isThrownBy(() -> endpoint.deleteFeature("nonexistent"));
+    // 非存在フラグの削除ではイベントが発行されない
+    verifyNoInteractions(eventPublisher);
+  }
+
+  @Test
+  void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsNull() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.deleteFeature(null))
+        .withMessageContaining("featureName must not be null or blank");
+  }
+
+  @Test
+  void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsEmpty() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.deleteFeature(""))
+        .withMessageContaining("featureName must not be null or blank");
+  }
+
+  @Test
+  void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsBlank() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.deleteFeature("   "))
+        .withMessageContaining("featureName must not be null or blank");
   }
 }

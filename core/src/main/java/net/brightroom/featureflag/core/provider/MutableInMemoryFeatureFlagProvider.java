@@ -37,6 +37,12 @@ public class MutableInMemoryFeatureFlagProvider implements MutableFeatureFlagPro
     features.put(featureName, enabled);
   }
 
+  /** {@inheritDoc} */
+  @Override
+  public boolean removeFeature(String featureName) {
+    return features.remove(featureName) != null;
+  }
+
   /**
    * Constructs a {@code MutableInMemoryFeatureFlagProvider} with the given initial flags and
    * default enabled state.

@@ -98,4 +98,32 @@ class MutableInMemoryReactiveFeatureFlagProviderTest {
     assertEquals(threadCount, features.size());
     flags.forEach(flag -> assertTrue(provider.isFeatureEnabled(flag).block()));
   }
+
+  @Test
+  void removeFeature_removesExistingFlag_andFallsBackToDefaultEnabled() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
+
+    provider.removeFeature("feature-a").block();
+
+    assertFalse(provider.isFeatureEnabled("feature-a").block());
+    assertTrue(provider.getFeatures().block().isEmpty());
+  }
+
+  @Test
+  void removeFeature_fallsBackToDefaultEnabled_true_whenDefaultEnabledIsTrue() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", false), true);
+
+    provider.removeFeature("feature-a").block();
+
+    assertTrue(provider.isFeatureEnabled("feature-a").block());
+  }
+
+  @Test
+  void removeFeature_isNoOp_whenFlagDoesNotExist() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
+
+    provider.removeFeature("nonexistent").block();
+
+    assertEquals(Map.of("feature-a", true), provider.getFeatures().block());
+  }
 }

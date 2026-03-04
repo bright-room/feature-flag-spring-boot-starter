@@ -1,10 +1,12 @@
 package net.brightroom.featureflag.actuator.endpoint;
 
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
+import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
 import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableRolloutPercentageProvider;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.actuate.endpoint.Access;
+import org.springframework.boot.actuate.endpoint.annotation.DeleteOperation;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
 import org.springframework.boot.actuate.endpoint.annotation.Selector;
@@ -87,6 +89,28 @@ public class FeatureFlagEndpoint {
     }
     eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, enabled, rollout));
     return buildFlagsResponse();
+  }
+
+  /**
+   * Removes a feature flag and its associated rollout percentage.
+   *
+   * <p>A {@link FeatureFlagRemovedEvent} is published only if the flag actually existed. This
+   * operation is idempotent: deleting a non-existent flag is a no-op and still returns 204 No
+   * Content without publishing an event.
+   *
+   * @param featureName the name of the feature flag to remove
+   * @throws IllegalArgumentException if {@code featureName} is {@code null} or blank
+   */
+  @DeleteOperation
+  public void deleteFeature(@Selector String featureName) {
+    if (featureName == null || featureName.isBlank()) {
+      throw new IllegalArgumentException("featureName must not be null or blank");
+    }
+    boolean removed = provider.removeFeature(featureName);
+    rolloutProvider.removeRolloutPercentage(featureName);
+    if (removed) {
+      eventPublisher.publishEvent(new FeatureFlagRemovedEvent(this, featureName));
+    }
   }
 
   private FeatureFlagsEndpointResponse buildFlagsResponse() {

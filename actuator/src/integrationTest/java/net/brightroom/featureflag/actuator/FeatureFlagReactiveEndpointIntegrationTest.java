@@ -3,11 +3,13 @@ package net.brightroom.featureflag.actuator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 import net.brightroom.featureflag.actuator.configuration.FeatureFlagActuatorTestAutoConfiguration;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
+import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -295,6 +297,97 @@ class FeatureFlagReactiveEndpointIntegrationTest {
     assertEquals(70, event.rolloutPercentage());
   }
 
+  @Test
+  void delete_returnsNoContent() {
+    webTestClient
+        .delete()
+        .uri("/actuator/feature-flags/feature-a")
+        .exchange()
+        .expectStatus()
+        .isNoContent();
+  }
+
+  @Test
+  void delete_thenGet_flagIsRemoved() {
+    webTestClient
+        .delete()
+        .uri("/actuator/feature-flags/feature-a")
+        .exchange()
+        .expectStatus()
+        .isNoContent();
+
+    webTestClient
+        .get()
+        .uri("/actuator/feature-flags")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.features[?(@.featureName == 'feature-a')]")
+        .isEmpty();
+  }
+
+  @Test
+  void delete_thenGetWithSelector_returnsDefaultEnabled() {
+    webTestClient
+        .delete()
+        .uri("/actuator/feature-flags/feature-a")
+        .exchange()
+        .expectStatus()
+        .isNoContent();
+
+    webTestClient
+        .get()
+        .uri("/actuator/feature-flags/feature-a")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.featureName")
+        .isEqualTo("feature-a")
+        .jsonPath("$.enabled")
+        .isEqualTo(false);
+  }
+
+  @Test
+  void delete_isIdempotent_forNonexistentFlag() {
+    webTestClient
+        .delete()
+        .uri("/actuator/feature-flags/nonexistent")
+        .exchange()
+        .expectStatus()
+        .isNoContent();
+  }
+
+  @Test
+  void delete_publishesFeatureFlagRemovedEvent() {
+    webTestClient
+        .delete()
+        .uri("/actuator/feature-flags/feature-a")
+        .exchange()
+        .expectStatus()
+        .isNoContent();
+
+    assertEquals(1, eventCapture.removedEvents().size());
+    var event = eventCapture.removedEvents().get(0);
+    assertEquals("feature-a", event.featureName());
+    assertNotNull(event.getSource());
+    assertTrue(
+        eventCapture.events().isEmpty(), "DELETE should not publish FeatureFlagChangedEvent");
+  }
+
+  @Test
+  void delete_doesNotPublishRemovedEvent_forNonexistentFlag() {
+    webTestClient
+        .delete()
+        .uri("/actuator/feature-flags/nonexistent")
+        .exchange()
+        .expectStatus()
+        .isNoContent();
+
+    assertTrue(eventCapture.removedEvents().isEmpty());
+  }
+
   @Autowired
   FeatureFlagReactiveEndpointIntegrationTest(EventCapture eventCapture) {
     this.eventCapture = eventCapture;
@@ -304,18 +397,29 @@ class FeatureFlagReactiveEndpointIntegrationTest {
   static class EventCapture {
 
     private final List<FeatureFlagChangedEvent> captured = new ArrayList<>();
+    private final List<FeatureFlagRemovedEvent> capturedRemoved = new ArrayList<>();
 
     @EventListener
     void onEvent(FeatureFlagChangedEvent event) {
       captured.add(event);
     }
 
+    @EventListener
+    void onEvent(FeatureFlagRemovedEvent event) {
+      capturedRemoved.add(event);
+    }
+
     List<FeatureFlagChangedEvent> events() {
       return List.copyOf(captured);
     }
 
+    List<FeatureFlagRemovedEvent> removedEvents() {
+      return List.copyOf(capturedRemoved);
+    }
+
     void clear() {
       captured.clear();
+      capturedRemoved.clear();
     }
   }
 }

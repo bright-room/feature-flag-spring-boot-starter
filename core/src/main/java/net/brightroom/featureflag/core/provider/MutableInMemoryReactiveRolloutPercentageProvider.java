@@ -38,6 +38,12 @@ public class MutableInMemoryReactiveRolloutPercentageProvider
     rolloutPercentages.put(featureName, percentage);
   }
 
+  /** {@inheritDoc} */
+  @Override
+  public void removeRolloutPercentage(String featureName) {
+    rolloutPercentages.remove(featureName);
+  }
+
   /**
    * Constructs a {@code MutableInMemoryReactiveRolloutPercentageProvider} with the given initial
    * rollout percentages.
