@@ -1,14 +1,11 @@
 package net.brightroom.featureflag.actuator.endpoint;
 
-import java.util.Map;
-
 /**
- * Response body for the {@code /actuator/feature-flags} endpoint.
+ * Response body for the {@code /actuator/feature-flags/{featureName}} endpoint.
  *
- * <p>Contains a snapshot of all feature flags and the default-enabled policy at the time of the
- * request.
+ * <p>Contains the state of a single feature flag at the time of the request.
  *
- * @param features an immutable map of feature flag names to their current enabled states
- * @param defaultEnabled the fallback value returned for flags not present in {@code features}
+ * @param featureName the name of the feature flag
+ * @param enabled the current enabled state of the feature flag
  */
-public record FeatureFlagEndpointResponse(Map<String, Boolean> features, boolean defaultEnabled) {}
+public record FeatureFlagEndpointResponse(String featureName, boolean enabled) {}

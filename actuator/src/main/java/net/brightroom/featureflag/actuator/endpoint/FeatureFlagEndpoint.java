@@ -5,6 +5,7 @@ import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
 import org.springframework.boot.actuate.endpoint.Access;
 import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.endpoint.annotation.ReadOperation;
+import org.springframework.boot.actuate.endpoint.annotation.Selector;
 import org.springframework.boot.actuate.endpoint.annotation.WriteOperation;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -34,8 +35,21 @@ public class FeatureFlagEndpoint {
    * @return a response containing all flags and the default-enabled policy
    */
   @ReadOperation
-  public FeatureFlagEndpointResponse features() {
-    return new FeatureFlagEndpointResponse(provider.getFeatures(), defaultEnabled);
+  public FeatureFlagsEndpointResponse features() {
+    return buildFlagsResponse();
+  }
+
+  /**
+   * Returns the current state of a single feature flag.
+   *
+   * <p>If the flag is not defined, the response reflects the {@code defaultEnabled} policy.
+   *
+   * @param featureName the name of the feature flag to read
+   * @return a response containing the flag name and its current enabled state
+   */
+  @ReadOperation
+  public FeatureFlagEndpointResponse feature(@Selector String featureName) {
+    return new FeatureFlagEndpointResponse(featureName, provider.isFeatureEnabled(featureName));
   }
 
   /**
@@ -51,13 +65,21 @@ public class FeatureFlagEndpoint {
    * @return a response reflecting the updated state of all flags
    */
   @WriteOperation
-  public FeatureFlagEndpointResponse updateFeature(String featureName, boolean enabled) {
+  public FeatureFlagsEndpointResponse updateFeature(String featureName, boolean enabled) {
     if (featureName == null || featureName.isBlank()) {
       throw new IllegalArgumentException("featureName must not be null or blank");
     }
     provider.setFeatureEnabled(featureName, enabled);
     eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, enabled));
-    return new FeatureFlagEndpointResponse(provider.getFeatures(), defaultEnabled);
+    return buildFlagsResponse();
+  }
+
+  private FeatureFlagsEndpointResponse buildFlagsResponse() {
+    var featureList =
+        provider.getFeatures().entrySet().stream()
+            .map(e -> new FeatureFlagEndpointResponse(e.getKey(), e.getValue()))
+            .toList();
+    return new FeatureFlagsEndpointResponse(featureList, defaultEnabled);
   }
 
   /**
