@@ -44,7 +44,7 @@ class FeatureFlagHandlerFilterFunctionCustomResolutionIntegrationTest {
   void customResolutionTakesPriority_whenFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/functional/development-stage-endpoint"))
-        .andExpect(status().isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value()))
+        .andExpect(status().is(HttpStatus.SERVICE_UNAVAILABLE.value()))
         .andExpect(content().string("custom: development-stage-endpoint"));
   }
 
@@ -52,7 +52,7 @@ class FeatureFlagHandlerFilterFunctionCustomResolutionIntegrationTest {
   void customResolutionTakesPriority_whenClassLevelFeatureIsDisabled() throws Exception {
     mockMvc
         .perform(get("/functional/test/disable"))
-        .andExpect(status().isEqualTo(HttpStatus.SERVICE_UNAVAILABLE.value()))
+        .andExpect(status().is(HttpStatus.SERVICE_UNAVAILABLE.value()))
         .andExpect(content().string("custom: disable-class-level-feature"));
   }
 
