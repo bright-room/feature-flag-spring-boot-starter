@@ -79,12 +79,13 @@ public class ReactiveFeatureFlagEndpoint {
 
   private FeatureFlagsEndpointResponse buildFlagsResponse() {
     var features = provider.getFeatures().block();
+    if (features == null) {
+      return new FeatureFlagsEndpointResponse(List.of(), defaultEnabled);
+    }
     var featureList =
-        features == null
-            ? List.<FeatureFlagEndpointResponse>of()
-            : features.entrySet().stream()
-                .map(e -> new FeatureFlagEndpointResponse(e.getKey(), e.getValue()))
-                .toList();
+        features.entrySet().stream()
+            .map(e -> new FeatureFlagEndpointResponse(e.getKey(), e.getValue()))
+            .toList();
     return new FeatureFlagsEndpointResponse(featureList, defaultEnabled);
   }
 
