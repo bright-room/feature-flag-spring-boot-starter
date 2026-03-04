@@ -80,12 +80,11 @@ public class ReactiveFeatureFlagEndpoint {
     if (featureName == null || featureName.isBlank()) {
       throw new IllegalArgumentException("featureName must not be null or blank");
     }
+    if (rollout != null && (rollout < 0 || rollout > 100)) {
+      throw new IllegalArgumentException("rollout must be between 0 and 100, but was: " + rollout);
+    }
     provider.setFeatureEnabled(featureName, enabled).block();
     if (rollout != null) {
-      if (rollout < 0 || rollout > 100) {
-        throw new IllegalArgumentException(
-            "rollout must be between 0 and 100, but was: " + rollout);
-      }
       rolloutProvider.setRolloutPercentage(featureName, rollout);
     }
     eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, enabled, rollout));

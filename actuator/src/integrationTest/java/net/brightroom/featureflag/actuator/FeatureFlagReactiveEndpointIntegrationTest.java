@@ -1,6 +1,6 @@
 package net.brightroom.featureflag.actuator;
 
-import static org.hamcrest.Matchers.hasItem;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -33,6 +33,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
     })
 @Import(FeatureFlagReactiveEndpointIntegrationTest.EventCapture.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@SuppressWarnings("unchecked")
 class FeatureFlagReactiveEndpointIntegrationTest {
 
   @LocalServerPort int port;
@@ -56,9 +57,9 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .isOk()
         .expectBody()
         .jsonPath("$.features[?(@.featureName == 'feature-a')].enabled")
-        .value(hasItem(true))
+        .value(v -> assertThat((List<Object>) v).contains(true))
         .jsonPath("$.features[?(@.featureName == 'feature-b')].enabled")
-        .value(hasItem(false))
+        .value(v -> assertThat((List<Object>) v).contains(false))
         .jsonPath("$.defaultEnabled")
         .isEqualTo(false);
   }
@@ -78,7 +79,7 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .isOk()
         .expectBody()
         .jsonPath("$.features[?(@.featureName == 'feature-a')].enabled")
-        .value(hasItem(false));
+        .value(v -> assertThat((List<Object>) v).contains(false));
   }
 
   @Test
@@ -103,7 +104,7 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .isOk()
         .expectBody()
         .jsonPath("$.features[?(@.featureName == 'feature-b')].enabled")
-        .value(hasItem(true));
+        .value(v -> assertThat((List<Object>) v).contains(true));
   }
 
   @Test
@@ -121,7 +122,7 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .isOk()
         .expectBody()
         .jsonPath("$.features[?(@.featureName == 'new-flag')].enabled")
-        .value(hasItem(true));
+        .value(v -> assertThat((List<Object>) v).contains(true));
   }
 
   @Test
@@ -212,9 +213,9 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .isOk()
         .expectBody()
         .jsonPath("$.features[?(@.featureName == 'feature-a')].rollout")
-        .value(hasItem(50))
+        .value(v -> assertThat((List<Object>) v).contains(50))
         .jsonPath("$.features[?(@.featureName == 'feature-b')].rollout")
-        .value(hasItem(100));
+        .value(v -> assertThat((List<Object>) v).contains(100));
   }
 
   @Test
@@ -245,7 +246,7 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .isOk()
         .expectBody()
         .jsonPath("$.features[?(@.featureName == 'feature-a')].rollout")
-        .value(hasItem(80));
+        .value(v -> assertThat((List<Object>) v).contains(80));
   }
 
   @Test
@@ -290,6 +291,7 @@ class FeatureFlagReactiveEndpointIntegrationTest {
     assertEquals(1, eventCapture.events().size());
     var event = eventCapture.events().get(0);
     assertEquals("feature-a", event.featureName());
+    assertEquals(true, event.enabled());
     assertEquals(70, event.rolloutPercentage());
   }
 

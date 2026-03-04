@@ -293,6 +293,7 @@ class ReactiveFeatureFlagEndpointTest {
 
     var captor = ArgumentCaptor.forClass(FeatureFlagChangedEvent.class);
     verify(eventPublisher).publishEvent(captor.capture());
+    assertTrue(captor.getValue().enabled());
     assertEquals(60, captor.getValue().rolloutPercentage());
   }
 

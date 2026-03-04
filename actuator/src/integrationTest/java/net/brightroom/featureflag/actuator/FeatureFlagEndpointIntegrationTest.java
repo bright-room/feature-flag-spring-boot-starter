@@ -105,13 +105,15 @@ class FeatureFlagEndpointIntegrationTest {
 
   @Test
   void post_publishesFeatureFlagChangedEvent() throws Exception {
-    mockMvc.perform(
-        post("/actuator/feature-flags")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(
-                """
-                {"featureName": "feature-a", "enabled": false}
-                """));
+    mockMvc
+        .perform(
+            post("/actuator/feature-flags")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"featureName": "feature-a", "enabled": false}
+                    """))
+        .andExpect(status().isOk());
 
     assertEquals(1, eventCapture.events().size());
     var event = eventCapture.events().get(0);
@@ -208,17 +210,20 @@ class FeatureFlagEndpointIntegrationTest {
 
   @Test
   void post_withRollout_publishesEventWithRolloutPercentage() throws Exception {
-    mockMvc.perform(
-        post("/actuator/feature-flags")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(
-                """
-                {"featureName": "feature-a", "enabled": true, "rollout": 70}
-                """));
+    mockMvc
+        .perform(
+            post("/actuator/feature-flags")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"featureName": "feature-a", "enabled": true, "rollout": 70}
+                    """))
+        .andExpect(status().isOk());
 
     assertEquals(1, eventCapture.events().size());
     var event = eventCapture.events().get(0);
     assertEquals("feature-a", event.featureName());
+    assertEquals(true, event.enabled());
     assertEquals(70, event.rolloutPercentage());
   }
 
