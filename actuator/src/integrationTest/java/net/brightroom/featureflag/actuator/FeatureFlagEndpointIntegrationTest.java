@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.actuator;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -50,8 +51,8 @@ class FeatureFlagEndpointIntegrationTest {
     mockMvc
         .perform(get("/actuator/feature-flags"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.features['feature-a']").value(true))
-        .andExpect(jsonPath("$.features['feature-b']").value(false))
+        .andExpect(jsonPath("$.features[?(@.featureName == 'feature-a')].enabled", hasItem(true)))
+        .andExpect(jsonPath("$.features[?(@.featureName == 'feature-b')].enabled", hasItem(false)))
         .andExpect(jsonPath("$.defaultEnabled").value(false));
   }
 
@@ -66,7 +67,7 @@ class FeatureFlagEndpointIntegrationTest {
                     {"featureName": "feature-a", "enabled": false}
                     """))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.features['feature-a']").value(false));
+        .andExpect(jsonPath("$.features[?(@.featureName == 'feature-a')].enabled", hasItem(false)));
   }
 
   @Test
@@ -84,7 +85,7 @@ class FeatureFlagEndpointIntegrationTest {
     mockMvc
         .perform(get("/actuator/feature-flags"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.features['feature-b']").value(true));
+        .andExpect(jsonPath("$.features[?(@.featureName == 'feature-b')].enabled", hasItem(true)));
   }
 
   @Test
@@ -98,7 +99,7 @@ class FeatureFlagEndpointIntegrationTest {
                     {"featureName": "new-flag", "enabled": true}
                     """))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.features['new-flag']").value(true));
+        .andExpect(jsonPath("$.features[?(@.featureName == 'new-flag')].enabled", hasItem(true)));
   }
 
   @Test
@@ -116,6 +117,43 @@ class FeatureFlagEndpointIntegrationTest {
     assertEquals("feature-a", event.featureName());
     assertEquals(false, event.enabled());
     assertNotNull(event.getSource());
+  }
+
+  @Test
+  void get_withSelector_returnsIndividualFlag() throws Exception {
+    mockMvc
+        .perform(get("/actuator/feature-flags/feature-a"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.featureName").value("feature-a"))
+        .andExpect(jsonPath("$.enabled").value(true));
+  }
+
+  @Test
+  void get_withSelector_returnsDefaultEnabled_whenFlagIsUndefined() throws Exception {
+    mockMvc
+        .perform(get("/actuator/feature-flags/undefined-flag"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.featureName").value("undefined-flag"))
+        .andExpect(jsonPath("$.enabled").value(false));
+  }
+
+  @Test
+  void post_thenGetWithSelector_reflectsUpdate() throws Exception {
+    mockMvc
+        .perform(
+            post("/actuator/feature-flags")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"featureName": "feature-b", "enabled": true}
+                    """))
+        .andExpect(status().isOk());
+
+    mockMvc
+        .perform(get("/actuator/feature-flags/feature-b"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.featureName").value("feature-b"))
+        .andExpect(jsonPath("$.enabled").value(true));
   }
 
   @Autowired

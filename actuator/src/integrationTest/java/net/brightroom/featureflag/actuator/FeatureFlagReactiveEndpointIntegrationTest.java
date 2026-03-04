@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.actuator;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -53,10 +54,10 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .expectStatus()
         .isOk()
         .expectBody()
-        .jsonPath("$.features['feature-a']")
-        .isEqualTo(true)
-        .jsonPath("$.features['feature-b']")
-        .isEqualTo(false)
+        .jsonPath("$.features[?(@.featureName == 'feature-a')].enabled")
+        .value(hasItem(true))
+        .jsonPath("$.features[?(@.featureName == 'feature-b')].enabled")
+        .value(hasItem(false))
         .jsonPath("$.defaultEnabled")
         .isEqualTo(false);
   }
@@ -75,8 +76,8 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .expectStatus()
         .isOk()
         .expectBody()
-        .jsonPath("$.features['feature-a']")
-        .isEqualTo(false);
+        .jsonPath("$.features[?(@.featureName == 'feature-a')].enabled")
+        .value(hasItem(false));
   }
 
   @Test
@@ -100,8 +101,8 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .expectStatus()
         .isOk()
         .expectBody()
-        .jsonPath("$.features['feature-b']")
-        .isEqualTo(true);
+        .jsonPath("$.features[?(@.featureName == 'feature-b')].enabled")
+        .value(hasItem(true));
   }
 
   @Test
@@ -118,8 +119,8 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .expectStatus()
         .isOk()
         .expectBody()
-        .jsonPath("$.features['new-flag']")
-        .isEqualTo(true);
+        .jsonPath("$.features[?(@.featureName == 'new-flag')].enabled")
+        .value(hasItem(true));
   }
 
   @Test
@@ -141,6 +142,63 @@ class FeatureFlagReactiveEndpointIntegrationTest {
     assertEquals("feature-a", event.featureName());
     assertEquals(false, event.enabled());
     assertNotNull(event.getSource());
+  }
+
+  @Test
+  void get_withSelector_returnsIndividualFlag() {
+    webTestClient
+        .get()
+        .uri("/actuator/feature-flags/feature-a")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.featureName")
+        .isEqualTo("feature-a")
+        .jsonPath("$.enabled")
+        .isEqualTo(true);
+  }
+
+  @Test
+  void get_withSelector_returnsDefaultEnabled_whenFlagIsUndefined() {
+    webTestClient
+        .get()
+        .uri("/actuator/feature-flags/undefined-flag")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.featureName")
+        .isEqualTo("undefined-flag")
+        .jsonPath("$.enabled")
+        .isEqualTo(false);
+  }
+
+  @Test
+  void post_thenGetWithSelector_reflectsUpdate() {
+    webTestClient
+        .post()
+        .uri("/actuator/feature-flags")
+        .contentType(MediaType.APPLICATION_JSON)
+        .bodyValue(
+            """
+            {"featureName": "feature-b", "enabled": true}
+            """)
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    webTestClient
+        .get()
+        .uri("/actuator/feature-flags/feature-b")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.featureName")
+        .isEqualTo("feature-b")
+        .jsonPath("$.enabled")
+        .isEqualTo(true);
   }
 
   @Autowired

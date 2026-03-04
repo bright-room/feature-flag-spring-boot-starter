@@ -1,13 +1,13 @@
 package net.brightroom.featureflag.actuator.endpoint;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.groups.Tuple.tuple;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.provider.MutableInMemoryFeatureFlagProvider;
@@ -32,7 +32,9 @@ class FeatureFlagEndpointTest {
 
     var response = endpoint.features();
 
-    assertEquals(Map.of("feature-a", true, "feature-b", false), response.features());
+    assertThat(response.features())
+        .extracting(FeatureFlagEndpointResponse::featureName, FeatureFlagEndpointResponse::enabled)
+        .containsExactlyInAnyOrder(tuple("feature-a", true), tuple("feature-b", false));
     assertFalse(response.defaultEnabled());
   }
 
@@ -43,7 +45,10 @@ class FeatureFlagEndpointTest {
 
     var response = endpoint.updateFeature("feature-a", false);
 
-    assertFalse(response.features().get("feature-a"));
+    assertThat(response.features())
+        .filteredOn(f -> f.featureName().equals("feature-a"))
+        .extracting(FeatureFlagEndpointResponse::enabled)
+        .containsExactly(false);
   }
 
   @Test
@@ -66,7 +71,10 @@ class FeatureFlagEndpointTest {
 
     var response = endpoint.updateFeature("new-flag", true);
 
-    assertTrue(response.features().get("new-flag"));
+    assertThat(response.features())
+        .filteredOn(f -> f.featureName().equals("new-flag"))
+        .extracting(FeatureFlagEndpointResponse::enabled)
+        .containsExactly(true);
   }
 
   @Test
@@ -87,10 +95,10 @@ class FeatureFlagEndpointTest {
 
     var response = endpoint.updateFeature("feature-a", false);
 
-    List<String> keys = new ArrayList<>(response.features().keySet());
-    assertEquals(2, keys.size());
-    assertFalse(response.features().get("feature-a"));
-    assertTrue(response.features().get("feature-b"));
+    assertEquals(2, response.features().size());
+    assertThat(response.features())
+        .extracting(FeatureFlagEndpointResponse::featureName, FeatureFlagEndpointResponse::enabled)
+        .containsExactlyInAnyOrder(tuple("feature-a", false), tuple("feature-b", true));
   }
 
   @Test
@@ -121,5 +129,49 @@ class FeatureFlagEndpointTest {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> endpoint.updateFeature("   ", true))
         .withMessageContaining("featureName must not be null or blank");
+  }
+
+  @Test
+  void feature_returnsEnabledFlag() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint = new FeatureFlagEndpoint(provider, false, eventPublisher);
+
+    var response = endpoint.feature("feature-a");
+
+    assertEquals("feature-a", response.featureName());
+    assertTrue(response.enabled());
+  }
+
+  @Test
+  void feature_returnsDisabledFlag() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", false), false);
+    var endpoint = new FeatureFlagEndpoint(provider, false, eventPublisher);
+
+    var response = endpoint.feature("feature-a");
+
+    assertEquals("feature-a", response.featureName());
+    assertFalse(response.enabled());
+  }
+
+  @Test
+  void feature_returnsDefaultEnabled_whenFlagIsUndefined() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
+    var endpoint = new FeatureFlagEndpoint(provider, false, eventPublisher);
+
+    var response = endpoint.feature("undefined-flag");
+
+    assertEquals("undefined-flag", response.featureName());
+    assertFalse(response.enabled());
+  }
+
+  @Test
+  void feature_returnsDefaultEnabled_true_whenFlagIsUndefined_andDefaultEnabledIsTrue() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), true);
+    var endpoint = new FeatureFlagEndpoint(provider, true, eventPublisher);
+
+    var response = endpoint.feature("undefined-flag");
+
+    assertEquals("undefined-flag", response.featureName());
+    assertTrue(response.enabled());
   }
 }
