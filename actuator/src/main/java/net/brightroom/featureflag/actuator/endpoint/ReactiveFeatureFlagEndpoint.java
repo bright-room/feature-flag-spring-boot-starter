@@ -1,5 +1,7 @@
 package net.brightroom.featureflag.actuator.endpoint;
 
+import java.util.List;
+import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableReactiveRolloutPercentageProvider;
@@ -92,7 +94,11 @@ public class ReactiveFeatureFlagEndpoint {
 
   private FeatureFlagsEndpointResponse buildFlagsResponse() {
     var features = provider.getFeatures().block();
-    var rolloutPercentages = rolloutProvider.getRolloutPercentages().block();
+    if (features == null) {
+      return new FeatureFlagsEndpointResponse(List.of(), defaultEnabled);
+    }
+    var rolloutPercentages =
+        rolloutProvider.getRolloutPercentages().blockOptional().orElse(Map.of());
     var featureList =
         features.entrySet().stream()
             .map(

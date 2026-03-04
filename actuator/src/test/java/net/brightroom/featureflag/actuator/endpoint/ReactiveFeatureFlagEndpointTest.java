@@ -6,18 +6,22 @@ import static org.assertj.core.groups.Tuple.tuple;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import reactor.core.publisher.Mono;
 
 @ExtendWith(MockitoExtension.class)
 class ReactiveFeatureFlagEndpointTest {
@@ -193,5 +197,18 @@ class ReactiveFeatureFlagEndpointTest {
 
     assertEquals("undefined-flag", response.featureName());
     assertTrue(response.enabled());
+  }
+
+  @Test
+  void features_returnsEmptyList_whenProviderReturnsMonoEmpty() {
+    var provider = mock(MutableReactiveFeatureFlagProvider.class);
+    when(provider.getFeatures()).thenReturn(Mono.empty());
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    var response = endpoint.features();
+
+    assertThat(response.features()).isEmpty();
+    assertFalse(response.defaultEnabled());
   }
 }
