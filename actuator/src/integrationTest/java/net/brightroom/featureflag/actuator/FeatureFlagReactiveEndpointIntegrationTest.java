@@ -372,7 +372,20 @@ class FeatureFlagReactiveEndpointIntegrationTest {
     var event = eventCapture.removedEvents().get(0);
     assertEquals("feature-a", event.featureName());
     assertNotNull(event.getSource());
-    assertTrue(eventCapture.events().isEmpty());
+    assertTrue(
+        eventCapture.events().isEmpty(), "DELETE should not publish FeatureFlagChangedEvent");
+  }
+
+  @Test
+  void delete_doesNotPublishRemovedEvent_forNonexistentFlag() {
+    webTestClient
+        .delete()
+        .uri("/actuator/feature-flags/nonexistent")
+        .exchange()
+        .expectStatus()
+        .isNoContent();
+
+    assertTrue(eventCapture.removedEvents().isEmpty());
   }
 
   @Autowired

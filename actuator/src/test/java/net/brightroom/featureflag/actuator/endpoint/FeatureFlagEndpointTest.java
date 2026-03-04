@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
@@ -355,5 +356,37 @@ class FeatureFlagEndpointTest {
     var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
     assertThatNoException().isThrownBy(() -> endpoint.deleteFeature("nonexistent"));
+    // 非存在フラグの削除ではイベントが発行されない
+    verifyNoInteractions(eventPublisher);
+  }
+
+  @Test
+  void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsNull() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
+    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.deleteFeature(null))
+        .withMessageContaining("featureName must not be null or blank");
+  }
+
+  @Test
+  void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsEmpty() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
+    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.deleteFeature(""))
+        .withMessageContaining("featureName must not be null or blank");
+  }
+
+  @Test
+  void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsBlank() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
+    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.deleteFeature("   "))
+        .withMessageContaining("featureName must not be null or blank");
   }
 }

@@ -45,7 +45,7 @@ public interface MutableReactiveFeatureFlagProvider extends ReactiveFeatureFlagP
    * Removes the specified feature flag from this provider.
    *
    * <p>After removal, {@link #isFeatureEnabled(String)} for this flag will return the default
-   * enabled value. If the flag does not exist, this method is a no-op.
+   * enabled value. If the flag does not exist, this method is a no-op and emits {@code false}.
    *
    * <p><b>Note:</b> This method does not publish {@code FeatureFlagRemovedEvent}. Event publishing
    * is handled by the actuator endpoint ({@code ReactiveFeatureFlagEndpoint}). If you call this
@@ -53,7 +53,8 @@ public interface MutableReactiveFeatureFlagProvider extends ReactiveFeatureFlagP
    * ApplicationEventPublisher}.
    *
    * @param featureName the name of the feature flag to remove
-   * @return a {@link Mono} that completes when the removal is applied
+   * @return a {@link Mono} emitting {@code true} if the flag existed and was removed, {@code false}
+   *     if it did not exist
    */
-  Mono<Void> removeFeature(String featureName);
+  Mono<Boolean> removeFeature(String featureName);
 }

@@ -42,9 +42,8 @@ public class MutableInMemoryReactiveFeatureFlagProvider
 
   /** {@inheritDoc} */
   @Override
-  public Mono<Void> removeFeature(String featureName) {
-    features.remove(featureName);
-    return Mono.empty();
+  public Mono<Boolean> removeFeature(String featureName) {
+    return Mono.just(features.remove(featureName) != null);
   }
 
   /**

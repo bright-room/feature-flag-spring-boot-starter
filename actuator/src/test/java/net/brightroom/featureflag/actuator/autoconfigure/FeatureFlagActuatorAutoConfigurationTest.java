@@ -176,8 +176,8 @@ class FeatureFlagActuatorAutoConfigurationTest {
     }
 
     @Override
-    public void removeFeature(String featureName) {
-      store.remove(featureName);
+    public boolean removeFeature(String featureName) {
+      return store.remove(featureName) != null;
     }
   }
 
@@ -203,9 +203,8 @@ class FeatureFlagActuatorAutoConfigurationTest {
     }
 
     @Override
-    public Mono<Void> removeFeature(String featureName) {
-      store.remove(featureName);
-      return Mono.empty();
+    public Mono<Boolean> removeFeature(String featureName) {
+      return Mono.just(store.remove(featureName) != null);
     }
   }
 

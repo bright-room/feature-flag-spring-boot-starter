@@ -271,7 +271,17 @@ class FeatureFlagEndpointIntegrationTest {
     var event = eventCapture.removedEvents().get(0);
     assertEquals("feature-a", event.featureName());
     assertNotNull(event.getSource());
-    assertTrue(eventCapture.events().isEmpty());
+    assertTrue(
+        eventCapture.events().isEmpty(), "DELETE should not publish FeatureFlagChangedEvent");
+  }
+
+  @Test
+  void delete_doesNotPublishRemovedEvent_forNonexistentFlag() throws Exception {
+    mockMvc
+        .perform(delete("/actuator/feature-flags/nonexistent"))
+        .andExpect(status().isNoContent());
+
+    assertTrue(eventCapture.removedEvents().isEmpty());
   }
 
   @Autowired

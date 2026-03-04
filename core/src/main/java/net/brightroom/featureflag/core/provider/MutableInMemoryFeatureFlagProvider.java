@@ -39,8 +39,8 @@ public class MutableInMemoryFeatureFlagProvider implements MutableFeatureFlagPro
 
   /** {@inheritDoc} */
   @Override
-  public void removeFeature(String featureName) {
-    features.remove(featureName);
+  public boolean removeFeature(String featureName) {
+    return features.remove(featureName) != null;
   }
 
   /**

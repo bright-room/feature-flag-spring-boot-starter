@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.Map;
@@ -405,5 +406,40 @@ class ReactiveFeatureFlagEndpointTest {
         new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
 
     assertThatNoException().isThrownBy(() -> endpoint.deleteFeature("nonexistent"));
+    // 非存在フラグの削除ではイベントが発行されない
+    verifyNoInteractions(eventPublisher);
+  }
+
+  @Test
+  void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsNull() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.deleteFeature(null))
+        .withMessageContaining("featureName must not be null or blank");
+  }
+
+  @Test
+  void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsEmpty() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.deleteFeature(""))
+        .withMessageContaining("featureName must not be null or blank");
+  }
+
+  @Test
+  void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsBlank() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    var endpoint =
+        new ReactiveFeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> endpoint.deleteFeature("   "))
+        .withMessageContaining("featureName must not be null or blank");
   }
 }
