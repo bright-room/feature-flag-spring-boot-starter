@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @FeatureFlag("enable-class-level-feature")
 public class FeatureFlagEnableViewController {
 
-  @GetMapping("/test/enabled")
+  @GetMapping("/view/test/enabled")
   String testEnabled() {
     return "enabled";
   }

@@ -9,9 +9,12 @@ import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
 import net.brightroom.featureflag.webmvc.context.RandomFeatureFlagContextResolver;
 import net.brightroom.featureflag.webmvc.exception.FeatureFlagExceptionHandler;
+import net.brightroom.featureflag.webmvc.filter.FeatureFlagHandlerFilterFunction;
 import net.brightroom.featureflag.webmvc.interceptor.FeatureFlagInterceptor;
 import net.brightroom.featureflag.webmvc.resolution.AccessDeniedInterceptResolution;
 import net.brightroom.featureflag.webmvc.resolution.AccessDeniedInterceptResolutionFactory;
+import net.brightroom.featureflag.webmvc.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
+import net.brightroom.featureflag.webmvc.resolution.handlerfilter.AccessDeniedHandlerFilterResolutionFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -59,6 +62,23 @@ public class FeatureFlagMvcAutoConfiguration {
   FeatureFlagExceptionHandler featureFlagExceptionHandler(
       AccessDeniedInterceptResolution accessDeniedInterceptResolution) {
     return new FeatureFlagExceptionHandler(accessDeniedInterceptResolution);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(AccessDeniedHandlerFilterResolution.class)
+  AccessDeniedHandlerFilterResolution accessDeniedHandlerFilterResolution() {
+    return new AccessDeniedHandlerFilterResolutionFactory().create(featureFlagProperties);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  FeatureFlagHandlerFilterFunction featureFlagHandlerFilterFunction(
+      FeatureFlagProvider featureFlagProvider,
+      AccessDeniedHandlerFilterResolution accessDeniedHandlerFilterResolution,
+      RolloutStrategy rolloutStrategy,
+      FeatureFlagContextResolver contextResolver) {
+    return new FeatureFlagHandlerFilterFunction(
+        featureFlagProvider, accessDeniedHandlerFilterResolution, rolloutStrategy, contextResolver);
   }
 
   FeatureFlagMvcAutoConfiguration(FeatureFlagProperties featureFlagProperties) {

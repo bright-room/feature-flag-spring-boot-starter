@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @FeatureFlag("disable-class-level-feature")
 public class FeatureFlagDisableViewController {
 
-  @GetMapping("/test/disable")
+  @GetMapping("/view/test/disable")
   String testDisable() {
     return "disable";
   }
