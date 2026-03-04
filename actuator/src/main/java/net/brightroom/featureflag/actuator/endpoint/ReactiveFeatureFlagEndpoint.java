@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.actuator.endpoint;
 
+import java.util.List;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
 import org.springframework.boot.actuate.endpoint.Access;
@@ -79,9 +80,11 @@ public class ReactiveFeatureFlagEndpoint {
   private FeatureFlagsEndpointResponse buildFlagsResponse() {
     var features = provider.getFeatures().block();
     var featureList =
-        features.entrySet().stream()
-            .map(e -> new FeatureFlagEndpointResponse(e.getKey(), e.getValue()))
-            .toList();
+        features == null
+            ? List.<FeatureFlagEndpointResponse>of()
+            : features.entrySet().stream()
+                .map(e -> new FeatureFlagEndpointResponse(e.getKey(), e.getValue()))
+                .toList();
     return new FeatureFlagsEndpointResponse(featureList, defaultEnabled);
   }
 
