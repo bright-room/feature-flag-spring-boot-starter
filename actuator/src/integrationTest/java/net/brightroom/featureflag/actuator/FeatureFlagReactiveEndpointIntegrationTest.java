@@ -26,6 +26,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
     properties = {
       "spring.main.web-application-type=reactive",
       "feature-flags.features.feature-a.enabled=true",
+      "feature-flags.features.feature-a.rollout=50",
       "feature-flags.features.feature-b.enabled=false",
       "feature-flags.default-enabled=false",
       "management.endpoints.web.exposure.include=feature-flags"
@@ -199,6 +200,97 @@ class FeatureFlagReactiveEndpointIntegrationTest {
         .isEqualTo("feature-b")
         .jsonPath("$.enabled")
         .isEqualTo(true);
+  }
+
+  @Test
+  void get_returnsRolloutPercentageForEachFlag() {
+    webTestClient
+        .get()
+        .uri("/actuator/feature-flags")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.features[?(@.featureName == 'feature-a')].rollout")
+        .value(hasItem(50))
+        .jsonPath("$.features[?(@.featureName == 'feature-b')].rollout")
+        .value(hasItem(100));
+  }
+
+  @Test
+  void get_withSelector_returnsRolloutPercentage() {
+    webTestClient
+        .get()
+        .uri("/actuator/feature-flags/feature-a")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.rollout")
+        .isEqualTo(50);
+  }
+
+  @Test
+  void post_withRollout_updatesRolloutPercentage() {
+    webTestClient
+        .post()
+        .uri("/actuator/feature-flags")
+        .contentType(MediaType.APPLICATION_JSON)
+        .bodyValue(
+            """
+            {"featureName": "feature-a", "enabled": true, "rollout": 80}
+            """)
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.features[?(@.featureName == 'feature-a')].rollout")
+        .value(hasItem(80));
+  }
+
+  @Test
+  void post_withRollout_thenGet_persistsRolloutUpdate() {
+    webTestClient
+        .post()
+        .uri("/actuator/feature-flags")
+        .contentType(MediaType.APPLICATION_JSON)
+        .bodyValue(
+            """
+            {"featureName": "feature-a", "enabled": true, "rollout": 30}
+            """)
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    webTestClient
+        .get()
+        .uri("/actuator/feature-flags/feature-a")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody()
+        .jsonPath("$.rollout")
+        .isEqualTo(30);
+  }
+
+  @Test
+  void post_withRollout_publishesEventWithRolloutPercentage() {
+    webTestClient
+        .post()
+        .uri("/actuator/feature-flags")
+        .contentType(MediaType.APPLICATION_JSON)
+        .bodyValue(
+            """
+            {"featureName": "feature-a", "enabled": true, "rollout": 70}
+            """)
+        .exchange()
+        .expectStatus()
+        .isOk();
+
+    assertEquals(1, eventCapture.events().size());
+    var event = eventCapture.events().get(0);
+    assertEquals("feature-a", event.featureName());
+    assertEquals(70, event.rolloutPercentage());
   }
 
   @Autowired

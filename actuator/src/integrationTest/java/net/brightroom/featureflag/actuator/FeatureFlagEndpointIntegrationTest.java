@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @TestPropertySource(
     properties = {
       "feature-flags.features.feature-a.enabled=true",
+      "feature-flags.features.feature-a.rollout=50",
       "feature-flags.features.feature-b.enabled=false",
       "feature-flags.default-enabled=false",
       "management.endpoints.web.exposure.include=feature-flags"
@@ -154,6 +155,71 @@ class FeatureFlagEndpointIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.featureName").value("feature-b"))
         .andExpect(jsonPath("$.enabled").value(true));
+  }
+
+  @Test
+  void get_returnsRolloutPercentageForEachFlag() throws Exception {
+    mockMvc
+        .perform(get("/actuator/feature-flags"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.features[?(@.featureName == 'feature-a')].rollout", hasItem(50)))
+        .andExpect(jsonPath("$.features[?(@.featureName == 'feature-b')].rollout", hasItem(100)));
+  }
+
+  @Test
+  void get_withSelector_returnsRolloutPercentage() throws Exception {
+    mockMvc
+        .perform(get("/actuator/feature-flags/feature-a"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rollout").value(50));
+  }
+
+  @Test
+  void post_withRollout_updatesRolloutPercentage() throws Exception {
+    mockMvc
+        .perform(
+            post("/actuator/feature-flags")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"featureName": "feature-a", "enabled": true, "rollout": 80}
+                    """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.features[?(@.featureName == 'feature-a')].rollout", hasItem(80)));
+  }
+
+  @Test
+  void post_withRollout_thenGet_persistsRolloutUpdate() throws Exception {
+    mockMvc
+        .perform(
+            post("/actuator/feature-flags")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """
+                    {"featureName": "feature-a", "enabled": true, "rollout": 30}
+                    """))
+        .andExpect(status().isOk());
+
+    mockMvc
+        .perform(get("/actuator/feature-flags/feature-a"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.rollout").value(30));
+  }
+
+  @Test
+  void post_withRollout_publishesEventWithRolloutPercentage() throws Exception {
+    mockMvc.perform(
+        post("/actuator/feature-flags")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(
+                """
+                {"featureName": "feature-a", "enabled": true, "rollout": 70}
+                """));
+
+    assertEquals(1, eventCapture.events().size());
+    var event = eventCapture.events().get(0);
+    assertEquals("feature-a", event.featureName());
+    assertEquals(70, event.rolloutPercentage());
   }
 
   @Autowired
