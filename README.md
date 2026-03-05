@@ -414,14 +414,14 @@ The `actuator` module provides a Spring Boot Actuator endpoint for reading and u
 ### Setup
 
 1. Add the `actuator` dependency (see [Installation](#installation)).
-2. Expose the endpoint:
+2. Expose the endpoint(s):
 
 ```yaml
 management:
   endpoints:
     web:
       exposure:
-        include: feature-flags
+        include: feature-flags, health
 ```
 
 ### Read all flags
@@ -495,9 +495,9 @@ If the flag does not exist, it is created with the given state.
 DELETE /actuator/feature-flags/{featureName}
 ```
 
-Removes the feature flag and its associated rollout percentage. Returns `204 No Content`.
+Removes the flag and its associated rollout percentage. Returns `204 No Content`.
 
-This operation is idempotent: deleting a non-existent flag is a no-op and still returns `204 No Content`. A [`FeatureFlagRemovedEvent`](#event-integration) is published only if the flag actually existed.
+This operation is idempotent: deleting a non-existent flag is a no-op and returns `204 No Content` without publishing any event.
 
 ### Restricting access
 
@@ -512,16 +512,36 @@ management:
 
 Or secure the endpoint with Spring Security.
 
+### Health Indicator
+
+The `actuator` module registers a `featureFlag` health component that is exposed under `/actuator/health`.
+
+When the provider responds normally, the component reports `UP` with flag statistics:
+
+```json
+{
+  "status": "UP",
+  "components": {
+    "featureFlag": {
+      "status": "UP",
+      "details": {
+        "provider": "InMemoryFeatureFlagProvider",
+        "totalFlags": 2,
+        "enabledFlags": 1,
+        "disabledFlags": 1,
+        "defaultEnabled": false
+      }
+    }
+  }
+}
+```
+
+If an exception occurs during the health check, the component reports `DOWN`.
+
 ### Event integration
 
-The following events are published via the actuator endpoint:
+A `FeatureFlagChangedEvent` is published every time a flag is updated via the actuator endpoint. A `FeatureFlagRemovedEvent` is published when a flag that existed is deleted. Subscribe with `@EventListener` to react to changes (e.g., clearing caches, logging audit trails).
 
-| Event | Trigger |
-|-------|---------|
-| `FeatureFlagChangedEvent` | A flag is created or updated via `POST /actuator/feature-flags` |
-| `FeatureFlagRemovedEvent` | An existing flag is deleted via `DELETE /actuator/feature-flags/{featureName}` |
-
-Subscribe with `@EventListener` to react to changes (e.g., clearing caches, logging audit trails).
 
 > **WebFlux (reactive) environments:** Events are published synchronously on the calling thread, which may be the Netty event loop thread. Listeners must not perform blocking operations directly; use `@Async` or subscribe on `Schedulers.boundedElastic()` to offload blocking work.
 
@@ -536,7 +556,7 @@ class FeatureFlagChangeListener {
 
   @EventListener
   void onFlagRemoved(FeatureFlagRemovedEvent event) {
-    log.info("Flag '{}' removed", event.featureName());
+    log.info("Flag '{}' was removed", event.featureName());
   }
 }
 ```
