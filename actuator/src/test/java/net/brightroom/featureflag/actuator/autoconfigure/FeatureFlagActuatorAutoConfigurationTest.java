@@ -99,6 +99,17 @@ class FeatureFlagActuatorAutoConfigurationTest {
     }
 
     @Test
+    void healthIndicatorRegistered_whenNonMutableProviderExists() {
+      contextRunner
+          .withBean(
+              FeatureFlagProvider.class, () -> new InMemoryFeatureFlagProvider(Map.of(), false))
+          .run(
+              context -> {
+                assertThat(context).hasSingleBean(FeatureFlagHealthIndicator.class);
+              });
+    }
+
+    @Test
     void customRolloutProvider_defaultRolloutProviderNotRegistered() {
       var customRolloutProvider = new StubMutableRolloutPercentageProvider();
       contextRunner
@@ -176,6 +187,16 @@ class FeatureFlagActuatorAutoConfigurationTest {
           .run(
               context -> {
                 assertThat(context).doesNotHaveBean(ReactiveFeatureFlagHealthIndicator.class);
+              });
+    }
+
+    @Test
+    void reactiveHealthIndicatorRegistered_whenNonMutableProviderExists() {
+      contextRunner
+          .withBean(ReactiveFeatureFlagProvider.class, () -> featureName -> Mono.just(false))
+          .run(
+              context -> {
+                assertThat(context).hasSingleBean(ReactiveFeatureFlagHealthIndicator.class);
               });
     }
 

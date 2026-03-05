@@ -9,12 +9,12 @@ import org.springframework.boot.health.contributor.AbstractHealthIndicator;
 import org.springframework.boot.health.contributor.Health;
 
 /**
- * {@link org.springframework.boot.actuate.health.HealthIndicator HealthIndicator} for the feature
- * flag provider.
+ * {@link org.springframework.boot.health.contributor.HealthIndicator HealthIndicator} for the
+ * feature flag provider.
  *
- * <p>Reports {@link org.springframework.boot.actuate.health.Status#UP UP} when the provider
+ * <p>Reports {@link org.springframework.boot.health.contributor.Status#UP UP} when the provider
  * responds normally and flag information can be retrieved, and {@link
- * org.springframework.boot.actuate.health.Status#DOWN DOWN} when an exception occurs during the
+ * org.springframework.boot.health.contributor.Status#DOWN DOWN} when an exception occurs during the
  * health check.
  *
  * <p>Health details include:
@@ -57,13 +57,14 @@ public class FeatureFlagHealthIndicator extends AbstractHealthIndicator {
       features = map;
     }
 
+    long totalCount = features.size();
     long enabledCount = features.values().stream().filter(Boolean::booleanValue).count();
-    long disabledCount = features.size() - enabledCount;
+    long disabledCount = totalCount - enabledCount;
 
     builder
         .up()
         .withDetail("provider", provider.getClass().getSimpleName())
-        .withDetail("totalFlags", features.size())
+        .withDetail("totalFlags", totalCount)
         .withDetail("enabledFlags", enabledCount)
         .withDetail("disabledFlags", disabledCount)
         .withDetail("defaultEnabled", properties.defaultEnabled());

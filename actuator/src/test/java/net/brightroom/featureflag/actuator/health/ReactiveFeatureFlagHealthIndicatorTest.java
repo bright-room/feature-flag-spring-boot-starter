@@ -33,7 +33,7 @@ class ReactiveFeatureFlagHealthIndicatorTest {
     assertThat(health.getStatus()).isEqualTo(Status.UP);
     assertThat(health.getDetails())
         .containsEntry("provider", "MutableInMemoryReactiveFeatureFlagProvider")
-        .containsEntry("totalFlags", 2)
+        .containsEntry("totalFlags", 2L)
         .containsEntry("enabledFlags", 1L)
         .containsEntry("disabledFlags", 1L)
         .containsEntry("defaultEnabled", false);
@@ -51,7 +51,7 @@ class ReactiveFeatureFlagHealthIndicatorTest {
 
     assertThat(health.getStatus()).isEqualTo(Status.UP);
     assertThat(health.getDetails())
-        .containsEntry("totalFlags", 2)
+        .containsEntry("totalFlags", 2L)
         .containsEntry("enabledFlags", 1L)
         .containsEntry("disabledFlags", 1L);
   }
@@ -79,7 +79,7 @@ class ReactiveFeatureFlagHealthIndicatorTest {
 
     assertThat(health.getStatus()).isEqualTo(Status.UP);
     assertThat(health.getDetails())
-        .containsEntry("totalFlags", 0)
+        .containsEntry("totalFlags", 0L)
         .containsEntry("enabledFlags", 0L)
         .containsEntry("disabledFlags", 0L);
   }

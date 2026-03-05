@@ -60,13 +60,14 @@ public class ReactiveFeatureFlagHealthIndicator extends AbstractReactiveHealthIn
 
     return featuresMono.map(
         features -> {
+          long totalCount = features.size();
           long enabledCount = features.values().stream().filter(Boolean::booleanValue).count();
-          long disabledCount = features.size() - enabledCount;
+          long disabledCount = totalCount - enabledCount;
 
           return builder
               .up()
               .withDetail("provider", provider.getClass().getSimpleName())
-              .withDetail("totalFlags", features.size())
+              .withDetail("totalFlags", totalCount)
               .withDetail("enabledFlags", enabledCount)
               .withDetail("disabledFlags", disabledCount)
               .withDetail("defaultEnabled", properties.defaultEnabled())
