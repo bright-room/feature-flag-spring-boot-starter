@@ -11,7 +11,7 @@ import reactor.core.publisher.Mono;
  * control feature rollout, perform experiments, or toggle functionality dynamically.
  *
  * <p><b>Undefined flag policy:</b> Implementations must decide what to return when {@code
- * featureName} is not known to the provider. The built-in {@link
+ * featureName} is not known to the provider. The built-in {@code
  * InMemoryReactiveFeatureFlagProvider} uses a <em>fail-closed</em> policy by default (returns
  * {@code false} for unknown flags), which can be changed to fail-open via {@code
  * feature-flags.default-enabled: true}. Custom implementations should document their own policy

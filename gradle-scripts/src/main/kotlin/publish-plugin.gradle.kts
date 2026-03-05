@@ -66,6 +66,16 @@ tasks {
     sonatypeCentralUpload {
         dependsOn("jar", "sourcesJar", "javadocJar", "generatePomFileForMavenJavaPublication")
 
+        // Ensure all subprojects' javadoc tasks succeed before any upload starts,
+        // preventing partial uploads when a sibling module's javadoc fails.
+        rootProject.subprojects.forEach { sub ->
+            if (sub != project) {
+                sub.tasks.matching { it.name == "javadocJar" }.all {
+                    this@sonatypeCentralUpload.dependsOn(this)
+                }
+            }
+        }
+
         username = System.getenv("SONATYPE_CENTRAL_USERNAME")
         password = System.getenv("SONATYPE_CENTRAL_PASSWORD")
 
