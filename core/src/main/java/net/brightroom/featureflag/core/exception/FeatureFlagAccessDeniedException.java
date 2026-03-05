@@ -10,6 +10,7 @@ public class FeatureFlagAccessDeniedException extends RuntimeException {
 
   private static final long serialVersionUID = 1L;
 
+  /** The name of the feature that is not available. */
   private final String featureName;
 
   /**

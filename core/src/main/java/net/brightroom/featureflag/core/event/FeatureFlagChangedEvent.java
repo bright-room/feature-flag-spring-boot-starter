@@ -17,8 +17,13 @@ import org.springframework.context.ApplicationEvent;
  */
 public class FeatureFlagChangedEvent extends ApplicationEvent {
 
+  /** The name of the feature flag that was changed. */
   private final String featureName;
+
+  /** Whether the feature flag is enabled after this change. */
   private final boolean enabled;
+
+  /** The new rollout percentage, or {@code null} if the rollout was not changed. */
   @Nullable private final Integer rolloutPercentage;
 
   /**
