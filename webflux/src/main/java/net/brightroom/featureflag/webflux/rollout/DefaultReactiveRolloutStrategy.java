@@ -11,6 +11,9 @@ import reactor.core.publisher.Mono;
  */
 public class DefaultReactiveRolloutStrategy implements ReactiveRolloutStrategy {
 
+  /** Creates a new {@code DefaultReactiveRolloutStrategy}. */
+  public DefaultReactiveRolloutStrategy() {}
+
   private final DefaultRolloutStrategy delegate = new DefaultRolloutStrategy();
 
   @Override
