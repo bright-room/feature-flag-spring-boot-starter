@@ -31,6 +31,11 @@ public class FeatureFlagExceptionHandler {
     return accessDeniedExceptionHandlerResolution.resolution(request, e);
   }
 
+  /**
+   * Creates a new {@code FeatureFlagExceptionHandler}.
+   *
+   * @param accessDeniedExceptionHandlerResolution the resolution used to build the denied response
+   */
   public FeatureFlagExceptionHandler(
       AccessDeniedExceptionHandlerResolution accessDeniedExceptionHandlerResolution) {
     this.accessDeniedExceptionHandlerResolution = accessDeniedExceptionHandlerResolution;

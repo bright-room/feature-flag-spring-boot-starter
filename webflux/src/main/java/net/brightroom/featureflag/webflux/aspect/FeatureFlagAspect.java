@@ -17,6 +17,19 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+/**
+ * AOP aspect that enforces feature flag access control on Spring WebFlux controller methods.
+ *
+ * <p>Intercepts methods and classes annotated with {@link
+ * net.brightroom.featureflag.core.annotation.FeatureFlag} via an {@code @Around} advice. If the
+ * referenced feature flag is disabled, a {@link
+ * net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException} is emitted into the
+ * reactive pipeline. The method-level annotation takes priority over the class-level annotation.
+ *
+ * <p>Only reactive return types ({@link reactor.core.publisher.Mono} and {@link
+ * reactor.core.publisher.Flux}) are supported; non-reactive return types throw {@link
+ * IllegalStateException}.
+ */
 @Aspect
 public class FeatureFlagAspect {
 
@@ -25,6 +38,18 @@ public class FeatureFlagAspect {
   private final ReactiveFeatureFlagContextResolver contextResolver;
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
 
+  /**
+   * Around advice that checks the feature flag before proceeding with the annotated method.
+   *
+   * <p>Applies to methods and classes annotated with {@link
+   * net.brightroom.featureflag.core.annotation.FeatureFlag}. If the feature is disabled, a {@link
+   * net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException} is returned in the
+   * reactive pipeline. Rollout percentage is also evaluated when configured.
+   *
+   * @param joinPoint the proceeding join point of the intercepted method
+   * @return the result of the intercepted method, or an error signal if access is denied
+   * @throws Throwable if the underlying method throws an exception
+   */
   @Around(
       "@within(net.brightroom.featureflag.core.annotation.FeatureFlag) || "
           + "@annotation(net.brightroom.featureflag.core.annotation.FeatureFlag)")
@@ -167,6 +192,15 @@ public class FeatureFlagAspect {
     }
   }
 
+  /**
+   * Creates a new {@code FeatureFlagAspect}.
+   *
+   * @param reactiveFeatureFlagProvider the provider used to check whether a feature flag is enabled
+   * @param rolloutStrategy the strategy used to determine rollout bucket membership
+   * @param contextResolver the resolver used to extract context from the current request
+   * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
+   *     feature
+   */
   public FeatureFlagAspect(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       ReactiveRolloutStrategy rolloutStrategy,

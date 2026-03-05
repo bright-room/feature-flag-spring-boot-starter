@@ -17,6 +17,9 @@ import reactor.core.publisher.Mono;
 public class RandomReactiveFeatureFlagContextResolver
     implements ReactiveFeatureFlagContextResolver {
 
+  /** Creates a new {@code RandomReactiveFeatureFlagContextResolver}. */
+  public RandomReactiveFeatureFlagContextResolver() {}
+
   @Override
   public Mono<FeatureFlagContext> resolve(ServerHttpRequest request) {
     return Mono.just(new FeatureFlagContext(UUID.randomUUID().toString()));

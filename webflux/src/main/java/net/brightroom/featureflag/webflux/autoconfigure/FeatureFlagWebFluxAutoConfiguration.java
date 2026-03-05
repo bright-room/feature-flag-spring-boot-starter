@@ -25,6 +25,22 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
 
+/**
+ * Auto-configuration for the Spring WebFlux feature flag integration.
+ *
+ * <p>Registers the following beans when running in a reactive web application:
+ *
+ * <ul>
+ *   <li>{@link net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider} — in-memory
+ *       provider backed by {@code feature-flags.feature-names} config (conditional on missing bean)
+ *   <li>{@link net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect} — AOP aspect for
+ *       annotation-based controllers (conditional on missing bean)
+ *   <li>{@link net.brightroom.featureflag.webflux.filter.FeatureFlagHandlerFilterFunction} — filter
+ *       factory for functional endpoints (conditional on missing bean)
+ *   <li>{@link org.springframework.web.server.WebFilter} — propagates {@link
+ *       org.springframework.web.server.ServerWebExchange} into the Reactor context
+ * </ul>
+ */
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
 @EnableAspectJAutoProxy(proxyTargetClass = true)
@@ -120,6 +136,11 @@ public class FeatureFlagWebFluxAutoConfiguration {
         reactiveRolloutPercentageProvider);
   }
 
+  /**
+   * Creates a new {@code FeatureFlagWebFluxAutoConfiguration}.
+   *
+   * @param featureFlagProperties the feature flag configuration properties
+   */
   FeatureFlagWebFluxAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
     this.featureFlagProperties = featureFlagProperties;
   }

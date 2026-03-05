@@ -119,6 +119,16 @@ public class FeatureFlagHandlerFilterFunction {
                 });
   }
 
+  /**
+   * Creates a new {@code FeatureFlagHandlerFilterFunction}.
+   *
+   * @param reactiveFeatureFlagProvider the provider used to check whether a feature flag is enabled
+   * @param resolution the resolution used to build the denied response for functional endpoints
+   * @param rolloutStrategy the strategy used to determine rollout bucket membership
+   * @param contextResolver the resolver used to extract context from the current request
+   * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
+   *     feature
+   */
   public FeatureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       AccessDeniedHandlerFilterResolution resolution,
