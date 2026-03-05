@@ -16,6 +16,9 @@ import net.brightroom.featureflag.core.context.FeatureFlagContext;
  */
 public class RandomFeatureFlagContextResolver implements FeatureFlagContextResolver {
 
+  /** Creates a new {@link RandomFeatureFlagContextResolver}. */
+  public RandomFeatureFlagContextResolver() {}
+
   @Override
   public Optional<FeatureFlagContext> resolve(HttpServletRequest request) {
     return Optional.of(new FeatureFlagContext(UUID.randomUUID().toString()));

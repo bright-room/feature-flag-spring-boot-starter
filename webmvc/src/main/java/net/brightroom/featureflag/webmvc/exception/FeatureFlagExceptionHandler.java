@@ -31,6 +31,12 @@ public class FeatureFlagExceptionHandler {
     return accessDeniedInterceptResolution.resolution(request, e);
   }
 
+  /**
+   * Creates a new {@link FeatureFlagExceptionHandler} with the given resolution strategy.
+   *
+   * @param accessDeniedInterceptResolution the resolution to use when access is denied; must not be
+   *     null
+   */
   public FeatureFlagExceptionHandler(
       AccessDeniedInterceptResolution accessDeniedInterceptResolution) {
     this.accessDeniedInterceptResolution = accessDeniedInterceptResolution;

@@ -14,12 +14,33 @@ import org.jspecify.annotations.NonNull;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+/**
+ * Spring MVC interceptor that enforces feature flag access control on annotated controllers.
+ *
+ * <p>Checks the {@link net.brightroom.featureflag.core.annotation.FeatureFlag} annotation on the
+ * handler method first, then on the handler class. Method-level annotations take priority over
+ * class-level annotations. If the feature is disabled, a {@link
+ * net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException} is thrown and handled
+ * by {@link net.brightroom.featureflag.webmvc.exception.FeatureFlagExceptionHandler}.
+ */
 public class FeatureFlagInterceptor implements HandlerInterceptor {
   private final FeatureFlagProvider featureFlagProvider;
   private final RolloutStrategy rolloutStrategy;
   private final FeatureFlagContextResolver contextResolver;
   private final RolloutPercentageProvider rolloutPercentageProvider;
 
+  /**
+   * Creates a new {@link FeatureFlagInterceptor}.
+   *
+   * @param featureFlagProvider the provider used to check whether a feature flag is enabled; must
+   *     not be null
+   * @param rolloutStrategy the strategy used to determine rollout bucket membership; must not be
+   *     null
+   * @param contextResolver the resolver used to obtain the feature flag context from the request;
+   *     must not be null
+   * @param rolloutPercentageProvider the provider that supplies per-flag rollout percentages,
+   *     overriding annotation-level values when present; must not be null
+   */
   public FeatureFlagInterceptor(
       FeatureFlagProvider featureFlagProvider,
       RolloutStrategy rolloutStrategy,
