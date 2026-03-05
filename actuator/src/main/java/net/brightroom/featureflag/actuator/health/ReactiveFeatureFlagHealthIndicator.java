@@ -38,6 +38,12 @@ public class ReactiveFeatureFlagHealthIndicator extends AbstractReactiveHealthIn
   private final ReactiveFeatureFlagProvider provider;
   private final FeatureFlagProperties properties;
 
+  /**
+   * Creates a new {@link ReactiveFeatureFlagHealthIndicator}.
+   *
+   * @param provider the reactive feature flag provider to check
+   * @param properties the feature flag configuration properties
+   */
   public ReactiveFeatureFlagHealthIndicator(
       ReactiveFeatureFlagProvider provider, FeatureFlagProperties properties) {
     super("Feature flag health check failed");

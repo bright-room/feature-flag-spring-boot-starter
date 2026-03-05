@@ -37,6 +37,12 @@ public class FeatureFlagHealthIndicator extends AbstractHealthIndicator {
   private final FeatureFlagProvider provider;
   private final FeatureFlagProperties properties;
 
+  /**
+   * Creates a new {@link FeatureFlagHealthIndicator}.
+   *
+   * @param provider the feature flag provider to check
+   * @param properties the feature flag configuration properties
+   */
   public FeatureFlagHealthIndicator(
       FeatureFlagProvider provider, FeatureFlagProperties properties) {
     super("Feature flag health check failed");
