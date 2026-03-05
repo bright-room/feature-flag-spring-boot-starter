@@ -341,6 +341,18 @@ class BetaController {
 }
 ```
 
+You can also configure the rollout percentage in `application.yml` without changing the annotation:
+
+```yaml
+feature-flags:
+  features:
+    new-feature:
+      enabled: true
+      rollout: 50  # enable for 50% of requests (0–100, default: 100)
+```
+
+When `feature-flags.features.*.rollout` is configured, it takes priority over the `@FeatureFlag(rollout = ...)` annotation value. The annotation value is used as a fallback when no config-based rollout is defined. The config value can also be overridden at runtime via the [Actuator endpoint](#runtime-flag-management-actuator).
+
 By default, rollout is **non-sticky** — each request is evaluated independently using a random identifier. This means the same user may see different behavior across requests.
 
 ### Sticky Rollout
@@ -430,6 +442,24 @@ Response:
 }
 ```
 
+### Read a single flag
+
+```
+GET /actuator/feature-flags/{featureName}
+```
+
+Response:
+
+```json
+{
+  "featureName": "user-find",
+  "enabled": false,
+  "rollout": 100
+}
+```
+
+If the flag is not defined, `enabled` reflects the `defaultEnabled` policy and `rollout` is `100`.
+
 ### Update a flag
 
 ```
@@ -438,9 +468,12 @@ Content-Type: application/json
 
 {
   "featureName": "user-find",
-  "enabled": true
+  "enabled": true,
+  "rollout": 50
 }
 ```
+
+The `rollout` field is optional (0–100). If omitted, the rollout percentage is left unchanged.
 
 Response:
 
@@ -455,6 +488,16 @@ Response:
 ```
 
 If the flag does not exist, it is created with the given state.
+
+### Delete a flag
+
+```
+DELETE /actuator/feature-flags/{featureName}
+```
+
+Removes the feature flag and its associated rollout percentage. Returns `204 No Content`.
+
+This operation is idempotent: deleting a non-existent flag is a no-op and still returns `204 No Content`. A [`FeatureFlagRemovedEvent`](#event-integration) is published only if the flag actually existed.
 
 ### Restricting access
 
@@ -471,9 +514,16 @@ Or secure the endpoint with Spring Security.
 
 ### Event integration
 
-A `FeatureFlagChangedEvent` is published every time a flag is updated via the actuator endpoint. Subscribe with `@EventListener` to react to changes (e.g., clearing caches, logging audit trails).
+The following events are published via the actuator endpoint:
 
-> **WebFlux (reactive) environments:** The event is published synchronously on the calling thread, which may be the Netty event loop thread. Listeners must not perform blocking operations directly; use `@Async` or subscribe on `Schedulers.boundedElastic()` to offload blocking work.
+| Event | Trigger |
+|-------|---------|
+| `FeatureFlagChangedEvent` | A flag is created or updated via `POST /actuator/feature-flags` |
+| `FeatureFlagRemovedEvent` | An existing flag is deleted via `DELETE /actuator/feature-flags/{featureName}` |
+
+Subscribe with `@EventListener` to react to changes (e.g., clearing caches, logging audit trails).
+
+> **WebFlux (reactive) environments:** Events are published synchronously on the calling thread, which may be the Netty event loop thread. Listeners must not perform blocking operations directly; use `@Async` or subscribe on `Schedulers.boundedElastic()` to offload blocking work.
 
 ```java
 @Component
@@ -482,6 +532,11 @@ class FeatureFlagChangeListener {
   @EventListener
   void onFlagChanged(FeatureFlagChangedEvent event) {
     log.info("Flag '{}' changed to {}", event.featureName(), event.enabled());
+  }
+
+  @EventListener
+  void onFlagRemoved(FeatureFlagRemovedEvent event) {
+    log.info("Flag '{}' removed", event.featureName());
   }
 }
 ```
