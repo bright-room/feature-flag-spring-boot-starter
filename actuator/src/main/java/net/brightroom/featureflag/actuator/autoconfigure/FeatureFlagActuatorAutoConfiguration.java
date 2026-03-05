@@ -52,6 +52,9 @@ import org.springframework.context.annotation.Configuration;
     })
 public class FeatureFlagActuatorAutoConfiguration {
 
+  /** Creates a new {@link FeatureFlagActuatorAutoConfiguration}. */
+  FeatureFlagActuatorAutoConfiguration() {}
+
   @Configuration(proxyBeanMethods = false)
   @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
   static class ServletConfiguration {
