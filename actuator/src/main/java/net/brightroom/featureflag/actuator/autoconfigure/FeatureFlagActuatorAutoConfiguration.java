@@ -3,6 +3,7 @@ package net.brightroom.featureflag.actuator.autoconfigure;
 import net.brightroom.featureflag.actuator.endpoint.FeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.endpoint.ReactiveFeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.health.FeatureFlagHealthIndicator;
+import net.brightroom.featureflag.actuator.health.ReactiveFeatureFlagHealthIndicator;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
@@ -153,6 +154,20 @@ public class FeatureFlagActuatorAutoConfiguration {
     MutableInMemoryReactiveRolloutPercentageProvider mutableReactiveRolloutPercentageProvider() {
       return new MutableInMemoryReactiveRolloutPercentageProvider(
           featureFlagProperties.rolloutPercentages());
+    }
+
+    /**
+     * Registers the {@link ReactiveFeatureFlagHealthIndicator} bean when the {@code featureFlag}
+     * health indicator is enabled.
+     *
+     * @param provider the reactive feature flag provider
+     * @return the reactive feature flag health indicator
+     */
+    @Bean
+    @ConditionalOnEnabledHealthIndicator("featureFlag")
+    ReactiveFeatureFlagHealthIndicator reactiveFeatureFlagHealthIndicator(
+        ReactiveFeatureFlagProvider provider) {
+      return new ReactiveFeatureFlagHealthIndicator(provider, featureFlagProperties);
     }
 
     /**
