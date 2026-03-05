@@ -3,8 +3,23 @@ package net.brightroom.featureflag.webmvc.resolution;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.properties.ResponseProperties;
 
+/**
+ * Factory for creating {@link AccessDeniedInterceptResolution} instances based on the configured
+ * response type.
+ *
+ * <p>Selects the appropriate resolution implementation from {@link
+ * net.brightroom.featureflag.core.properties.ResponseProperties.ResponseType} configured via {@code
+ * feature-flags.response.type}.
+ */
 public class AccessDeniedInterceptResolutionFactory {
 
+  /**
+   * Creates an {@link AccessDeniedInterceptResolution} appropriate for the response type configured
+   * in the given properties.
+   *
+   * @param featureFlagProperties the feature flag configuration properties; must not be null
+   * @return the resolution implementation matching the configured response type
+   */
   public AccessDeniedInterceptResolution create(FeatureFlagProperties featureFlagProperties) {
     ResponseProperties responseProperties = featureFlagProperties.response();
 
@@ -15,5 +30,6 @@ public class AccessDeniedInterceptResolutionFactory {
     };
   }
 
+  /** Creates a new {@link AccessDeniedInterceptResolutionFactory}. */
   public AccessDeniedInterceptResolutionFactory() {}
 }

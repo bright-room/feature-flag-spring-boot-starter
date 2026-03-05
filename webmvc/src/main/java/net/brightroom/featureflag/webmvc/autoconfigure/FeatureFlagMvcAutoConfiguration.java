@@ -22,6 +22,16 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 
+/**
+ * Auto-configuration for Spring MVC feature flag support.
+ *
+ * <p>Registers the core beans required for feature flag enforcement in servlet-based Spring MVC
+ * applications, including {@link net.brightroom.featureflag.core.provider.FeatureFlagProvider},
+ * {@link net.brightroom.featureflag.webmvc.interceptor.FeatureFlagInterceptor}, {@link
+ * net.brightroom.featureflag.webmvc.exception.FeatureFlagExceptionHandler}, and related resolution
+ * and rollout beans. Beans annotated with {@code @ConditionalOnMissingBean} can be replaced by
+ * user-defined beans.
+ */
 @AutoConfiguration(after = FeatureFlagAutoConfiguration.class)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class FeatureFlagMvcAutoConfiguration {
@@ -91,6 +101,11 @@ public class FeatureFlagMvcAutoConfiguration {
         featureFlagProvider, accessDeniedHandlerFilterResolution, rolloutStrategy, contextResolver);
   }
 
+  /**
+   * Creates a new {@link FeatureFlagMvcAutoConfiguration}.
+   *
+   * @param featureFlagProperties the feature flag configuration properties; must not be null
+   */
   FeatureFlagMvcAutoConfiguration(FeatureFlagProperties featureFlagProperties) {
     this.featureFlagProperties = featureFlagProperties;
   }

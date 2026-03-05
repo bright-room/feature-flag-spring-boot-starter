@@ -86,6 +86,17 @@ public class FeatureFlagHandlerFilterFunction {
     };
   }
 
+  /**
+   * Creates a new {@link FeatureFlagHandlerFilterFunction}.
+   *
+   * @param featureFlagProvider the provider used to check whether a feature flag is enabled; must
+   *     not be null
+   * @param resolution the resolution strategy invoked when access is denied; must not be null
+   * @param rolloutStrategy the strategy used to determine rollout bucket membership; must not be
+   *     null
+   * @param contextResolver the resolver used to obtain the feature flag context from the request;
+   *     must not be null
+   */
   public FeatureFlagHandlerFilterFunction(
       FeatureFlagProvider featureFlagProvider,
       AccessDeniedHandlerFilterResolution resolution,
