@@ -165,7 +165,7 @@ public class FeatureFlagActuatorAutoConfiguration {
      */
     @Bean
     @ConditionalOnEnabledHealthIndicator("featureFlag")
-    ReactiveFeatureFlagHealthIndicator reactiveFeatureFlagHealthIndicator(
+    ReactiveFeatureFlagHealthIndicator featureFlagHealthIndicator(
         ReactiveFeatureFlagProvider provider) {
       return new ReactiveFeatureFlagHealthIndicator(provider, featureFlagProperties);
     }
