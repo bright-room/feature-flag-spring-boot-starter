@@ -16,6 +16,7 @@ import org.springframework.context.ApplicationEvent;
  */
 public class FeatureFlagRemovedEvent extends ApplicationEvent {
 
+  /** The name of the feature flag that was removed. */
   private final String featureName;
 
   /**

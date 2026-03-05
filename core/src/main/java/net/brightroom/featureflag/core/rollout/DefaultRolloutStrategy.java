@@ -15,6 +15,9 @@ import net.brightroom.featureflag.core.context.FeatureFlagContext;
  */
 public class DefaultRolloutStrategy implements RolloutStrategy {
 
+  /** Creates a new {@code DefaultRolloutStrategy}. */
+  public DefaultRolloutStrategy() {}
+
   @Override
   public boolean isInRollout(String featureName, FeatureFlagContext context, int percentage) {
     if (percentage <= 0) return false;
