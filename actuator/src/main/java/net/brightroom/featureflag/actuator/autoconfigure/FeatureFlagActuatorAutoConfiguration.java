@@ -2,6 +2,8 @@ package net.brightroom.featureflag.actuator.autoconfigure;
 
 import net.brightroom.featureflag.actuator.endpoint.FeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.endpoint.ReactiveFeatureFlagEndpoint;
+import net.brightroom.featureflag.actuator.health.FeatureFlagHealthIndicator;
+import net.brightroom.featureflag.actuator.health.ReactiveFeatureFlagHealthIndicator;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
@@ -20,6 +22,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.health.autoconfigure.contributor.ConditionalOnEnabledHealthIndicator;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -83,6 +86,19 @@ public class FeatureFlagActuatorAutoConfiguration {
     }
 
     /**
+     * Registers the {@link FeatureFlagHealthIndicator} bean when the {@code featureFlag} health
+     * indicator is enabled.
+     *
+     * @param provider the feature flag provider
+     * @return the feature flag health indicator
+     */
+    @Bean
+    @ConditionalOnEnabledHealthIndicator("featureFlag")
+    FeatureFlagHealthIndicator featureFlagHealthIndicator(FeatureFlagProvider provider) {
+      return new FeatureFlagHealthIndicator(provider, featureFlagProperties);
+    }
+
+    /**
      * Registers the {@link FeatureFlagEndpoint} bean when a {@link MutableFeatureFlagProvider} bean
      * is present.
      *
@@ -138,6 +154,20 @@ public class FeatureFlagActuatorAutoConfiguration {
     MutableInMemoryReactiveRolloutPercentageProvider mutableReactiveRolloutPercentageProvider() {
       return new MutableInMemoryReactiveRolloutPercentageProvider(
           featureFlagProperties.rolloutPercentages());
+    }
+
+    /**
+     * Registers the {@link ReactiveFeatureFlagHealthIndicator} bean when the {@code featureFlag}
+     * health indicator is enabled.
+     *
+     * @param provider the reactive feature flag provider
+     * @return the reactive feature flag health indicator
+     */
+    @Bean
+    @ConditionalOnEnabledHealthIndicator("featureFlag")
+    ReactiveFeatureFlagHealthIndicator featureFlagHealthIndicator(
+        ReactiveFeatureFlagProvider provider) {
+      return new ReactiveFeatureFlagHealthIndicator(provider, featureFlagProperties);
     }
 
     /**
