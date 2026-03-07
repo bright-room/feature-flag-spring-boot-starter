@@ -1,0 +1,19 @@
+name: seed-gradle-cache
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  seed-cache:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Build
+        uses: ./.github/actions/gradle-action
+        with:
+          command: classes testClasses
