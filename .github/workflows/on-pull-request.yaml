@@ -12,9 +12,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v6
 
-      - name: Gradle Cache
-        uses: ./.github/actions/gradle-cache
-
       - name: Spotless Check
         uses: ./.github/actions/gradle-action
         with:
@@ -29,9 +26,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v6
 
-      - name: Gradle Cache
-        uses: ./.github/actions/gradle-cache
-
       - name: Unit Test
         uses: ./.github/actions/gradle-action
         with:
@@ -45,9 +39,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
-
-      - name: Gradle Cache
-        uses: ./.github/actions/gradle-cache
 
       - name: Integration Test
         uses: ./.github/actions/gradle-action
