@@ -1,11 +1,14 @@
 package net.brightroom.featureflag.actuator.endpoint;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
+import net.brightroom.featureflag.core.provider.Schedule;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.actuate.endpoint.Access;
 import org.springframework.boot.actuate.endpoint.annotation.DeleteOperation;
@@ -34,8 +37,10 @@ public class ReactiveFeatureFlagEndpoint {
 
   private final MutableReactiveFeatureFlagProvider provider;
   private final MutableReactiveRolloutPercentageProvider rolloutProvider;
+  private final ReactiveScheduleProvider reactiveScheduleProvider;
   private final boolean defaultEnabled;
   private final ApplicationEventPublisher eventPublisher;
+  private final Clock clock;
 
   /**
    * Returns the current state of all feature flags.
@@ -62,7 +67,8 @@ public class ReactiveFeatureFlagEndpoint {
     }
     var enabled = provider.isFeatureEnabled(featureName).block();
     var rollout = rolloutProvider.getRolloutPercentage(featureName).blockOptional().orElse(100);
-    return new FeatureFlagEndpointResponse(featureName, Boolean.TRUE.equals(enabled), rollout);
+    return new FeatureFlagEndpointResponse(
+        featureName, Boolean.TRUE.equals(enabled), rollout, buildScheduleResponse(featureName));
   }
 
   /**
@@ -131,9 +137,23 @@ public class ReactiveFeatureFlagEndpoint {
             .map(
                 e ->
                     new FeatureFlagEndpointResponse(
-                        e.getKey(), e.getValue(), rolloutPercentages.getOrDefault(e.getKey(), 100)))
+                        e.getKey(),
+                        e.getValue(),
+                        rolloutPercentages.getOrDefault(e.getKey(), 100),
+                        buildScheduleResponse(e.getKey())))
             .toList();
     return new FeatureFlagsEndpointResponse(featureList, defaultEnabled);
+  }
+
+  @Nullable
+  private ScheduleEndpointResponse buildScheduleResponse(String featureName) {
+    Schedule schedule =
+        reactiveScheduleProvider.getSchedule(featureName).blockOptional().orElse(null);
+    if (schedule == null) {
+      return null;
+    }
+    return new ScheduleEndpointResponse(
+        schedule.start(), schedule.end(), schedule.timezone(), schedule.isActive(clock.instant()));
   }
 
   /**
@@ -141,17 +161,24 @@ public class ReactiveFeatureFlagEndpoint {
    *
    * @param provider the mutable reactive feature flag provider
    * @param rolloutProvider the mutable reactive rollout percentage provider
+   * @param reactiveScheduleProvider the reactive schedule provider used to look up schedules per
+   *     feature
    * @param defaultEnabled the default-enabled value to include in responses
    * @param eventPublisher the publisher used to broadcast flag change events
+   * @param clock the clock used to determine schedule active status in responses
    */
   public ReactiveFeatureFlagEndpoint(
       MutableReactiveFeatureFlagProvider provider,
       MutableReactiveRolloutPercentageProvider rolloutProvider,
+      ReactiveScheduleProvider reactiveScheduleProvider,
       boolean defaultEnabled,
-      ApplicationEventPublisher eventPublisher) {
+      ApplicationEventPublisher eventPublisher,
+      Clock clock) {
     this.provider = provider;
     this.rolloutProvider = rolloutProvider;
+    this.reactiveScheduleProvider = reactiveScheduleProvider;
     this.defaultEnabled = defaultEnabled;
     this.eventPublisher = eventPublisher;
+    this.clock = clock;
   }
 }

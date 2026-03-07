@@ -1,7 +1,8 @@
 package net.brightroom.featureflag.core.properties;
 
 /**
- * Configuration for a single feature flag, including its enabled status and rollout percentage.
+ * Configuration for a single feature flag, including its enabled status, rollout percentage, and
+ * optional schedule.
  *
  * <p>Used as the value type for {@code feature-flags.features} in {@link FeatureFlagProperties}.
  *
@@ -13,6 +14,12 @@ package net.brightroom.featureflag.core.properties;
  *     new-feature:
  *       enabled: true
  *       rollout: 50
+ *     christmas-sale:
+ *       enabled: true
+ *       schedule:
+ *         start: "2026-12-25T00:00:00"
+ *         end: "2027-01-05T23:59:59"
+ *         timezone: "Asia/Tokyo"
  *     simple-feature:
  *       enabled: true
  * }</pre>
@@ -21,6 +28,7 @@ public class FeatureConfiguration {
 
   private boolean enabled = true;
   private int rollout = 100;
+  private ScheduleConfiguration schedule;
 
   /**
    * Returns whether this feature is enabled.
@@ -43,6 +51,16 @@ public class FeatureConfiguration {
     return rollout;
   }
 
+  /**
+   * Returns the schedule configuration for this feature, or {@code null} if no schedule is
+   * configured.
+   *
+   * @return the schedule configuration, or {@code null}
+   */
+  public ScheduleConfiguration schedule() {
+    return schedule;
+  }
+
   // for property binding
   void setEnabled(boolean enabled) {
     this.enabled = enabled;
@@ -54,6 +72,11 @@ public class FeatureConfiguration {
       throw new IllegalArgumentException("rollout must be between 0 and 100, but was: " + rollout);
     }
     this.rollout = rollout;
+  }
+
+  // for property binding
+  void setSchedule(ScheduleConfiguration schedule) {
+    this.schedule = schedule;
   }
 
   FeatureConfiguration() {}

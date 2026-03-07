@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.webmvc.autoconfigure;
 
+import java.time.Clock;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.condition.SpelFeatureFlagConditionEvaluator;
@@ -7,7 +8,9 @@ import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.InMemoryScheduleProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ScheduleProvider;
 import net.brightroom.featureflag.core.rollout.DefaultRolloutStrategy;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
@@ -78,18 +81,34 @@ public class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean
+  Clock featureFlagClock() {
+    return Clock.systemDefaultZone();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ScheduleProvider.class)
+  ScheduleProvider scheduleProvider() {
+    return new InMemoryScheduleProvider(featureFlagProperties.schedules());
+  }
+
+  @Bean
   FeatureFlagInterceptor featureFlagInterceptor(
       FeatureFlagProvider featureFlagProvider,
       RolloutStrategy rolloutStrategy,
       FeatureFlagContextResolver contextResolver,
       RolloutPercentageProvider rolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator) {
+      FeatureFlagConditionEvaluator conditionEvaluator,
+      ScheduleProvider scheduleProvider,
+      Clock clock) {
     return new FeatureFlagInterceptor(
         featureFlagProvider,
         rolloutStrategy,
         contextResolver,
         rolloutPercentageProvider,
-        conditionEvaluator);
+        conditionEvaluator,
+        scheduleProvider,
+        clock);
   }
 
   @Bean
@@ -112,14 +131,18 @@ public class FeatureFlagMvcAutoConfiguration {
       RolloutStrategy rolloutStrategy,
       FeatureFlagContextResolver contextResolver,
       RolloutPercentageProvider rolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator) {
+      FeatureFlagConditionEvaluator conditionEvaluator,
+      ScheduleProvider scheduleProvider,
+      Clock clock) {
     return new FeatureFlagHandlerFilterFunction(
         featureFlagProvider,
         accessDeniedHandlerFilterResolution,
         rolloutStrategy,
         contextResolver,
         rolloutPercentageProvider,
-        conditionEvaluator);
+        conditionEvaluator,
+        scheduleProvider,
+        clock);
   }
 
   /**

@@ -11,11 +11,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
+import net.brightroom.featureflag.core.provider.InMemoryScheduleProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.Schedule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -28,8 +34,35 @@ class FeatureFlagEndpointTest {
 
   @Mock ApplicationEventPublisher eventPublisher;
 
+  private final Clock clock = Clock.systemDefaultZone();
+
   private MutableInMemoryRolloutPercentageProvider emptyRolloutProvider() {
     return new MutableInMemoryRolloutPercentageProvider(Map.of());
+  }
+
+  private InMemoryScheduleProvider emptyScheduleProvider() {
+    return new InMemoryScheduleProvider(Map.of());
+  }
+
+  private FeatureFlagEndpoint endpoint(
+      MutableInMemoryFeatureFlagProvider provider,
+      MutableInMemoryRolloutPercentageProvider rolloutProvider,
+      boolean defaultEnabled) {
+    return new FeatureFlagEndpoint(
+        provider, rolloutProvider, emptyScheduleProvider(), defaultEnabled, eventPublisher, clock);
+  }
+
+  private FeatureFlagEndpoint endpointWithSchedule(
+      MutableInMemoryFeatureFlagProvider provider,
+      Map<String, Schedule> schedules,
+      boolean defaultEnabled) {
+    return new FeatureFlagEndpoint(
+        provider,
+        emptyRolloutProvider(),
+        new InMemoryScheduleProvider(schedules),
+        defaultEnabled,
+        eventPublisher,
+        clock);
   }
 
   @Test
@@ -37,7 +70,7 @@ class FeatureFlagEndpointTest {
     var provider =
         new MutableInMemoryFeatureFlagProvider(
             Map.of("feature-a", true, "feature-b", false), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     var response = endpoint.features();
 
@@ -50,7 +83,7 @@ class FeatureFlagEndpointTest {
   @Test
   void updateFeature_updatesExistingFlagAndReturnsUpdatedState() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     var response = endpoint.updateFeature("feature-a", false, null);
 
@@ -63,7 +96,7 @@ class FeatureFlagEndpointTest {
   @Test
   void updateFeature_publishesFeatureFlagChangedEvent() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     endpoint.updateFeature("feature-a", false, null);
 
@@ -76,7 +109,7 @@ class FeatureFlagEndpointTest {
   @Test
   void updateFeature_addsNewFlagNotPreviouslyDefined() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     var response = endpoint.updateFeature("new-flag", true, null);
 
@@ -89,7 +122,7 @@ class FeatureFlagEndpointTest {
   @Test
   void features_returnsDefaultEnabled_true_whenConfigured() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), true);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), true, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), true);
 
     var response = endpoint.features();
 
@@ -100,7 +133,7 @@ class FeatureFlagEndpointTest {
   void updateFeature_responseReflectsAllFlagsIncludingUnchanged() {
     var provider =
         new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true, "feature-b", true), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     var response = endpoint.updateFeature("feature-a", false, null);
 
@@ -113,7 +146,7 @@ class FeatureFlagEndpointTest {
   @Test
   void updateFeature_throwsIllegalArgumentException_whenFeatureNameIsNull() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> endpoint.updateFeature(null, true, null))
@@ -123,7 +156,7 @@ class FeatureFlagEndpointTest {
   @Test
   void updateFeature_throwsIllegalArgumentException_whenFeatureNameIsEmpty() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> endpoint.updateFeature("", true, null))
@@ -133,7 +166,7 @@ class FeatureFlagEndpointTest {
   @Test
   void updateFeature_throwsIllegalArgumentException_whenFeatureNameIsBlank() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> endpoint.updateFeature("   ", true, null))
@@ -143,7 +176,7 @@ class FeatureFlagEndpointTest {
   @Test
   void feature_returnsEnabledFlag() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     var response = endpoint.feature("feature-a");
 
@@ -154,7 +187,7 @@ class FeatureFlagEndpointTest {
   @Test
   void feature_returnsDisabledFlag() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", false), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     var response = endpoint.feature("feature-a");
 
@@ -165,7 +198,7 @@ class FeatureFlagEndpointTest {
   @Test
   void feature_returnsDefaultEnabled_whenFlagIsUndefined() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     var response = endpoint.feature("undefined-flag");
 
@@ -176,7 +209,7 @@ class FeatureFlagEndpointTest {
   @Test
   void feature_returnsDefaultEnabled_true_whenFlagIsUndefined_andDefaultEnabledIsTrue() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), true);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), true, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), true);
 
     var response = endpoint.feature("undefined-flag");
 
@@ -188,7 +221,7 @@ class FeatureFlagEndpointTest {
   void features_returnsRolloutPercentagesFromProvider() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
     var rolloutProvider = new MutableInMemoryRolloutPercentageProvider(Map.of("feature-a", 50));
-    var endpoint = new FeatureFlagEndpoint(provider, rolloutProvider, false, eventPublisher);
+    var endpoint = endpoint(provider, rolloutProvider, false);
 
     var response = endpoint.features();
 
@@ -201,7 +234,7 @@ class FeatureFlagEndpointTest {
   @Test
   void features_returnsDefaultRollout100_whenNotConfigured() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     var response = endpoint.features();
 
@@ -215,7 +248,7 @@ class FeatureFlagEndpointTest {
   void feature_returnsRolloutPercentageFromProvider() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
     var rolloutProvider = new MutableInMemoryRolloutPercentageProvider(Map.of("feature-a", 75));
-    var endpoint = new FeatureFlagEndpoint(provider, rolloutProvider, false, eventPublisher);
+    var endpoint = endpoint(provider, rolloutProvider, false);
 
     var response = endpoint.feature("feature-a");
 
@@ -225,7 +258,7 @@ class FeatureFlagEndpointTest {
   @Test
   void feature_returnsDefaultRollout100_whenNotConfigured() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     var response = endpoint.feature("feature-a");
 
@@ -236,7 +269,7 @@ class FeatureFlagEndpointTest {
   void updateFeature_updatesRolloutPercentage() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
     var rolloutProvider = new MutableInMemoryRolloutPercentageProvider(Map.of());
-    var endpoint = new FeatureFlagEndpoint(provider, rolloutProvider, false, eventPublisher);
+    var endpoint = endpoint(provider, rolloutProvider, false);
 
     var response = endpoint.updateFeature("feature-a", true, 50);
 
@@ -249,7 +282,7 @@ class FeatureFlagEndpointTest {
   @Test
   void updateFeature_publishesEventWithRolloutPercentage() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     endpoint.updateFeature("feature-a", true, 60);
 
@@ -262,7 +295,7 @@ class FeatureFlagEndpointTest {
   @Test
   void updateFeature_publishesEventWithNullRollout_whenRolloutNotSpecified() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     endpoint.updateFeature("feature-a", true, null);
 
@@ -274,7 +307,7 @@ class FeatureFlagEndpointTest {
   @Test
   void updateFeature_throwsIllegalArgumentException_whenRolloutIsNegative() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> endpoint.updateFeature("feature-a", true, -1))
@@ -284,7 +317,7 @@ class FeatureFlagEndpointTest {
   @Test
   void updateFeature_throwsIllegalArgumentException_whenRolloutExceeds100() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> endpoint.updateFeature("feature-a", true, 101))
@@ -295,7 +328,7 @@ class FeatureFlagEndpointTest {
   void updateFeature_acceptsBoundaryRolloutValues() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
     var rolloutProvider = new MutableInMemoryRolloutPercentageProvider(Map.of());
-    var endpoint = new FeatureFlagEndpoint(provider, rolloutProvider, false, eventPublisher);
+    var endpoint = endpoint(provider, rolloutProvider, false);
 
     assertThatNoException().isThrownBy(() -> endpoint.updateFeature("feature-a", true, 0));
     assertThatNoException().isThrownBy(() -> endpoint.updateFeature("feature-a", true, 100));
@@ -304,7 +337,7 @@ class FeatureFlagEndpointTest {
   @Test
   void deleteFeature_removesFlagFromProvider() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     endpoint.deleteFeature("feature-a");
 
@@ -315,7 +348,7 @@ class FeatureFlagEndpointTest {
   @Test
   void deleteFeature_publishesFeatureFlagRemovedEvent() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     endpoint.deleteFeature("feature-a");
 
@@ -328,7 +361,7 @@ class FeatureFlagEndpointTest {
   void deleteFeature_removesRolloutPercentage() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
     var rolloutProvider = new MutableInMemoryRolloutPercentageProvider(Map.of("feature-a", 50));
-    var endpoint = new FeatureFlagEndpoint(provider, rolloutProvider, false, eventPublisher);
+    var endpoint = endpoint(provider, rolloutProvider, false);
 
     endpoint.deleteFeature("feature-a");
 
@@ -340,7 +373,7 @@ class FeatureFlagEndpointTest {
     var provider =
         new MutableInMemoryFeatureFlagProvider(
             Map.of("feature-a", true, "feature-b", false), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     endpoint.deleteFeature("feature-a");
 
@@ -353,7 +386,7 @@ class FeatureFlagEndpointTest {
   @Test
   void deleteFeature_isIdempotent_whenFlagDoesNotExist() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatNoException().isThrownBy(() -> endpoint.deleteFeature("nonexistent"));
     // 非存在フラグの削除ではイベントが発行されない
@@ -363,7 +396,7 @@ class FeatureFlagEndpointTest {
   @Test
   void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsNull() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> endpoint.deleteFeature(null))
@@ -373,7 +406,7 @@ class FeatureFlagEndpointTest {
   @Test
   void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsEmpty() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> endpoint.deleteFeature(""))
@@ -383,10 +416,90 @@ class FeatureFlagEndpointTest {
   @Test
   void deleteFeature_throwsIllegalArgumentException_whenFeatureNameIsBlank() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
-    var endpoint = new FeatureFlagEndpoint(provider, emptyRolloutProvider(), false, eventPublisher);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
         .isThrownBy(() -> endpoint.deleteFeature("   "))
         .withMessageContaining("featureName must not be null or blank");
+  }
+
+  // --- schedule response (M-2) ---
+
+  @Test
+  void feature_returnsSchedule_whenScheduleIsConfigured() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    // active schedule: start in the past, no end
+    var schedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
+    var endpoint = endpointWithSchedule(provider, Map.of("feature-a", schedule), false);
+
+    var response = endpoint.feature("feature-a");
+
+    assertThat(response.schedule()).isNotNull();
+    assertThat(response.schedule().start()).isEqualTo(LocalDateTime.of(2020, 1, 1, 0, 0));
+    assertThat(response.schedule().end()).isNull();
+    assertTrue(response.schedule().active());
+  }
+
+  @Test
+  void feature_returnsNullSchedule_whenNoScheduleIsConfigured() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
+
+    var response = endpoint.feature("feature-a");
+
+    assertNull(response.schedule());
+  }
+
+  @Test
+  void feature_returnsInactiveSchedule_whenScheduleWindowHasPassed() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    // Inactive: end in the past
+    var schedule =
+        new Schedule(
+            null,
+            LocalDateTime.ofInstant(Instant.EPOCH, ZoneId.of("UTC")).plusDays(1),
+            ZoneId.of("UTC"));
+    // Use a fixed clock far in the future so the schedule is inactive
+    var fixedClock = Clock.fixed(Instant.now().plusSeconds(86400 * 365 * 100), ZoneId.of("UTC"));
+    var endpointWithFixedClock =
+        new FeatureFlagEndpoint(
+            provider,
+            emptyRolloutProvider(),
+            new InMemoryScheduleProvider(Map.of("feature-a", schedule)),
+            false,
+            eventPublisher,
+            fixedClock);
+
+    var response = endpointWithFixedClock.feature("feature-a");
+
+    assertThat(response.schedule()).isNotNull();
+    assertFalse(response.schedule().active());
+  }
+
+  @Test
+  void features_includesSchedule_whenScheduleIsConfigured() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var schedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
+    var endpoint = endpointWithSchedule(provider, Map.of("feature-a", schedule), false);
+
+    var response = endpoint.features();
+
+    assertThat(response.features())
+        .filteredOn(f -> f.featureName().equals("feature-a"))
+        .extracting(FeatureFlagEndpointResponse::schedule)
+        .doesNotContainNull();
+  }
+
+  @Test
+  void features_hasNullSchedule_whenNoScheduleConfigured() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
+
+    var response = endpoint.features();
+
+    assertThat(response.features())
+        .filteredOn(f -> f.featureName().equals("feature-a"))
+        .extracting(FeatureFlagEndpointResponse::schedule)
+        .containsOnlyNulls();
   }
 }

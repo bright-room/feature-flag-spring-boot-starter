@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.actuator.autoconfigure;
 
+import java.time.Clock;
 import java.util.List;
 import net.brightroom.featureflag.actuator.endpoint.FeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.endpoint.ReactiveFeatureFlagEndpoint;
@@ -11,6 +12,8 @@ import net.brightroom.featureflag.actuator.health.ReactiveHealthDetailsContribut
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.InMemoryReactiveScheduleProvider;
+import net.brightroom.featureflag.core.provider.InMemoryScheduleProvider;
 import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveFeatureFlagProvider;
@@ -21,7 +24,9 @@ import net.brightroom.featureflag.core.provider.MutableReactiveRolloutPercentage
 import net.brightroom.featureflag.core.provider.MutableRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ScheduleProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -96,6 +101,29 @@ public class FeatureFlagActuatorAutoConfiguration {
     }
 
     /**
+     * Registers an {@link InMemoryScheduleProvider} bean when no other {@link ScheduleProvider}
+     * bean is already present.
+     *
+     * @return the in-memory schedule provider initialized from {@link FeatureFlagProperties}
+     */
+    @Bean
+    @ConditionalOnMissingBean(ScheduleProvider.class)
+    InMemoryScheduleProvider scheduleProvider() {
+      return new InMemoryScheduleProvider(featureFlagProperties.schedules());
+    }
+
+    /**
+     * Registers a {@link Clock} bean when no other {@link Clock} bean is already present.
+     *
+     * @return the system default clock
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    Clock featureFlagClock() {
+      return Clock.systemDefaultZone();
+    }
+
+    /**
      * Registers the {@link FeatureFlagHealthIndicator} bean when the {@code featureFlag} health
      * indicator is enabled.
      *
@@ -117,7 +145,9 @@ public class FeatureFlagActuatorAutoConfiguration {
      *
      * @param provider the mutable feature flag provider
      * @param rolloutProvider the mutable rollout percentage provider
+     * @param scheduleProvider the schedule provider
      * @param eventPublisher the publisher used to broadcast flag change events
+     * @param clock the clock used for schedule evaluation
      * @return the feature flag actuator endpoint
      */
     @Bean
@@ -125,9 +155,16 @@ public class FeatureFlagActuatorAutoConfiguration {
     FeatureFlagEndpoint featureFlagEndpoint(
         MutableFeatureFlagProvider provider,
         MutableRolloutPercentageProvider rolloutProvider,
-        ApplicationEventPublisher eventPublisher) {
+        ScheduleProvider scheduleProvider,
+        ApplicationEventPublisher eventPublisher,
+        Clock clock) {
       return new FeatureFlagEndpoint(
-          provider, rolloutProvider, featureFlagProperties.defaultEnabled(), eventPublisher);
+          provider,
+          rolloutProvider,
+          scheduleProvider,
+          featureFlagProperties.defaultEnabled(),
+          eventPublisher,
+          clock);
     }
 
     ServletConfiguration(
@@ -174,6 +211,30 @@ public class FeatureFlagActuatorAutoConfiguration {
     }
 
     /**
+     * Registers an {@link InMemoryReactiveScheduleProvider} bean when no other {@link
+     * ReactiveScheduleProvider} bean is already present.
+     *
+     * @return the in-memory reactive schedule provider initialized from {@link
+     *     FeatureFlagProperties}
+     */
+    @Bean
+    @ConditionalOnMissingBean(ReactiveScheduleProvider.class)
+    InMemoryReactiveScheduleProvider reactiveScheduleProvider() {
+      return new InMemoryReactiveScheduleProvider(featureFlagProperties.schedules());
+    }
+
+    /**
+     * Registers a {@link Clock} bean when no other {@link Clock} bean is already present.
+     *
+     * @return the system default clock
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    Clock featureFlagClock() {
+      return Clock.systemDefaultZone();
+    }
+
+    /**
      * Registers the {@link ReactiveFeatureFlagHealthIndicator} bean when the {@code featureFlag}
      * health indicator is enabled.
      *
@@ -195,7 +256,9 @@ public class FeatureFlagActuatorAutoConfiguration {
      *
      * @param provider the mutable reactive feature flag provider
      * @param rolloutProvider the mutable reactive rollout percentage provider
+     * @param reactiveScheduleProvider the reactive schedule provider
      * @param eventPublisher the publisher used to broadcast flag change events
+     * @param clock the clock used for schedule evaluation
      * @return the reactive feature flag actuator endpoint
      */
     @Bean
@@ -203,9 +266,16 @@ public class FeatureFlagActuatorAutoConfiguration {
     ReactiveFeatureFlagEndpoint reactiveFeatureFlagEndpoint(
         MutableReactiveFeatureFlagProvider provider,
         MutableReactiveRolloutPercentageProvider rolloutProvider,
-        ApplicationEventPublisher eventPublisher) {
+        ReactiveScheduleProvider reactiveScheduleProvider,
+        ApplicationEventPublisher eventPublisher,
+        Clock clock) {
       return new ReactiveFeatureFlagEndpoint(
-          provider, rolloutProvider, featureFlagProperties.defaultEnabled(), eventPublisher);
+          provider,
+          rolloutProvider,
+          reactiveScheduleProvider,
+          featureFlagProperties.defaultEnabled(),
+          eventPublisher,
+          clock);
     }
 
     ReactiveConfiguration(

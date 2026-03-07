@@ -10,6 +10,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -19,6 +21,8 @@ import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.Schedule;
+import net.brightroom.featureflag.core.provider.ScheduleProvider;
 import net.brightroom.featureflag.core.rollout.DefaultRolloutStrategy;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
@@ -39,6 +43,8 @@ class FeatureFlagHandlerFilterFunctionTest {
       mock(RolloutPercentageProvider.class);
   private final FeatureFlagConditionEvaluator conditionEvaluator =
       mock(FeatureFlagConditionEvaluator.class);
+  private final ScheduleProvider scheduleProvider =
+      mock(ScheduleProvider.class, invocation -> Optional.empty());
   private final FeatureFlagHandlerFilterFunction filterFunction =
       new FeatureFlagHandlerFilterFunction(
           provider,
@@ -46,7 +52,9 @@ class FeatureFlagHandlerFilterFunctionTest {
           new DefaultRolloutStrategy(),
           contextResolver,
           rolloutPercentageProvider,
-          conditionEvaluator);
+          conditionEvaluator,
+          scheduleProvider,
+          Clock.systemDefaultZone());
 
   // Filter function with a mocked rollout strategy for rollout-specific tests
   private final RolloutStrategy rolloutStrategy = mock(RolloutStrategy.class);
@@ -57,7 +65,54 @@ class FeatureFlagHandlerFilterFunctionTest {
           rolloutStrategy,
           contextResolver,
           rolloutPercentageProvider,
-          conditionEvaluator);
+          conditionEvaluator,
+          scheduleProvider,
+          Clock.systemDefaultZone());
+
+  // --- checkSchedule ---
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void of_delegatesToResolution_whenScheduleIsInactive() throws Exception {
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    // end in the past → inactive
+    Schedule inactiveSchedule = new Schedule(null, LocalDateTime.of(2020, 1, 1, 0, 0), null);
+    when(scheduleProvider.getSchedule("my-feature")).thenReturn(Optional.of(inactiveSchedule));
+
+    ServerRequest request = mock(ServerRequest.class);
+    HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
+    ServerResponse deniedResponse = mock(ServerResponse.class);
+    when(resolution.resolve(eq(request), any(FeatureFlagAccessDeniedException.class)))
+        .thenReturn(deniedResponse);
+
+    HandlerFilterFunction<ServerResponse, ServerResponse> filter = filterFunction.of("my-feature");
+    ServerResponse result = filter.filter(request, next);
+
+    assertThat(result).isEqualTo(deniedResponse);
+    verifyNoInteractions(next);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void of_delegatesToNext_whenScheduleIsActive() throws Exception {
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
+        .thenReturn(OptionalInt.empty());
+    // start in the past, no end → active
+    Schedule activeSchedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
+    when(scheduleProvider.getSchedule("my-feature")).thenReturn(Optional.of(activeSchedule));
+
+    ServerRequest request = mock(ServerRequest.class);
+    HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
+    ServerResponse okResponse = mock(ServerResponse.class);
+    when(next.handle(request)).thenReturn(okResponse);
+
+    HandlerFilterFunction<ServerResponse, ServerResponse> filter = filterFunction.of("my-feature");
+    ServerResponse result = filter.filter(request, next);
+
+    assertThat(result).isEqualTo(okResponse);
+    verify(next).handle(request);
+  }
 
   @Test
   void of_throwsIllegalArgumentException_whenFeatureNameIsNull() {

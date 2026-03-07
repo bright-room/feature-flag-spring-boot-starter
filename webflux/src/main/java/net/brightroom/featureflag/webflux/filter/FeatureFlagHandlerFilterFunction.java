@@ -1,10 +1,12 @@
 package net.brightroom.featureflag.webflux.filter;
 
+import java.time.Clock;
 import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
 import net.brightroom.featureflag.webflux.condition.ServerHttpConditionVariables;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
@@ -47,6 +49,8 @@ public class FeatureFlagHandlerFilterFunction {
   private final ReactiveFeatureFlagContextResolver contextResolver;
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
   private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator;
+  private final ReactiveScheduleProvider reactiveScheduleProvider;
+  private final Clock clock;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -96,7 +100,8 @@ public class FeatureFlagHandlerFilterFunction {
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag,
    * SpEL condition expression, and rollout percentage.
    *
-   * <p>The evaluation order is: feature enabled check → condition check → rollout check.
+   * <p>The evaluation order is: feature enabled check → schedule check → condition check → rollout
+   * check.
    *
    * @param featureName the name of the feature flag to check; must not be null or blank
    * @param condition SpEL expression evaluated against request context; empty string means no
@@ -146,7 +151,18 @@ public class FeatureFlagHandlerFilterFunction {
     if (!enabled) {
       return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
     }
-    return evaluateCondition(request, next, featureName, condition, rolloutFallback);
+    return reactiveScheduleProvider
+        .getSchedule(featureName)
+        .map(schedule -> schedule.isActive(clock.instant()))
+        .defaultIfEmpty(true)
+        .flatMap(
+            active -> {
+              if (!active) {
+                return resolution.resolve(
+                    request, new FeatureFlagAccessDeniedException(featureName));
+              }
+              return evaluateCondition(request, next, featureName, condition, rolloutFallback);
+            });
   }
 
   private Mono<ServerResponse> evaluateCondition(
@@ -236,6 +252,8 @@ public class FeatureFlagHandlerFilterFunction {
    * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
    *     feature
    * @param conditionEvaluator the reactive evaluator used to evaluate SpEL condition expressions
+   * @param reactiveScheduleProvider the provider used to look up the schedule per feature
+   * @param clock the clock used to obtain the current time for schedule evaluation
    */
   public FeatureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
@@ -243,12 +261,16 @@ public class FeatureFlagHandlerFilterFunction {
       ReactiveRolloutStrategy rolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver,
       ReactiveRolloutPercentageProvider rolloutPercentageProvider,
-      ReactiveFeatureFlagConditionEvaluator conditionEvaluator) {
+      ReactiveFeatureFlagConditionEvaluator conditionEvaluator,
+      ReactiveScheduleProvider reactiveScheduleProvider,
+      Clock clock) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.resolution = resolution;
     this.rolloutStrategy = rolloutStrategy;
     this.contextResolver = contextResolver;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
     this.conditionEvaluator = conditionEvaluator;
+    this.reactiveScheduleProvider = reactiveScheduleProvider;
+    this.clock = clock;
   }
 }

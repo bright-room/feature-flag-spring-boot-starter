@@ -1,11 +1,13 @@
 package net.brightroom.featureflag.webflux.aspect;
 
 import java.lang.reflect.Method;
+import java.time.Clock;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
 import net.brightroom.featureflag.webflux.condition.ServerHttpConditionVariables;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
@@ -40,6 +42,8 @@ public class FeatureFlagAspect {
   private final ReactiveFeatureFlagContextResolver contextResolver;
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
   private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator;
+  private final ReactiveScheduleProvider reactiveScheduleProvider;
+  private final Clock clock;
 
   /**
    * Around advice that checks the feature flag before proceeding with the annotated method.
@@ -69,6 +73,11 @@ public class FeatureFlagAspect {
     int annotationRollout = annotation.rollout();
     Mono<Boolean> enabledMono =
         reactiveFeatureFlagProvider.isFeatureEnabled(featureName).defaultIfEmpty(false);
+    Mono<Boolean> scheduleMono =
+        reactiveScheduleProvider
+            .getSchedule(featureName)
+            .map(schedule -> schedule.isActive(clock.instant()))
+            .defaultIfEmpty(true);
     Mono<Integer> rolloutMono =
         rolloutPercentageProvider
             .getRolloutPercentage(featureName)
@@ -78,12 +87,16 @@ public class FeatureFlagAspect {
 
     if (Mono.class.isAssignableFrom(returnType)) {
       return enabledMono.flatMap(
-          enabled -> handleMonoEnabled(joinPoint, featureName, condition, rolloutMono, enabled));
+          enabled ->
+              handleMonoEnabled(
+                  joinPoint, featureName, condition, rolloutMono, scheduleMono, enabled));
     }
 
     if (Flux.class.isAssignableFrom(returnType)) {
       return enabledMono.flatMapMany(
-          enabled -> handleFluxEnabled(joinPoint, featureName, condition, rolloutMono, enabled));
+          enabled ->
+              handleFluxEnabled(
+                  joinPoint, featureName, condition, rolloutMono, scheduleMono, enabled));
     }
 
     // Non-reactive return type: not supported in WebFlux
@@ -99,15 +112,22 @@ public class FeatureFlagAspect {
       String featureName,
       String condition,
       Mono<Integer> rolloutMono,
+      Mono<Boolean> scheduleMono,
       boolean enabled) {
     if (!enabled) {
       return Mono.error(new FeatureFlagAccessDeniedException(featureName));
     }
-    if (!condition.isEmpty()) {
-      return evaluateConditionForMono(joinPoint, featureName, condition, rolloutMono);
-    }
-    return rolloutMono.flatMap(
-        rollout -> handleMonoRolloutFromContext(joinPoint, featureName, rollout));
+    return scheduleMono.flatMap(
+        active -> {
+          if (!active) {
+            return Mono.error(new FeatureFlagAccessDeniedException(featureName));
+          }
+          if (!condition.isEmpty()) {
+            return evaluateConditionForMono(joinPoint, featureName, condition, rolloutMono);
+          }
+          return rolloutMono.flatMap(
+              rollout -> handleMonoRolloutFromContext(joinPoint, featureName, rollout));
+        });
   }
 
   private Mono<Object> evaluateConditionForMono(
@@ -183,15 +203,22 @@ public class FeatureFlagAspect {
       String featureName,
       String condition,
       Mono<Integer> rolloutMono,
+      Mono<Boolean> scheduleMono,
       boolean enabled) {
     if (!enabled) {
       return Flux.error(new FeatureFlagAccessDeniedException(featureName));
     }
-    if (!condition.isEmpty()) {
-      return evaluateConditionForFlux(joinPoint, featureName, condition, rolloutMono);
-    }
-    return rolloutMono.flatMapMany(
-        rollout -> handleFluxRolloutFromContext(joinPoint, featureName, rollout));
+    return scheduleMono.flatMapMany(
+        active -> {
+          if (!active) {
+            return Flux.error(new FeatureFlagAccessDeniedException(featureName));
+          }
+          if (!condition.isEmpty()) {
+            return evaluateConditionForFlux(joinPoint, featureName, condition, rolloutMono);
+          }
+          return rolloutMono.flatMapMany(
+              rollout -> handleFluxRolloutFromContext(joinPoint, featureName, rollout));
+        });
   }
 
   private Flux<Object> evaluateConditionForFlux(
@@ -327,17 +354,23 @@ public class FeatureFlagAspect {
    * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
    *     feature
    * @param conditionEvaluator the reactive evaluator used to evaluate SpEL condition expressions
+   * @param reactiveScheduleProvider the provider used to look up the schedule per feature
+   * @param clock the clock used to obtain the current time for schedule evaluation
    */
   public FeatureFlagAspect(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       ReactiveRolloutStrategy rolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver,
       ReactiveRolloutPercentageProvider rolloutPercentageProvider,
-      ReactiveFeatureFlagConditionEvaluator conditionEvaluator) {
+      ReactiveFeatureFlagConditionEvaluator conditionEvaluator,
+      ReactiveScheduleProvider reactiveScheduleProvider,
+      Clock clock) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.rolloutStrategy = rolloutStrategy;
     this.contextResolver = contextResolver;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
     this.conditionEvaluator = conditionEvaluator;
+    this.reactiveScheduleProvider = reactiveScheduleProvider;
+    this.clock = clock;
   }
 }
