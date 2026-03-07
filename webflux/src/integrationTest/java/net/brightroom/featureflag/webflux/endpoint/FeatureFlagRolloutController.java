@@ -9,7 +9,7 @@ import reactor.core.publisher.Mono;
 public class FeatureFlagRolloutController {
 
   @GetMapping("/test/rollout")
-  @FeatureFlag(value = "rollout-feature", rollout = 50)
+  @FeatureFlag("rollout-feature")
   public Mono<String> testRollout() {
     return Mono.just("Allowed");
   }

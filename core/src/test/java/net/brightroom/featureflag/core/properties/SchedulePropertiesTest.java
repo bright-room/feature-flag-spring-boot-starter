@@ -8,17 +8,17 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 
-class ScheduleConfigurationTest {
+class SchedulePropertiesTest {
 
-  private ScheduleConfiguration newSchedule() {
-    return new ScheduleConfiguration();
+  private ScheduleProperties newSchedule() {
+    return new ScheduleProperties();
   }
 
   // --- setEnd() validation ---
 
   @Test
   void setEnd_throwsIllegalArgumentException_whenEndIsBeforeStart() {
-    ScheduleConfiguration schedule = newSchedule();
+    ScheduleProperties schedule = newSchedule();
     schedule.setStart(LocalDateTime.of(2026, 6, 15, 12, 0));
 
     assertThatIllegalArgumentException()
@@ -28,7 +28,7 @@ class ScheduleConfigurationTest {
 
   @Test
   void setEnd_doesNotThrow_whenEndEqualsStart() {
-    ScheduleConfiguration schedule = newSchedule();
+    ScheduleProperties schedule = newSchedule();
     schedule.setStart(LocalDateTime.of(2026, 6, 15, 12, 0));
 
     assertThatNoException().isThrownBy(() -> schedule.setEnd(LocalDateTime.of(2026, 6, 15, 12, 0)));
@@ -36,7 +36,7 @@ class ScheduleConfigurationTest {
 
   @Test
   void setEnd_doesNotThrow_whenEndIsAfterStart() {
-    ScheduleConfiguration schedule = newSchedule();
+    ScheduleProperties schedule = newSchedule();
     schedule.setStart(LocalDateTime.of(2026, 6, 15, 12, 0));
 
     assertThatNoException().isThrownBy(() -> schedule.setEnd(LocalDateTime.of(2026, 6, 15, 13, 0)));
@@ -44,14 +44,14 @@ class ScheduleConfigurationTest {
 
   @Test
   void setEnd_doesNotThrow_whenStartIsNull() {
-    ScheduleConfiguration schedule = newSchedule();
+    ScheduleProperties schedule = newSchedule();
 
     assertThatNoException().isThrownBy(() -> schedule.setEnd(LocalDateTime.of(2026, 6, 15, 11, 0)));
   }
 
   @Test
   void setEnd_doesNotThrow_whenEndIsNull() {
-    ScheduleConfiguration schedule = newSchedule();
+    ScheduleProperties schedule = newSchedule();
     schedule.setStart(LocalDateTime.of(2026, 6, 15, 12, 0));
 
     assertThatNoException().isThrownBy(() -> schedule.setEnd(null));
@@ -61,7 +61,7 @@ class ScheduleConfigurationTest {
 
   @Test
   void setStart_throwsIllegalArgumentException_whenStartIsAfterEnd() {
-    ScheduleConfiguration schedule = newSchedule();
+    ScheduleProperties schedule = newSchedule();
     schedule.setEnd(LocalDateTime.of(2026, 6, 15, 12, 0));
 
     assertThatIllegalArgumentException()
@@ -71,7 +71,7 @@ class ScheduleConfigurationTest {
 
   @Test
   void setStart_doesNotThrow_whenStartEqualsEnd() {
-    ScheduleConfiguration schedule = newSchedule();
+    ScheduleProperties schedule = newSchedule();
     schedule.setEnd(LocalDateTime.of(2026, 6, 15, 12, 0));
 
     assertThatNoException()
@@ -80,7 +80,7 @@ class ScheduleConfigurationTest {
 
   @Test
   void setStart_doesNotThrow_whenStartIsBeforeEnd() {
-    ScheduleConfiguration schedule = newSchedule();
+    ScheduleProperties schedule = newSchedule();
     schedule.setEnd(LocalDateTime.of(2026, 6, 15, 12, 0));
 
     assertThatNoException()
@@ -89,7 +89,7 @@ class ScheduleConfigurationTest {
 
   @Test
   void setStart_doesNotThrow_whenEndIsNull() {
-    ScheduleConfiguration schedule = newSchedule();
+    ScheduleProperties schedule = newSchedule();
 
     assertThatNoException()
         .isThrownBy(() -> schedule.setStart(LocalDateTime.of(2026, 6, 15, 12, 0)));
@@ -97,7 +97,7 @@ class ScheduleConfigurationTest {
 
   @Test
   void setStart_doesNotThrow_whenStartIsNull() {
-    ScheduleConfiguration schedule = newSchedule();
+    ScheduleProperties schedule = newSchedule();
     schedule.setEnd(LocalDateTime.of(2026, 6, 15, 12, 0));
 
     assertThatNoException().isThrownBy(() -> schedule.setStart(null));
@@ -107,7 +107,7 @@ class ScheduleConfigurationTest {
 
   @Test
   void toSchedule_returnsScheduleWithSameValues() {
-    ScheduleConfiguration config = newSchedule();
+    ScheduleProperties config = newSchedule();
     config.setStart(LocalDateTime.of(2026, 6, 15, 10, 0));
     config.setEnd(LocalDateTime.of(2026, 6, 15, 18, 0));
 

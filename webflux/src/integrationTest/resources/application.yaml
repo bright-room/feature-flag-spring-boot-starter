@@ -10,5 +10,8 @@ feature-flags:
       enabled: false
     conditional-feature:
       enabled: true
+    remote-address-condition-feature:
+      enabled: true
+      condition: "remoteAddress == '127.0.0.1'"
   response:
     type: json

@@ -4,6 +4,7 @@ import net.brightroom.featureflag.core.evaluation.AccessDecision;
 import net.brightroom.featureflag.core.evaluation.EvaluationContext;
 import net.brightroom.featureflag.core.evaluation.ReactiveFeatureFlagEvaluationPipeline;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.provider.ReactiveConditionProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.webflux.condition.ServerHttpConditionVariables;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
@@ -34,17 +35,21 @@ import reactor.core.publisher.Mono;
  * The default response format follows {@code feature-flags.response.type} configuration, and can be
  * customized by providing a custom {@link AccessDeniedHandlerFilterResolution} bean.
  *
- * <p>Use {@link #of(String, int)} to enable gradual rollout for functional endpoints.
+ * <p>Use {@link #of(String, int)} to enable gradual rollout for functional endpoints with a
+ * fallback rollout percentage.
  */
 public class FeatureFlagHandlerFilterFunction {
 
   private final ReactiveFeatureFlagEvaluationPipeline pipeline;
   private final AccessDeniedHandlerFilterResolution resolution;
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
+  private final ReactiveConditionProvider conditionProvider;
   private final ReactiveFeatureFlagContextResolver contextResolver;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
+   *
+   * <p>Condition and rollout percentage are resolved from the configured providers.
    *
    * @param featureName the name of the feature flag to check; must not be null or blank
    * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag
@@ -56,23 +61,29 @@ public class FeatureFlagHandlerFilterFunction {
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag
-   * and SpEL condition expression.
+   * and fallback condition expression.
+   *
+   * <p>The condition is resolved from the provider first; the {@code conditionFallback} is used
+   * only when the provider returns no value for the feature.
    *
    * @param featureName the name of the feature flag to check; must not be null or blank
-   * @param condition SpEL expression evaluated against request context; empty string means no
-   *     condition
+   * @param conditionFallback SpEL expression used as fallback when the provider has no condition
+   *     configured; empty string means no condition
    * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag
    *     and condition
    * @throws IllegalArgumentException if {@code featureName} is null or blank
    */
   public HandlerFilterFunction<ServerResponse, ServerResponse> of(
-      String featureName, String condition) {
-    return of(featureName, condition, 100);
+      String featureName, String conditionFallback) {
+    return of(featureName, conditionFallback, 100);
   }
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag
-   * and rollout percentage.
+   * and fallback rollout percentage.
+   *
+   * <p>The rollout percentage is resolved from the provider first; the {@code rolloutFallback} is
+   * used only when the provider returns no value for the feature.
    *
    * @param featureName the name of the feature flag to check; must not be null or blank
    * @param rolloutFallback the fallback rollout percentage (0–100) when no value is configured in
@@ -89,14 +100,17 @@ public class FeatureFlagHandlerFilterFunction {
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag,
-   * SpEL condition expression, and rollout percentage.
+   * fallback SpEL condition expression, and fallback rollout percentage.
+   *
+   * <p>The condition and rollout percentage are resolved from their respective providers first;
+   * fallback values are used only when the providers return no value for the feature.
    *
    * <p>The evaluation order is: feature enabled check → schedule check → condition check → rollout
    * check.
    *
    * @param featureName the name of the feature flag to check; must not be null or blank
-   * @param condition SpEL expression evaluated against request context; empty string means no
-   *     condition
+   * @param conditionFallback SpEL expression used as fallback when the provider has no condition
+   *     configured; empty string means no condition
    * @param rolloutFallback the fallback rollout percentage (0–100) when no value is configured in
    *     the provider; 100 means fully enabled
    * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag,
@@ -105,7 +119,7 @@ public class FeatureFlagHandlerFilterFunction {
    *     rolloutFallback} is not between 0 and 100
    */
   public HandlerFilterFunction<ServerResponse, ServerResponse> of(
-      String featureName, String condition, int rolloutFallback) {
+      String featureName, String conditionFallback, int rolloutFallback) {
     if (featureName == null || featureName.isBlank()) {
       throw new IllegalArgumentException(
           "featureName must not be null or blank. "
@@ -117,6 +131,7 @@ public class FeatureFlagHandlerFilterFunction {
     }
     return (request, next) ->
         Mono.zip(
+                conditionProvider.getCondition(featureName).defaultIfEmpty(conditionFallback),
                 rolloutPercentageProvider
                     .getRolloutPercentage(featureName)
                     .defaultIfEmpty(rolloutFallback),
@@ -129,10 +144,10 @@ public class FeatureFlagHandlerFilterFunction {
                   EvaluationContext evalCtx =
                       new EvaluationContext(
                           featureName,
-                          condition,
                           tuple.getT1(),
+                          tuple.getT2(),
                           ServerHttpConditionVariables.build(request.exchange().getRequest()),
-                          () -> tuple.getT2().orElse(null));
+                          () -> tuple.getT3().orElse(null));
                   return pipeline.evaluate(evalCtx);
                 })
             .flatMap(
@@ -154,6 +169,8 @@ public class FeatureFlagHandlerFilterFunction {
    *     must not be null
    * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
    *     feature; must not be null
+   * @param conditionProvider the provider used to look up the condition expression per feature;
+   *     must not be null
    * @param contextResolver the resolver used to extract context from the current request; must not
    *     be null
    */
@@ -161,10 +178,12 @@ public class FeatureFlagHandlerFilterFunction {
       ReactiveFeatureFlagEvaluationPipeline pipeline,
       AccessDeniedHandlerFilterResolution resolution,
       ReactiveRolloutPercentageProvider rolloutPercentageProvider,
+      ReactiveConditionProvider conditionProvider,
       ReactiveFeatureFlagContextResolver contextResolver) {
     this.pipeline = pipeline;
     this.resolution = resolution;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
+    this.conditionProvider = conditionProvider;
     this.contextResolver = contextResolver;
   }
 }

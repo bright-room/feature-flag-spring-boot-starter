@@ -7,6 +7,7 @@ import net.brightroom.featureflag.core.evaluation.AccessDecision;
 import net.brightroom.featureflag.core.evaluation.EvaluationContext;
 import net.brightroom.featureflag.core.evaluation.FeatureFlagEvaluationPipeline;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.provider.ConditionProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import net.brightroom.featureflag.webmvc.condition.HttpServletConditionVariables;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
@@ -27,23 +28,28 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
 
   private final FeatureFlagEvaluationPipeline pipeline;
   private final RolloutPercentageProvider rolloutPercentageProvider;
+  private final ConditionProvider conditionProvider;
   private final FeatureFlagContextResolver contextResolver;
 
   /**
    * Creates a new {@link FeatureFlagInterceptor}.
    *
    * @param pipeline the evaluation pipeline that performs all feature flag checks; must not be null
-   * @param rolloutPercentageProvider the provider that supplies per-flag rollout percentages,
-   *     overriding annotation-level values when present; must not be null
+   * @param rolloutPercentageProvider the provider that supplies per-flag rollout percentages; must
+   *     not be null
+   * @param conditionProvider the provider that supplies per-flag condition expressions; must not be
+   *     null
    * @param contextResolver the resolver used to obtain the feature flag context from the request;
    *     must not be null
    */
   public FeatureFlagInterceptor(
       FeatureFlagEvaluationPipeline pipeline,
       RolloutPercentageProvider rolloutPercentageProvider,
+      ConditionProvider conditionProvider,
       FeatureFlagContextResolver contextResolver) {
     this.pipeline = pipeline;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
+    this.conditionProvider = conditionProvider;
     this.contextResolver = contextResolver;
   }
 
@@ -86,19 +92,15 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
           "@FeatureFlag must specify a non-empty value. "
               + "An empty value causes fail-open behavior and allows access unconditionally.");
     }
-    if (annotation.rollout() < 0 || annotation.rollout() > 100) {
-      throw new IllegalStateException(
-          "@FeatureFlag rollout must be between 0 and 100, but was: " + annotation.rollout());
-    }
   }
 
   private EvaluationContext buildContext(HttpServletRequest request, FeatureFlag annotation) {
     String featureName = annotation.value();
-    int rollout =
-        rolloutPercentageProvider.getRolloutPercentage(featureName).orElse(annotation.rollout());
+    String condition = conditionProvider.getCondition(featureName).orElse("");
+    int rollout = rolloutPercentageProvider.getRolloutPercentage(featureName).orElse(100);
     return new EvaluationContext(
         featureName,
-        annotation.condition(),
+        condition,
         rollout,
         HttpServletConditionVariables.build(request),
         () -> contextResolver.resolve(request).orElse(null));

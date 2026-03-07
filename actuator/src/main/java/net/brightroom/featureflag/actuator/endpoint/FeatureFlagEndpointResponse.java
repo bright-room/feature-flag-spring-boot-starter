@@ -10,11 +10,27 @@ import org.jspecify.annotations.Nullable;
  * @param featureName the name of the feature flag
  * @param enabled the current enabled state of the feature flag
  * @param rollout the current rollout percentage (0–100) of the feature flag
+ * @param condition the current condition expression, or {@code null} if no condition is configured
  * @param schedule the schedule configuration for this flag, or {@code null} if no schedule is
  *     configured
  */
 public record FeatureFlagEndpointResponse(
-    String featureName, boolean enabled, int rollout, @Nullable ScheduleEndpointResponse schedule) {
+    String featureName,
+    boolean enabled,
+    int rollout,
+    @Nullable String condition,
+    @Nullable ScheduleEndpointResponse schedule) {
+
+  /**
+   * Creates a response without condition or schedule information.
+   *
+   * @param featureName the name of the feature flag
+   * @param enabled the current enabled state of the feature flag
+   * @param rollout the current rollout percentage (0–100) of the feature flag
+   */
+  public FeatureFlagEndpointResponse(String featureName, boolean enabled, int rollout) {
+    this(featureName, enabled, rollout, null, null);
+  }
 
   /**
    * Creates a response without schedule information.
@@ -22,8 +38,11 @@ public record FeatureFlagEndpointResponse(
    * @param featureName the name of the feature flag
    * @param enabled the current enabled state of the feature flag
    * @param rollout the current rollout percentage (0–100) of the feature flag
+   * @param condition the current condition expression, or {@code null} if no condition is
+   *     configured
    */
-  public FeatureFlagEndpointResponse(String featureName, boolean enabled, int rollout) {
-    this(featureName, enabled, rollout, null);
+  public FeatureFlagEndpointResponse(
+      String featureName, boolean enabled, int rollout, @Nullable String condition) {
+    this(featureName, enabled, rollout, condition, null);
   }
 }

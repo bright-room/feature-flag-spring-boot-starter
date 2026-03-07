@@ -21,6 +21,7 @@ import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
 import net.brightroom.featureflag.core.provider.InMemoryReactiveScheduleProvider;
+import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveConditionProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
@@ -44,6 +45,10 @@ class ReactiveFeatureFlagEndpointTest {
     return new MutableInMemoryReactiveRolloutPercentageProvider(Map.of());
   }
 
+  private MutableInMemoryReactiveConditionProvider emptyConditionProvider() {
+    return new MutableInMemoryReactiveConditionProvider(Map.of());
+  }
+
   private InMemoryReactiveScheduleProvider emptyScheduleProvider() {
     return new InMemoryReactiveScheduleProvider(Map.of());
   }
@@ -53,7 +58,13 @@ class ReactiveFeatureFlagEndpointTest {
       MutableInMemoryReactiveRolloutPercentageProvider rolloutProvider,
       boolean defaultEnabled) {
     return new ReactiveFeatureFlagEndpoint(
-        provider, rolloutProvider, emptyScheduleProvider(), defaultEnabled, eventPublisher, clock);
+        provider,
+        rolloutProvider,
+        emptyConditionProvider(),
+        emptyScheduleProvider(),
+        defaultEnabled,
+        eventPublisher,
+        clock);
   }
 
   private ReactiveFeatureFlagEndpoint endpointWithSchedule(
@@ -63,6 +74,7 @@ class ReactiveFeatureFlagEndpointTest {
     return new ReactiveFeatureFlagEndpoint(
         provider,
         emptyRolloutProvider(),
+        emptyConditionProvider(),
         new InMemoryReactiveScheduleProvider(schedules),
         defaultEnabled,
         eventPublisher,
@@ -89,7 +101,7 @@ class ReactiveFeatureFlagEndpointTest {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
-    var response = endpoint.updateFeature("feature-a", false, null);
+    var response = endpoint.updateFeature("feature-a", false, null, null);
 
     assertThat(response.features())
         .filteredOn(f -> f.featureName().equals("feature-a"))
@@ -102,7 +114,7 @@ class ReactiveFeatureFlagEndpointTest {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
-    endpoint.updateFeature("feature-a", false, null);
+    endpoint.updateFeature("feature-a", false, null, null);
 
     var captor = ArgumentCaptor.forClass(FeatureFlagChangedEvent.class);
     verify(eventPublisher).publishEvent(captor.capture());
@@ -115,7 +127,7 @@ class ReactiveFeatureFlagEndpointTest {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
-    var response = endpoint.updateFeature("new-flag", true, null);
+    var response = endpoint.updateFeature("new-flag", true, null, null);
 
     assertThat(response.features())
         .filteredOn(f -> f.featureName().equals("new-flag"))
@@ -140,7 +152,7 @@ class ReactiveFeatureFlagEndpointTest {
             Map.of("feature-a", true, "feature-b", true), false);
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
-    var response = endpoint.updateFeature("feature-a", false, null);
+    var response = endpoint.updateFeature("feature-a", false, null, null);
 
     assertEquals(2, response.features().size());
     assertThat(response.features())
@@ -154,7 +166,7 @@ class ReactiveFeatureFlagEndpointTest {
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
-        .isThrownBy(() -> endpoint.updateFeature(null, true, null))
+        .isThrownBy(() -> endpoint.updateFeature(null, true, null, null))
         .withMessageContaining("featureName must not be null or blank");
   }
 
@@ -164,7 +176,7 @@ class ReactiveFeatureFlagEndpointTest {
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
-        .isThrownBy(() -> endpoint.updateFeature("", true, null))
+        .isThrownBy(() -> endpoint.updateFeature("", true, null, null))
         .withMessageContaining("featureName must not be null or blank");
   }
 
@@ -174,7 +186,7 @@ class ReactiveFeatureFlagEndpointTest {
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
-        .isThrownBy(() -> endpoint.updateFeature("   ", true, null))
+        .isThrownBy(() -> endpoint.updateFeature("   ", true, null, null))
         .withMessageContaining("featureName must not be null or blank");
   }
 
@@ -231,6 +243,7 @@ class ReactiveFeatureFlagEndpointTest {
         new ReactiveFeatureFlagEndpoint(
             provider,
             emptyRolloutProvider(),
+            emptyConditionProvider(),
             emptyScheduleProvider(),
             false,
             eventPublisher,
@@ -298,7 +311,7 @@ class ReactiveFeatureFlagEndpointTest {
     var rolloutProvider = new MutableInMemoryReactiveRolloutPercentageProvider(Map.of());
     var endpoint = endpoint(provider, rolloutProvider, false);
 
-    var response = endpoint.updateFeature("feature-a", true, 50);
+    var response = endpoint.updateFeature("feature-a", true, 50, null);
 
     assertThat(response.features())
         .filteredOn(f -> f.featureName().equals("feature-a"))
@@ -311,7 +324,7 @@ class ReactiveFeatureFlagEndpointTest {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
-    endpoint.updateFeature("feature-a", true, 60);
+    endpoint.updateFeature("feature-a", true, 60, null);
 
     var captor = ArgumentCaptor.forClass(FeatureFlagChangedEvent.class);
     verify(eventPublisher).publishEvent(captor.capture());
@@ -324,7 +337,7 @@ class ReactiveFeatureFlagEndpointTest {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
-    endpoint.updateFeature("feature-a", true, null);
+    endpoint.updateFeature("feature-a", true, null, null);
 
     var captor = ArgumentCaptor.forClass(FeatureFlagChangedEvent.class);
     verify(eventPublisher).publishEvent(captor.capture());
@@ -337,7 +350,7 @@ class ReactiveFeatureFlagEndpointTest {
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
-        .isThrownBy(() -> endpoint.updateFeature("feature-a", true, -1))
+        .isThrownBy(() -> endpoint.updateFeature("feature-a", true, -1, null))
         .withMessageContaining("rollout must be between 0 and 100");
   }
 
@@ -347,7 +360,7 @@ class ReactiveFeatureFlagEndpointTest {
     var endpoint = endpoint(provider, emptyRolloutProvider(), false);
 
     assertThatIllegalArgumentException()
-        .isThrownBy(() -> endpoint.updateFeature("feature-a", true, 101))
+        .isThrownBy(() -> endpoint.updateFeature("feature-a", true, 101, null))
         .withMessageContaining("rollout must be between 0 and 100");
   }
 
@@ -357,8 +370,8 @@ class ReactiveFeatureFlagEndpointTest {
     var rolloutProvider = new MutableInMemoryReactiveRolloutPercentageProvider(Map.of());
     var endpoint = endpoint(provider, rolloutProvider, false);
 
-    assertThatNoException().isThrownBy(() -> endpoint.updateFeature("feature-a", true, 0));
-    assertThatNoException().isThrownBy(() -> endpoint.updateFeature("feature-a", true, 100));
+    assertThatNoException().isThrownBy(() -> endpoint.updateFeature("feature-a", true, 0, null));
+    assertThatNoException().isThrownBy(() -> endpoint.updateFeature("feature-a", true, 100, null));
   }
 
   @Test
@@ -492,6 +505,7 @@ class ReactiveFeatureFlagEndpointTest {
         new ReactiveFeatureFlagEndpoint(
             provider,
             emptyRolloutProvider(),
+            emptyConditionProvider(),
             new InMemoryReactiveScheduleProvider(Map.of("feature-a", schedule)),
             false,
             eventPublisher,

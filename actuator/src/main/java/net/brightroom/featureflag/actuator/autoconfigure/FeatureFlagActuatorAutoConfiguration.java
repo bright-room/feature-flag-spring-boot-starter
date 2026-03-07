@@ -11,17 +11,23 @@ import net.brightroom.featureflag.actuator.health.ReactiveFeatureFlagHealthIndic
 import net.brightroom.featureflag.actuator.health.ReactiveHealthDetailsContributor;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
+import net.brightroom.featureflag.core.provider.ConditionProvider;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryReactiveScheduleProvider;
 import net.brightroom.featureflag.core.provider.InMemoryScheduleProvider;
+import net.brightroom.featureflag.core.provider.MutableConditionProvider;
 import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.MutableInMemoryConditionProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryFeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveConditionProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.MutableReactiveConditionProvider;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.MutableRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ReactiveConditionProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
@@ -113,6 +119,19 @@ public class FeatureFlagActuatorAutoConfiguration {
     }
 
     /**
+     * Registers a {@link MutableInMemoryConditionProvider} bean when no other {@link
+     * ConditionProvider} bean is already present.
+     *
+     * @return the mutable in-memory condition provider initialized from {@link
+     *     FeatureFlagProperties}
+     */
+    @Bean
+    @ConditionalOnMissingBean(ConditionProvider.class)
+    MutableInMemoryConditionProvider mutableConditionProvider() {
+      return new MutableInMemoryConditionProvider(featureFlagProperties.conditions());
+    }
+
+    /**
      * Registers a {@link Clock} bean when no other {@link Clock} bean is already present.
      *
      * @return the system default clock
@@ -145,6 +164,7 @@ public class FeatureFlagActuatorAutoConfiguration {
      *
      * @param provider the mutable feature flag provider
      * @param rolloutProvider the mutable rollout percentage provider
+     * @param conditionProvider the mutable condition provider
      * @param scheduleProvider the schedule provider
      * @param eventPublisher the publisher used to broadcast flag change events
      * @param clock the clock used for schedule evaluation
@@ -155,12 +175,14 @@ public class FeatureFlagActuatorAutoConfiguration {
     FeatureFlagEndpoint featureFlagEndpoint(
         MutableFeatureFlagProvider provider,
         MutableRolloutPercentageProvider rolloutProvider,
+        MutableConditionProvider conditionProvider,
         ScheduleProvider scheduleProvider,
         ApplicationEventPublisher eventPublisher,
         Clock clock) {
       return new FeatureFlagEndpoint(
           provider,
           rolloutProvider,
+          conditionProvider,
           scheduleProvider,
           featureFlagProperties.defaultEnabled(),
           eventPublisher,
@@ -224,6 +246,19 @@ public class FeatureFlagActuatorAutoConfiguration {
     }
 
     /**
+     * Registers a {@link MutableInMemoryReactiveConditionProvider} bean when no other {@link
+     * ReactiveConditionProvider} bean is already present.
+     *
+     * @return the mutable in-memory reactive condition provider initialized from {@link
+     *     FeatureFlagProperties}
+     */
+    @Bean
+    @ConditionalOnMissingBean(ReactiveConditionProvider.class)
+    MutableInMemoryReactiveConditionProvider mutableReactiveConditionProvider() {
+      return new MutableInMemoryReactiveConditionProvider(featureFlagProperties.conditions());
+    }
+
+    /**
      * Registers a {@link Clock} bean when no other {@link Clock} bean is already present.
      *
      * @return the system default clock
@@ -256,6 +291,7 @@ public class FeatureFlagActuatorAutoConfiguration {
      *
      * @param provider the mutable reactive feature flag provider
      * @param rolloutProvider the mutable reactive rollout percentage provider
+     * @param reactiveConditionProvider the mutable reactive condition provider
      * @param reactiveScheduleProvider the reactive schedule provider
      * @param eventPublisher the publisher used to broadcast flag change events
      * @param clock the clock used for schedule evaluation
@@ -266,12 +302,14 @@ public class FeatureFlagActuatorAutoConfiguration {
     ReactiveFeatureFlagEndpoint reactiveFeatureFlagEndpoint(
         MutableReactiveFeatureFlagProvider provider,
         MutableReactiveRolloutPercentageProvider rolloutProvider,
+        MutableReactiveConditionProvider reactiveConditionProvider,
         ReactiveScheduleProvider reactiveScheduleProvider,
         ApplicationEventPublisher eventPublisher,
         Clock clock) {
       return new ReactiveFeatureFlagEndpoint(
           provider,
           rolloutProvider,
+          reactiveConditionProvider,
           reactiveScheduleProvider,
           featureFlagProperties.defaultEnabled(),
           eventPublisher,

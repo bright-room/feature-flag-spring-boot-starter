@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class FeatureFlagRolloutController {
 
   @GetMapping("/test/rollout")
-  @FeatureFlag(value = "rollout-feature", rollout = 50)
+  @FeatureFlag("rollout-feature")
   public String testRollout() {
     return "Allowed";
   }

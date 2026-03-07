@@ -19,6 +19,7 @@ import net.brightroom.featureflag.core.evaluation.ReactiveFeatureFlagEvaluationP
 import net.brightroom.featureflag.core.evaluation.ReactiveRolloutEvaluationStep;
 import net.brightroom.featureflag.core.evaluation.ReactiveScheduleEvaluationStep;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.provider.ReactiveConditionProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
@@ -49,6 +50,8 @@ class FeatureFlagHandlerFilterFunctionTest {
       mock(ReactiveFeatureFlagContextResolver.class, invocation -> Mono.empty());
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider =
       mock(ReactiveRolloutPercentageProvider.class, invocation -> Mono.empty());
+  private final ReactiveConditionProvider conditionProvider =
+      mock(ReactiveConditionProvider.class, invocation -> Mono.empty());
   private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator =
       mock(ReactiveFeatureFlagConditionEvaluator.class);
   private final ReactiveScheduleProvider reactiveScheduleProvider =
@@ -69,11 +72,16 @@ class FeatureFlagHandlerFilterFunctionTest {
           buildPipeline(new DefaultReactiveRolloutStrategy()),
           resolution,
           rolloutPercentageProvider,
+          conditionProvider,
           contextResolver);
 
   private final FeatureFlagHandlerFilterFunction filterFunctionWithRollout =
       new FeatureFlagHandlerFilterFunction(
-          buildPipeline(rolloutStrategy), resolution, rolloutPercentageProvider, contextResolver);
+          buildPipeline(rolloutStrategy),
+          resolution,
+          rolloutPercentageProvider,
+          conditionProvider,
+          contextResolver);
 
   private ServerRequest mockRequest() {
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);

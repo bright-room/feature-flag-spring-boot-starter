@@ -12,7 +12,9 @@ import net.brightroom.featureflag.core.evaluation.FeatureFlagEvaluationPipeline;
 import net.brightroom.featureflag.core.evaluation.RolloutEvaluationStep;
 import net.brightroom.featureflag.core.evaluation.ScheduleEvaluationStep;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
+import net.brightroom.featureflag.core.provider.ConditionProvider;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.InMemoryConditionProvider;
 import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.InMemoryScheduleProvider;
@@ -82,6 +84,12 @@ public class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean(ConditionProvider.class)
+  ConditionProvider conditionProvider() {
+    return new InMemoryConditionProvider(featureFlagProperties.conditions());
+  }
+
+  @Bean
   @ConditionalOnMissingBean
   FeatureFlagConditionEvaluator featureFlagConditionEvaluator() {
     return new SpelFeatureFlagConditionEvaluator(featureFlagProperties.condition().failOnError());
@@ -134,8 +142,10 @@ public class FeatureFlagMvcAutoConfiguration {
   FeatureFlagInterceptor featureFlagInterceptor(
       FeatureFlagEvaluationPipeline pipeline,
       RolloutPercentageProvider rolloutPercentageProvider,
+      ConditionProvider conditionProvider,
       FeatureFlagContextResolver contextResolver) {
-    return new FeatureFlagInterceptor(pipeline, rolloutPercentageProvider, contextResolver);
+    return new FeatureFlagInterceptor(
+        pipeline, rolloutPercentageProvider, conditionProvider, contextResolver);
   }
 
   @Bean
@@ -156,9 +166,14 @@ public class FeatureFlagMvcAutoConfiguration {
       FeatureFlagEvaluationPipeline pipeline,
       AccessDeniedHandlerFilterResolution accessDeniedHandlerFilterResolution,
       RolloutPercentageProvider rolloutPercentageProvider,
+      ConditionProvider conditionProvider,
       FeatureFlagContextResolver contextResolver) {
     return new FeatureFlagHandlerFilterFunction(
-        pipeline, accessDeniedHandlerFilterResolution, rolloutPercentageProvider, contextResolver);
+        pipeline,
+        accessDeniedHandlerFilterResolution,
+        rolloutPercentageProvider,
+        conditionProvider,
+        contextResolver);
   }
 
   /**

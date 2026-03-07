@@ -13,6 +13,58 @@ class FeatureFlagPropertiesTest {
     return new FeatureFlagProperties();
   }
 
+  // --- conditions() ---
+
+  @Test
+  void conditions_returnsEmptyMap_whenNoFeaturesConfigured() {
+    FeatureFlagProperties properties = newProperties();
+
+    assertTrue(properties.conditions().isEmpty());
+  }
+
+  @Test
+  void conditions_excludesFeatures_whenConditionIsEmpty() {
+    FeatureFlagProperties properties = newProperties();
+    FeatureProperties config = new FeatureProperties();
+    // no condition set → condition() returns ""
+    properties.setFeatures(Map.of("no-condition-feature", config));
+
+    assertTrue(properties.conditions().isEmpty());
+  }
+
+  @Test
+  void conditions_includesFeature_whenConditionIsConfigured() {
+    FeatureFlagProperties properties = newProperties();
+    FeatureProperties config = new FeatureProperties();
+    config.setCondition("headers['X-Beta'] != null");
+    properties.setFeatures(Map.of("conditional-feature", config));
+
+    var conditions = properties.conditions();
+    assertEquals(1, conditions.size());
+    assertEquals("headers['X-Beta'] != null", conditions.get("conditional-feature"));
+  }
+
+  @Test
+  void conditions_mapsMultipleFeatures_whenMultipleConditionsConfigured() {
+    FeatureFlagProperties properties = newProperties();
+
+    FeatureProperties config1 = new FeatureProperties();
+    config1.setCondition("headers['X-Beta'] != null");
+
+    FeatureProperties config2 = new FeatureProperties();
+    config2.setCondition("params['variant'] == 'B'");
+
+    FeatureProperties configNoCondition = new FeatureProperties();
+
+    properties.setFeatures(
+        Map.of("feature-a", config1, "feature-b", config2, "feature-c", configNoCondition));
+
+    var conditions = properties.conditions();
+    assertEquals(2, conditions.size());
+    assertEquals("headers['X-Beta'] != null", conditions.get("feature-a"));
+    assertEquals("params['variant'] == 'B'", conditions.get("feature-b"));
+  }
+
   // --- schedules() ---
 
   @Test
@@ -25,7 +77,7 @@ class FeatureFlagPropertiesTest {
   @Test
   void schedules_excludesFeatures_whenScheduleIsNull() {
     FeatureFlagProperties properties = newProperties();
-    FeatureConfiguration config = new FeatureConfiguration();
+    FeatureProperties config = new FeatureProperties();
     // no schedule set → schedule() returns null
     properties.setFeatures(Map.of("no-schedule-feature", config));
 
@@ -35,11 +87,11 @@ class FeatureFlagPropertiesTest {
   @Test
   void schedules_includesFeature_whenScheduleIsConfigured() {
     FeatureFlagProperties properties = newProperties();
-    ScheduleConfiguration scheduleConfig = new ScheduleConfiguration();
+    ScheduleProperties scheduleConfig = new ScheduleProperties();
     scheduleConfig.setStart(LocalDateTime.of(2026, 6, 15, 10, 0));
     scheduleConfig.setEnd(LocalDateTime.of(2026, 6, 15, 18, 0));
 
-    FeatureConfiguration config = new FeatureConfiguration();
+    FeatureProperties config = new FeatureProperties();
     config.setSchedule(scheduleConfig);
     properties.setFeatures(Map.of("scheduled-feature", config));
 
@@ -53,17 +105,17 @@ class FeatureFlagPropertiesTest {
   void schedules_mapsMultipleFeatures_whenMultipleSchedulesConfigured() {
     FeatureFlagProperties properties = newProperties();
 
-    ScheduleConfiguration schedule1 = new ScheduleConfiguration();
+    ScheduleProperties schedule1 = new ScheduleProperties();
     schedule1.setStart(LocalDateTime.of(2026, 1, 1, 0, 0));
-    FeatureConfiguration config1 = new FeatureConfiguration();
+    FeatureProperties config1 = new FeatureProperties();
     config1.setSchedule(schedule1);
 
-    ScheduleConfiguration schedule2 = new ScheduleConfiguration();
+    ScheduleProperties schedule2 = new ScheduleProperties();
     schedule2.setEnd(LocalDateTime.of(2026, 12, 31, 23, 59));
-    FeatureConfiguration config2 = new FeatureConfiguration();
+    FeatureProperties config2 = new FeatureProperties();
     config2.setSchedule(schedule2);
 
-    FeatureConfiguration configNoSchedule = new FeatureConfiguration();
+    FeatureProperties configNoSchedule = new FeatureProperties();
 
     properties.setFeatures(
         Map.of("feature-a", config1, "feature-b", config2, "feature-c", configNoSchedule));

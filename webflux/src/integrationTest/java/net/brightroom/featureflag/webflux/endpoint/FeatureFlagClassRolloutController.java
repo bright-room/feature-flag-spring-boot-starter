@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
 @RestController
-@FeatureFlag(value = "rollout-feature", rollout = 50)
+@FeatureFlag("rollout-feature")
 public class FeatureFlagClassRolloutController {
 
   @GetMapping("/test/class-rollout")
