@@ -46,6 +46,7 @@ public class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean
   AccessDeniedInterceptResolution featureFlagAccessDeniedResponse() {
     return new AccessDeniedInterceptResolutionFactory().create(featureFlagProperties);
   }
