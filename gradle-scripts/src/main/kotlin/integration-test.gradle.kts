@@ -26,6 +26,7 @@ tasks {
             classpath = sourceSets["integrationTest"].runtimeClasspath
             useJUnitPlatform()
             shouldRunAfter(test)
+            maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
         }
 
     check {
