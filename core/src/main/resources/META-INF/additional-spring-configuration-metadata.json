@@ -24,6 +24,18 @@
       "description": "Per-feature configuration including enabled state and rollout percentage."
     },
     {
+      "name": "feature-flags.features.[*].enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether this feature flag is enabled.",
+      "defaultValue": true
+    },
+    {
+      "name": "feature-flags.features.[*].rollout",
+      "type": "java.lang.Integer",
+      "description": "Rollout percentage for this feature flag (0-100). 100 means fully rolled out to all requests; 0 means no requests even if enabled.",
+      "defaultValue": 100
+    },
+    {
       "name": "feature-flags.response.type",
       "type": "net.brightroom.featureflag.core.properties.ResponseType",
       "description": "The type of response to return."
