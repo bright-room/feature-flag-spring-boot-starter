@@ -50,6 +50,9 @@ public class FeatureConfiguration {
 
   // for property binding
   void setRollout(int rollout) {
+    if (rollout < 0 || rollout > 100) {
+      throw new IllegalArgumentException("rollout must be between 0 and 100, but was: " + rollout);
+    }
     this.rollout = rollout;
   }
 
