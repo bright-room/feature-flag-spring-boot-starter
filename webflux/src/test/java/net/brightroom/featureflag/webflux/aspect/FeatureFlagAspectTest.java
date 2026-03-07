@@ -9,17 +9,24 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Method;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
+import net.brightroom.featureflag.core.evaluation.ReactiveConditionEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.ReactiveEnabledEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.ReactiveEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.ReactiveFeatureFlagEvaluationPipeline;
+import net.brightroom.featureflag.core.evaluation.ReactiveRolloutEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.ReactiveScheduleEvaluationStep;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
 import net.brightroom.featureflag.core.provider.Schedule;
+import net.brightroom.featureflag.core.rollout.DefaultReactiveRolloutStrategy;
+import net.brightroom.featureflag.core.rollout.ReactiveRolloutStrategy;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
-import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
-import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.Test;
@@ -36,35 +43,43 @@ class FeatureFlagAspectTest {
 
   private final ReactiveFeatureFlagProvider provider = mock(ReactiveFeatureFlagProvider.class);
   private final ReactiveFeatureFlagContextResolver contextResolver =
-      mock(ReactiveFeatureFlagContextResolver.class);
-  // Default: no rollout percentage configured in provider, falls back to annotation value
+      mock(ReactiveFeatureFlagContextResolver.class, invocation -> Mono.empty());
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider =
       mock(ReactiveRolloutPercentageProvider.class, invocation -> Mono.empty());
   private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator =
       mock(ReactiveFeatureFlagConditionEvaluator.class);
   private final ReactiveScheduleProvider reactiveScheduleProvider =
       mock(ReactiveScheduleProvider.class, invocation -> Mono.empty());
+  private final ReactiveRolloutStrategy rolloutStrategy = mock(ReactiveRolloutStrategy.class);
+
+  private ReactiveFeatureFlagEvaluationPipeline buildPipeline(ReactiveRolloutStrategy strategy) {
+    List<ReactiveEvaluationStep> steps =
+        List.of(
+            new ReactiveEnabledEvaluationStep(provider),
+            new ReactiveScheduleEvaluationStep(reactiveScheduleProvider, Clock.systemDefaultZone()),
+            new ReactiveConditionEvaluationStep(conditionEvaluator),
+            new ReactiveRolloutEvaluationStep(strategy));
+    return new ReactiveFeatureFlagEvaluationPipeline(steps);
+  }
+
   private final FeatureFlagAspect aspect =
       new FeatureFlagAspect(
-          provider,
-          new DefaultReactiveRolloutStrategy(),
+          buildPipeline(new DefaultReactiveRolloutStrategy()),
           contextResolver,
-          rolloutPercentageProvider,
-          conditionEvaluator,
-          reactiveScheduleProvider,
-          Clock.systemDefaultZone());
+          rolloutPercentageProvider);
 
-  // Aspect with mocked rollout strategy for rollout-specific tests
-  private final ReactiveRolloutStrategy rolloutStrategy = mock(ReactiveRolloutStrategy.class);
   private final FeatureFlagAspect aspectWithRollout =
       new FeatureFlagAspect(
-          provider,
-          rolloutStrategy,
-          contextResolver,
-          rolloutPercentageProvider,
-          conditionEvaluator,
-          reactiveScheduleProvider,
-          Clock.systemDefaultZone());
+          buildPipeline(rolloutStrategy), contextResolver, rolloutPercentageProvider);
+
+  // Helper: creates a mock exchange with a mocked request
+  private ServerWebExchange mockExchange() {
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
+    return exchange;
+  }
 
   static class TestController {
 
@@ -140,14 +155,15 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Mono.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
-    // end in the past → inactive
     Schedule inactiveSchedule = new Schedule(null, LocalDateTime.of(2020, 1, 1, 0, 0), null);
     when(reactiveScheduleProvider.getSchedule("some-feature"))
         .thenReturn(Mono.just(inactiveSchedule));
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
-    StepVerifier.create((Mono<Object>) result)
+    StepVerifier.create(
+            ((Mono<Object>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
         .expectError(FeatureFlagAccessDeniedException.class)
         .verify();
   }
@@ -164,15 +180,18 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Mono.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
-    // start in the past, no end → active
     Schedule activeSchedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
     when(reactiveScheduleProvider.getSchedule("some-feature"))
         .thenReturn(Mono.just(activeSchedule));
     when(joinPoint.proceed()).thenReturn(Mono.just("result"));
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
-    StepVerifier.create((Mono<Object>) result).expectNext("result").verifyComplete();
+    StepVerifier.create(
+            ((Mono<Object>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNext("result")
+        .verifyComplete();
   }
 
   // --- checkSchedule for Flux ---
@@ -189,14 +208,15 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Flux.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
-    // end in the past → inactive
     Schedule inactiveSchedule = new Schedule(null, LocalDateTime.of(2020, 1, 1, 0, 0), null);
     when(reactiveScheduleProvider.getSchedule("some-feature"))
         .thenReturn(Mono.just(inactiveSchedule));
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
-    StepVerifier.create((Flux<Object>) result)
+    StepVerifier.create(
+            ((Flux<Object>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
         .expectError(FeatureFlagAccessDeniedException.class)
         .verify();
   }
@@ -213,15 +233,18 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Flux.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
-    // start in the past, no end → active
     Schedule activeSchedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
     when(reactiveScheduleProvider.getSchedule("some-feature"))
         .thenReturn(Mono.just(activeSchedule));
     when(joinPoint.proceed()).thenReturn(Flux.just("r1", "r2"));
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
-    StepVerifier.create((Flux<Object>) result).expectNext("r1", "r2").verifyComplete();
+    StepVerifier.create(
+            ((Flux<Object>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNext("r1", "r2")
+        .verifyComplete();
   }
 
   @Test
@@ -279,7 +302,6 @@ class FeatureFlagAspectTest {
     when(signature.getMethod()).thenReturn(method);
     when(signature.getReturnType()).thenReturn(String.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
-    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
 
     assertThatThrownBy(() -> aspect.checkFeatureFlag(joinPoint))
         .isInstanceOf(IllegalStateException.class)
@@ -316,11 +338,14 @@ class FeatureFlagAspectTest {
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
     when(joinPoint.proceed()).thenReturn(Mono.just("result"));
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
     @SuppressWarnings("unchecked")
     Mono<String> mono = (Mono<String>) result;
-    StepVerifier.create(mono).expectNext("result").verifyComplete();
+    StepVerifier.create(mono.contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNext("result")
+        .verifyComplete();
   }
 
   @Test
@@ -335,9 +360,11 @@ class FeatureFlagAspectTest {
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(false));
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
-    StepVerifier.create((Mono<?>) result)
+    StepVerifier.create(
+            ((Mono<?>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
         .expectErrorMatches(
             e ->
                 e instanceof FeatureFlagAccessDeniedException
@@ -360,6 +387,7 @@ class FeatureFlagAspectTest {
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
     when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
 
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(httpRequest)).thenReturn(Mono.just(context));
@@ -392,6 +420,7 @@ class FeatureFlagAspectTest {
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
     when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
 
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(httpRequest)).thenReturn(Mono.just(context));
@@ -408,7 +437,6 @@ class FeatureFlagAspectTest {
 
   @Test
   void checkFeatureFlag_returnsMono_whenContextIsEmpty() throws Throwable {
-    // fail-open: when context is not available, rollout check is skipped
     ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
     MethodSignature signature = mock(MethodSignature.class);
     when(joinPoint.getSignature()).thenReturn(signature);
@@ -423,6 +451,7 @@ class FeatureFlagAspectTest {
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
     when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
     when(contextResolver.resolve(httpRequest)).thenReturn(Mono.empty());
 
     Object result = aspectWithRollout.checkFeatureFlag(joinPoint);
@@ -449,6 +478,7 @@ class FeatureFlagAspectTest {
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
     when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
 
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(httpRequest)).thenReturn(Mono.just(context));
@@ -481,6 +511,7 @@ class FeatureFlagAspectTest {
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
     when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
 
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(httpRequest)).thenReturn(Mono.just(context));
@@ -497,7 +528,6 @@ class FeatureFlagAspectTest {
 
   @Test
   void checkFeatureFlag_returnsFlux_whenContextIsEmpty() throws Throwable {
-    // fail-open: when context is not available, rollout check is skipped
     ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
     MethodSignature signature = mock(MethodSignature.class);
     when(joinPoint.getSignature()).thenReturn(signature);
@@ -512,6 +542,7 @@ class FeatureFlagAspectTest {
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
     when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
     when(contextResolver.resolve(httpRequest)).thenReturn(Mono.empty());
 
     Object result = aspectWithRollout.checkFeatureFlag(joinPoint);
@@ -536,11 +567,14 @@ class FeatureFlagAspectTest {
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
     when(joinPoint.proceed()).thenReturn(Flux.just("result1", "result2"));
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
     @SuppressWarnings("unchecked")
     Flux<String> flux = (Flux<String>) result;
-    StepVerifier.create(flux).expectNext("result1", "result2").verifyComplete();
+    StepVerifier.create(flux.contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNext("result1", "result2")
+        .verifyComplete();
   }
 
   @Test
@@ -557,9 +591,13 @@ class FeatureFlagAspectTest {
     RuntimeException cause = new RuntimeException("unexpected");
     when(joinPoint.proceed()).thenThrow(cause);
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
-    StepVerifier.create((Mono<?>) result).expectErrorMatches(e -> e == cause).verify();
+    StepVerifier.create(
+            ((Mono<?>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectErrorMatches(e -> e == cause)
+        .verify();
   }
 
   @Test
@@ -574,9 +612,11 @@ class FeatureFlagAspectTest {
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(false));
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
-    StepVerifier.create((Flux<?>) result)
+    StepVerifier.create(
+            ((Flux<?>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
         .expectErrorMatches(
             e ->
                 e instanceof FeatureFlagAccessDeniedException
@@ -726,7 +766,6 @@ class FeatureFlagAspectTest {
 
   @Test
   void checkFeatureFlag_skipsConditionCheck_whenConditionIsEmpty() throws Throwable {
-    // monoMethod() has no condition attribute — evaluator must not be called
     ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
     MethodSignature signature = mock(MethodSignature.class);
     when(joinPoint.getSignature()).thenReturn(signature);
@@ -738,11 +777,14 @@ class FeatureFlagAspectTest {
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
     when(joinPoint.proceed()).thenReturn(Mono.just("result"));
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
     @SuppressWarnings("unchecked")
     Mono<Object> mono = (Mono<Object>) result;
-    StepVerifier.create(mono).expectNextCount(1).verifyComplete();
+    StepVerifier.create(mono.contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNextCount(1)
+        .verifyComplete();
     verifyNoInteractions(conditionEvaluator);
   }
 
@@ -760,8 +802,12 @@ class FeatureFlagAspectTest {
     RuntimeException cause = new RuntimeException("unexpected");
     when(joinPoint.proceed()).thenThrow(cause);
 
+    ServerWebExchange exchange = mockExchange();
     Object result = aspect.checkFeatureFlag(joinPoint);
 
-    StepVerifier.create((Flux<?>) result).expectErrorMatches(e -> e == cause).verify();
+    StepVerifier.create(
+            ((Flux<?>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectErrorMatches(e -> e == cause)
+        .verify();
   }
 }

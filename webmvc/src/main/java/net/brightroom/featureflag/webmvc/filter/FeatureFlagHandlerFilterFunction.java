@@ -1,15 +1,10 @@
 package net.brightroom.featureflag.webmvc.filter;
 
-import java.time.Clock;
-import java.util.Optional;
-import net.brightroom.featureflag.core.condition.ConditionVariables;
-import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
-import net.brightroom.featureflag.core.context.FeatureFlagContext;
+import net.brightroom.featureflag.core.evaluation.AccessDecision;
+import net.brightroom.featureflag.core.evaluation.EvaluationContext;
+import net.brightroom.featureflag.core.evaluation.FeatureFlagEvaluationPipeline;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
-import net.brightroom.featureflag.core.provider.ScheduleProvider;
-import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.condition.HttpServletConditionVariables;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
 import net.brightroom.featureflag.webmvc.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
@@ -42,14 +37,10 @@ import org.springframework.web.servlet.function.ServerResponse;
  */
 public class FeatureFlagHandlerFilterFunction {
 
-  private final FeatureFlagProvider featureFlagProvider;
+  private final FeatureFlagEvaluationPipeline pipeline;
   private final AccessDeniedHandlerFilterResolution resolution;
-  private final RolloutStrategy rolloutStrategy;
-  private final FeatureFlagContextResolver contextResolver;
   private final RolloutPercentageProvider rolloutPercentageProvider;
-  private final FeatureFlagConditionEvaluator conditionEvaluator;
-  private final ScheduleProvider scheduleProvider;
-  private final Clock clock;
+  private final FeatureFlagContextResolver contextResolver;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -124,27 +115,19 @@ public class FeatureFlagHandlerFilterFunction {
           "rollout must be between 0 and 100, but was: " + rolloutFallback);
     }
     return (request, next) -> {
-      if (!featureFlagProvider.isFeatureEnabled(featureName)) {
-        return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
-      }
-      var schedule = scheduleProvider.getSchedule(featureName);
-      if (schedule.isPresent() && !schedule.get().isActive(clock.instant())) {
-        return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
-      }
-      if (condition != null && !condition.isEmpty()) {
-        ConditionVariables variables =
-            HttpServletConditionVariables.build(request.servletRequest());
-        if (!conditionEvaluator.evaluate(condition, variables)) {
-          return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
-        }
-      }
       int rollout =
           rolloutPercentageProvider.getRolloutPercentage(featureName).orElse(rolloutFallback);
-      if (rollout < 100) {
-        Optional<FeatureFlagContext> ctx = contextResolver.resolve(request.servletRequest());
-        if (ctx.isPresent() && !rolloutStrategy.isInRollout(featureName, ctx.get(), rollout)) {
-          return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
-        }
+      EvaluationContext context =
+          new EvaluationContext(
+              featureName,
+              condition,
+              rollout,
+              HttpServletConditionVariables.build(request.servletRequest()),
+              contextResolver.resolve(request.servletRequest()).orElse(null));
+      AccessDecision decision = pipeline.evaluate(context);
+      if (decision instanceof AccessDecision.Denied denied) {
+        return resolution.resolve(
+            request, new FeatureFlagAccessDeniedException(denied.featureName()));
       }
       return next.handle(request);
     };
@@ -153,37 +136,21 @@ public class FeatureFlagHandlerFilterFunction {
   /**
    * Creates a new {@link FeatureFlagHandlerFilterFunction}.
    *
-   * @param featureFlagProvider the provider used to check whether a feature flag is enabled; must
-   *     not be null
+   * @param pipeline the evaluation pipeline that performs all feature flag checks; must not be null
    * @param resolution the resolution strategy invoked when access is denied; must not be null
-   * @param rolloutStrategy the strategy used to determine rollout bucket membership; must not be
-   *     null
-   * @param contextResolver the resolver used to obtain the feature flag context from the request;
-   *     must not be null
    * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
    *     feature; must not be null
-   * @param conditionEvaluator the evaluator used to evaluate SpEL condition expressions; must not
-   *     be null
-   * @param scheduleProvider the provider used to look up the schedule per feature; must not be null
-   * @param clock the clock used to obtain the current time for schedule evaluation; must not be
-   *     null
+   * @param contextResolver the resolver used to obtain the feature flag context from the request;
+   *     must not be null
    */
   public FeatureFlagHandlerFilterFunction(
-      FeatureFlagProvider featureFlagProvider,
+      FeatureFlagEvaluationPipeline pipeline,
       AccessDeniedHandlerFilterResolution resolution,
-      RolloutStrategy rolloutStrategy,
-      FeatureFlagContextResolver contextResolver,
       RolloutPercentageProvider rolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator,
-      ScheduleProvider scheduleProvider,
-      Clock clock) {
-    this.featureFlagProvider = featureFlagProvider;
+      FeatureFlagContextResolver contextResolver) {
+    this.pipeline = pipeline;
     this.resolution = resolution;
-    this.rolloutStrategy = rolloutStrategy;
-    this.contextResolver = contextResolver;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
-    this.conditionEvaluator = conditionEvaluator;
-    this.scheduleProvider = scheduleProvider;
-    this.clock = clock;
+    this.contextResolver = contextResolver;
   }
 }

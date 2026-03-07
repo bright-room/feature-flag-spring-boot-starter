@@ -3,6 +3,7 @@ package net.brightroom.featureflag.webmvc.resolution;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.resolution.PlainTextResponseBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,7 +16,7 @@ class AccessDeniedInterceptResolutionViaPlainTextResponse
       @SuppressWarnings("unused") HttpServletRequest request, FeatureFlagAccessDeniedException e) {
     return ResponseEntity.status(HttpStatus.FORBIDDEN)
         .contentType(new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8))
-        .body(e.getMessage());
+        .body(PlainTextResponseBuilder.build(e));
   }
 
   AccessDeniedInterceptResolutionViaPlainTextResponse() {}

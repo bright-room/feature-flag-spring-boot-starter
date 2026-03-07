@@ -13,11 +13,19 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
+import net.brightroom.featureflag.core.evaluation.AccessDecision;
+import net.brightroom.featureflag.core.evaluation.ConditionEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.EnabledEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.EvaluationStep;
+import net.brightroom.featureflag.core.evaluation.FeatureFlagEvaluationPipeline;
+import net.brightroom.featureflag.core.evaluation.RolloutEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.ScheduleEvaluationStep;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
@@ -45,29 +53,24 @@ class FeatureFlagHandlerFilterFunctionTest {
       mock(FeatureFlagConditionEvaluator.class);
   private final ScheduleProvider scheduleProvider =
       mock(ScheduleProvider.class, invocation -> Optional.empty());
-  private final FeatureFlagHandlerFilterFunction filterFunction =
-      new FeatureFlagHandlerFilterFunction(
-          provider,
-          resolution,
-          new DefaultRolloutStrategy(),
-          contextResolver,
-          rolloutPercentageProvider,
-          conditionEvaluator,
-          scheduleProvider,
-          Clock.systemDefaultZone());
-
-  // Filter function with a mocked rollout strategy for rollout-specific tests
   private final RolloutStrategy rolloutStrategy = mock(RolloutStrategy.class);
+
+  private FeatureFlagHandlerFilterFunction buildFilterFunction(RolloutStrategy strategy) {
+    List<EvaluationStep> steps =
+        List.of(
+            new EnabledEvaluationStep(provider),
+            new ScheduleEvaluationStep(scheduleProvider, Clock.systemDefaultZone()),
+            new ConditionEvaluationStep(conditionEvaluator),
+            new RolloutEvaluationStep(strategy));
+    FeatureFlagEvaluationPipeline pipeline = new FeatureFlagEvaluationPipeline(steps);
+    return new FeatureFlagHandlerFilterFunction(
+        pipeline, resolution, rolloutPercentageProvider, contextResolver);
+  }
+
+  private final FeatureFlagHandlerFilterFunction filterFunction =
+      buildFilterFunction(new DefaultRolloutStrategy());
   private final FeatureFlagHandlerFilterFunction filterFunctionWithRollout =
-      new FeatureFlagHandlerFilterFunction(
-          provider,
-          resolution,
-          rolloutStrategy,
-          contextResolver,
-          rolloutPercentageProvider,
-          conditionEvaluator,
-          scheduleProvider,
-          Clock.systemDefaultZone());
+      buildFilterFunction(rolloutStrategy);
 
   // --- checkSchedule ---
 
@@ -75,11 +78,17 @@ class FeatureFlagHandlerFilterFunctionTest {
   @SuppressWarnings("unchecked")
   void of_delegatesToResolution_whenScheduleIsInactive() throws Exception {
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
-    // end in the past → inactive
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
+        .thenReturn(OptionalInt.empty());
     Schedule inactiveSchedule = new Schedule(null, LocalDateTime.of(2020, 1, 1, 0, 0), null);
     when(scheduleProvider.getSchedule("my-feature")).thenReturn(Optional.of(inactiveSchedule));
 
+    HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
+    stubServletRequestForConditionVariables(httpServletRequest);
     ServerRequest request = mock(ServerRequest.class);
+    when(request.servletRequest()).thenReturn(httpServletRequest);
+    when(contextResolver.resolve(httpServletRequest)).thenReturn(Optional.empty());
+
     HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
     ServerResponse deniedResponse = mock(ServerResponse.class);
     when(resolution.resolve(eq(request), any(FeatureFlagAccessDeniedException.class)))
@@ -98,11 +107,15 @@ class FeatureFlagHandlerFilterFunctionTest {
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.empty());
-    // start in the past, no end → active
     Schedule activeSchedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
     when(scheduleProvider.getSchedule("my-feature")).thenReturn(Optional.of(activeSchedule));
 
+    HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
+    stubServletRequestForConditionVariables(httpServletRequest);
     ServerRequest request = mock(ServerRequest.class);
+    when(request.servletRequest()).thenReturn(httpServletRequest);
+    when(contextResolver.resolve(httpServletRequest)).thenReturn(Optional.empty());
+
     HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
     ServerResponse okResponse = mock(ServerResponse.class);
     when(next.handle(request)).thenReturn(okResponse);
@@ -142,13 +155,23 @@ class FeatureFlagHandlerFilterFunctionTest {
         .hasMessageContaining("rollout must be between 0 and 100");
   }
 
+  private void stubServletRequest(ServerRequest serverRequest, HttpServletRequest httpRequest) {
+    when(serverRequest.servletRequest()).thenReturn(httpRequest);
+    stubServletRequestForConditionVariables(httpRequest);
+  }
+
   @Test
   @SuppressWarnings("unchecked")
   void of_delegatesToNext_whenFeatureEnabled() throws Exception {
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.empty());
+
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     ServerRequest request = mock(ServerRequest.class);
+    stubServletRequest(request, httpRequest);
+    when(contextResolver.resolve(httpRequest)).thenReturn(Optional.empty());
+
     HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
     ServerResponse okResponse = mock(ServerResponse.class);
     when(next.handle(request)).thenReturn(okResponse);
@@ -165,7 +188,12 @@ class FeatureFlagHandlerFilterFunctionTest {
   @SuppressWarnings("unchecked")
   void of_delegatesToResolution_whenFeatureDisabled() throws Exception {
     when(provider.isFeatureEnabled("my-feature")).thenReturn(false);
+
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
     ServerRequest request = mock(ServerRequest.class);
+    stubServletRequest(request, httpRequest);
+    when(contextResolver.resolve(httpRequest)).thenReturn(Optional.empty());
+
     HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
     ServerResponse deniedResponse = mock(ServerResponse.class);
     when(resolution.resolve(eq(request), any(FeatureFlagAccessDeniedException.class)))
@@ -188,7 +216,7 @@ class FeatureFlagHandlerFilterFunctionTest {
 
     HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
     ServerRequest request = mock(ServerRequest.class);
-    when(request.servletRequest()).thenReturn(httpServletRequest);
+    stubServletRequest(request, httpServletRequest);
 
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(httpServletRequest)).thenReturn(Optional.of(context));
@@ -216,7 +244,7 @@ class FeatureFlagHandlerFilterFunctionTest {
 
     HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
     ServerRequest request = mock(ServerRequest.class);
-    when(request.servletRequest()).thenReturn(httpServletRequest);
+    stubServletRequest(request, httpServletRequest);
 
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(httpServletRequest)).thenReturn(Optional.of(context));
@@ -239,15 +267,13 @@ class FeatureFlagHandlerFilterFunctionTest {
   @Test
   @SuppressWarnings("unchecked")
   void of_delegatesToNext_whenContextIsEmpty() throws Exception {
-    // fail-open: when context is not available, rollout check is skipped
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.empty());
 
     HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
     ServerRequest request = mock(ServerRequest.class);
-    when(request.servletRequest()).thenReturn(httpServletRequest);
-
+    stubServletRequest(request, httpServletRequest);
     when(contextResolver.resolve(httpServletRequest)).thenReturn(Optional.empty());
 
     HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
@@ -266,14 +292,13 @@ class FeatureFlagHandlerFilterFunctionTest {
   @Test
   @SuppressWarnings("unchecked")
   void of_usesProviderRollout_whenProviderReturnsValue() throws Exception {
-    // Provider returns 70, fallback is 50 — provider value takes precedence
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.of(70));
 
     HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
     ServerRequest request = mock(ServerRequest.class);
-    when(request.servletRequest()).thenReturn(httpServletRequest);
+    stubServletRequest(request, httpServletRequest);
 
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(httpServletRequest)).thenReturn(Optional.of(context));
@@ -313,6 +338,7 @@ class FeatureFlagHandlerFilterFunctionTest {
 
     ServerRequest request = mock(ServerRequest.class);
     when(request.servletRequest()).thenReturn(httpServletRequest);
+    when(contextResolver.resolve(httpServletRequest)).thenReturn(Optional.empty());
 
     when(conditionEvaluator.evaluate(eq("headers['X-Beta'] != null"), any())).thenReturn(true);
 
@@ -339,6 +365,7 @@ class FeatureFlagHandlerFilterFunctionTest {
 
     ServerRequest request = mock(ServerRequest.class);
     when(request.servletRequest()).thenReturn(httpServletRequest);
+    when(contextResolver.resolve(httpServletRequest)).thenReturn(Optional.empty());
 
     when(conditionEvaluator.evaluate(eq("headers['X-Beta'] != null"), any())).thenReturn(false);
 
@@ -363,7 +390,12 @@ class FeatureFlagHandlerFilterFunctionTest {
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.empty());
 
+    HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
+    stubServletRequestForConditionVariables(httpServletRequest);
     ServerRequest request = mock(ServerRequest.class);
+    when(request.servletRequest()).thenReturn(httpServletRequest);
+    when(contextResolver.resolve(httpServletRequest)).thenReturn(Optional.empty());
+
     HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
     ServerResponse okResponse = mock(ServerResponse.class);
     when(next.handle(request)).thenReturn(okResponse);
@@ -376,42 +408,14 @@ class FeatureFlagHandlerFilterFunctionTest {
 
   @Test
   @SuppressWarnings("unchecked")
-  void of_evaluatesConditionBeforeRollout() throws Exception {
-    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
-
-    HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
-    stubServletRequestForConditionVariables(httpServletRequest);
-
-    ServerRequest request = mock(ServerRequest.class);
-    when(request.servletRequest()).thenReturn(httpServletRequest);
-
-    when(conditionEvaluator.evaluate(eq("headers['X-Beta'] != null"), any())).thenReturn(false);
-
-    HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
-    ServerResponse deniedResponse = mock(ServerResponse.class);
-    when(resolution.resolve(eq(request), any(FeatureFlagAccessDeniedException.class)))
-        .thenReturn(deniedResponse);
-
-    // rollout = 50, but condition fails first — rollout check must not be reached
-    HandlerFilterFunction<ServerResponse, ServerResponse> filter =
-        filterFunctionWithRollout.of("my-feature", "headers['X-Beta'] != null", 50);
-    filter.filter(request, next);
-
-    verifyNoInteractions(rolloutPercentageProvider);
-    verifyNoInteractions(contextResolver);
-  }
-
-  @Test
-  @SuppressWarnings("unchecked")
   void of_usesFallbackRollout_whenProviderReturnsEmpty() throws Exception {
-    // Provider returns empty, fallback 30 is used
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.empty());
 
     HttpServletRequest httpServletRequest = mock(HttpServletRequest.class);
     ServerRequest request = mock(ServerRequest.class);
-    when(request.servletRequest()).thenReturn(httpServletRequest);
+    stubServletRequest(request, httpServletRequest);
 
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(httpServletRequest)).thenReturn(Optional.of(context));
@@ -429,5 +433,35 @@ class FeatureFlagHandlerFilterFunctionTest {
     assertThat(result).isEqualTo(deniedResponse);
     verify(rolloutStrategy).isInRollout("my-feature", context, 30);
     verifyNoInteractions(next);
+  }
+
+  // --- pipeline delegation ---
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void of_delegatesToPipeline() throws Exception {
+    FeatureFlagEvaluationPipeline pipeline = mock(FeatureFlagEvaluationPipeline.class);
+    FeatureFlagHandlerFilterFunction filterFn =
+        new FeatureFlagHandlerFilterFunction(
+            pipeline, resolution, rolloutPercentageProvider, contextResolver);
+
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
+        .thenReturn(OptionalInt.empty());
+    HttpServletRequest httpRequest = mock(HttpServletRequest.class);
+    stubServletRequestForConditionVariables(httpRequest);
+    ServerRequest request = mock(ServerRequest.class);
+    when(request.servletRequest()).thenReturn(httpRequest);
+    when(contextResolver.resolve(httpRequest)).thenReturn(Optional.empty());
+    when(pipeline.evaluate(any())).thenReturn(AccessDecision.allowed());
+
+    HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
+    ServerResponse okResponse = mock(ServerResponse.class);
+    when(next.handle(request)).thenReturn(okResponse);
+
+    HandlerFilterFunction<ServerResponse, ServerResponse> filter = filterFn.of("my-feature");
+    ServerResponse result = filter.filter(request, next);
+
+    assertThat(result).isEqualTo(okResponse);
+    verify(pipeline).evaluate(any());
   }
 }

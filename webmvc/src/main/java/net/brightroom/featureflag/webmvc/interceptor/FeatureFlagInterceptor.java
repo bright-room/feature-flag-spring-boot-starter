@@ -2,17 +2,12 @@ package net.brightroom.featureflag.webmvc.interceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.time.Clock;
-import java.util.Optional;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
-import net.brightroom.featureflag.core.condition.ConditionVariables;
-import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
-import net.brightroom.featureflag.core.context.FeatureFlagContext;
+import net.brightroom.featureflag.core.evaluation.AccessDecision;
+import net.brightroom.featureflag.core.evaluation.EvaluationContext;
+import net.brightroom.featureflag.core.evaluation.FeatureFlagEvaluationPipeline;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
-import net.brightroom.featureflag.core.provider.ScheduleProvider;
-import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.condition.HttpServletConditionVariables;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
 import org.jspecify.annotations.NonNull;
@@ -29,47 +24,27 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * by {@link net.brightroom.featureflag.webmvc.exception.FeatureFlagExceptionHandler}.
  */
 public class FeatureFlagInterceptor implements HandlerInterceptor {
-  private final FeatureFlagProvider featureFlagProvider;
-  private final RolloutStrategy rolloutStrategy;
-  private final FeatureFlagContextResolver contextResolver;
+
+  private final FeatureFlagEvaluationPipeline pipeline;
   private final RolloutPercentageProvider rolloutPercentageProvider;
-  private final FeatureFlagConditionEvaluator conditionEvaluator;
-  private final ScheduleProvider scheduleProvider;
-  private final Clock clock;
+  private final FeatureFlagContextResolver contextResolver;
 
   /**
    * Creates a new {@link FeatureFlagInterceptor}.
    *
-   * @param featureFlagProvider the provider used to check whether a feature flag is enabled; must
-   *     not be null
-   * @param rolloutStrategy the strategy used to determine rollout bucket membership; must not be
-   *     null
-   * @param contextResolver the resolver used to obtain the feature flag context from the request;
-   *     must not be null
+   * @param pipeline the evaluation pipeline that performs all feature flag checks; must not be null
    * @param rolloutPercentageProvider the provider that supplies per-flag rollout percentages,
    *     overriding annotation-level values when present; must not be null
-   * @param conditionEvaluator the evaluator used to evaluate SpEL condition expressions; must not
-   *     be null
-   * @param scheduleProvider the provider that supplies per-flag schedule configurations; must not
-   *     be null
-   * @param clock the clock used to obtain the current time for schedule evaluation; must not be
-   *     null
+   * @param contextResolver the resolver used to obtain the feature flag context from the request;
+   *     must not be null
    */
   public FeatureFlagInterceptor(
-      FeatureFlagProvider featureFlagProvider,
-      RolloutStrategy rolloutStrategy,
-      FeatureFlagContextResolver contextResolver,
+      FeatureFlagEvaluationPipeline pipeline,
       RolloutPercentageProvider rolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator,
-      ScheduleProvider scheduleProvider,
-      Clock clock) {
-    this.featureFlagProvider = featureFlagProvider;
-    this.rolloutStrategy = rolloutStrategy;
-    this.contextResolver = contextResolver;
+      FeatureFlagContextResolver contextResolver) {
+    this.pipeline = pipeline;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
-    this.conditionEvaluator = conditionEvaluator;
-    this.scheduleProvider = scheduleProvider;
-    this.clock = clock;
+    this.contextResolver = contextResolver;
   }
 
   @Override
@@ -81,31 +56,28 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
       return true;
     }
 
+    FeatureFlag annotation = resolveAnnotation(handlerMethod);
+    if (annotation == null) {
+      return true;
+    }
+
+    validateAnnotation(annotation);
+
+    EvaluationContext context = buildContext(request, annotation);
+    AccessDecision decision = pipeline.evaluate(context);
+
+    if (decision instanceof AccessDecision.Denied denied) {
+      throw new FeatureFlagAccessDeniedException(denied.featureName());
+    }
+    return true;
+  }
+
+  private FeatureFlag resolveAnnotation(HandlerMethod handlerMethod) {
     FeatureFlag methodAnnotation = handlerMethod.getMethodAnnotation(FeatureFlag.class);
     if (methodAnnotation != null) {
-      validateAnnotation(methodAnnotation);
-      if (checkFeatureFlag(methodAnnotation)) {
-        throw new FeatureFlagAccessDeniedException(methodAnnotation.value());
-      }
-      checkSchedule(methodAnnotation);
-      checkCondition(request, methodAnnotation);
-      checkRollout(request, methodAnnotation);
-      return true;
+      return methodAnnotation;
     }
-
-    FeatureFlag classAnnotation = handlerMethod.getBeanType().getAnnotation(FeatureFlag.class);
-    if (classAnnotation == null) {
-      return true;
-    }
-    validateAnnotation(classAnnotation);
-    if (checkFeatureFlag(classAnnotation)) {
-      throw new FeatureFlagAccessDeniedException(classAnnotation.value());
-    }
-    checkSchedule(classAnnotation);
-    checkCondition(request, classAnnotation);
-    checkRollout(request, classAnnotation);
-
-    return true;
+    return handlerMethod.getBeanType().getAnnotation(FeatureFlag.class);
   }
 
   private void validateAnnotation(FeatureFlag annotation) {
@@ -120,42 +92,15 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
     }
   }
 
-  private boolean checkFeatureFlag(FeatureFlag annotation) {
-    return !featureFlagProvider.isFeatureEnabled(annotation.value());
-  }
-
-  private void checkSchedule(FeatureFlag annotation) {
-    scheduleProvider
-        .getSchedule(annotation.value())
-        .ifPresent(
-            schedule -> {
-              if (!schedule.isActive(clock.instant())) {
-                throw new FeatureFlagAccessDeniedException(annotation.value());
-              }
-            });
-  }
-
-  private void checkCondition(HttpServletRequest request, FeatureFlag annotation) {
-    String condition = annotation.condition();
-    if (condition.isEmpty()) {
-      return;
-    }
-    ConditionVariables variables = HttpServletConditionVariables.build(request);
-    if (!conditionEvaluator.evaluate(condition, variables)) {
-      throw new FeatureFlagAccessDeniedException(annotation.value());
-    }
-  }
-
-  private void checkRollout(HttpServletRequest request, FeatureFlag annotation) {
+  private EvaluationContext buildContext(HttpServletRequest request, FeatureFlag annotation) {
+    String featureName = annotation.value();
     int rollout =
-        rolloutPercentageProvider
-            .getRolloutPercentage(annotation.value())
-            .orElse(annotation.rollout());
-    if (rollout >= 100) return;
-    Optional<FeatureFlagContext> context = contextResolver.resolve(request);
-    if (context.isPresent()
-        && !rolloutStrategy.isInRollout(annotation.value(), context.get(), rollout)) {
-      throw new FeatureFlagAccessDeniedException(annotation.value());
-    }
+        rolloutPercentageProvider.getRolloutPercentage(featureName).orElse(annotation.rollout());
+    return new EvaluationContext(
+        featureName,
+        annotation.condition(),
+        rollout,
+        HttpServletConditionVariables.build(request),
+        contextResolver.resolve(request).orElse(null));
   }
 }

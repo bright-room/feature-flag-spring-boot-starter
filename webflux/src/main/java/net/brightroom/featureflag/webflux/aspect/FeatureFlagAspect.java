@@ -1,16 +1,14 @@
 package net.brightroom.featureflag.webflux.aspect;
 
 import java.lang.reflect.Method;
-import java.time.Clock;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
-import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
+import net.brightroom.featureflag.core.evaluation.AccessDecision;
+import net.brightroom.featureflag.core.evaluation.EvaluationContext;
+import net.brightroom.featureflag.core.evaluation.ReactiveFeatureFlagEvaluationPipeline;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
-import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
 import net.brightroom.featureflag.webflux.condition.ServerHttpConditionVariables;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
-import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -37,13 +35,9 @@ import reactor.core.publisher.Mono;
 @Aspect
 public class FeatureFlagAspect {
 
-  private final ReactiveFeatureFlagProvider reactiveFeatureFlagProvider;
-  private final ReactiveRolloutStrategy rolloutStrategy;
+  private final ReactiveFeatureFlagEvaluationPipeline pipeline;
   private final ReactiveFeatureFlagContextResolver contextResolver;
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
-  private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator;
-  private final ReactiveScheduleProvider reactiveScheduleProvider;
-  private final Clock clock;
 
   /**
    * Around advice that checks the feature flag before proceeding with the annotated method.
@@ -71,236 +65,59 @@ public class FeatureFlagAspect {
     String featureName = annotation.value();
     String condition = annotation.condition();
     int annotationRollout = annotation.rollout();
-    Mono<Boolean> enabledMono =
-        reactiveFeatureFlagProvider.isFeatureEnabled(featureName).defaultIfEmpty(false);
-    Mono<Boolean> scheduleMono =
-        reactiveScheduleProvider
-            .getSchedule(featureName)
-            .map(schedule -> schedule.isActive(clock.instant()))
-            .defaultIfEmpty(true);
-    Mono<Integer> rolloutMono =
-        rolloutPercentageProvider
-            .getRolloutPercentage(featureName)
-            .defaultIfEmpty(annotationRollout);
 
     Class<?> returnType = ((MethodSignature) joinPoint.getSignature()).getReturnType();
 
+    Mono<AccessDecision> decisionMono =
+        Mono.deferContextual(
+            ctx -> {
+              ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
+              return Mono.zip(
+                      rolloutPercentageProvider
+                          .getRolloutPercentage(featureName)
+                          .defaultIfEmpty(annotationRollout),
+                      contextResolver
+                          .resolve(exchange.getRequest())
+                          .map(java.util.Optional::of)
+                          .defaultIfEmpty(java.util.Optional.empty()))
+                  .flatMap(
+                      tuple -> {
+                        EvaluationContext evalCtx =
+                            new EvaluationContext(
+                                featureName,
+                                condition,
+                                tuple.getT1(),
+                                ServerHttpConditionVariables.build(exchange.getRequest()),
+                                tuple.getT2().orElse(null));
+                        return pipeline.evaluate(evalCtx);
+                      });
+            });
+
     if (Mono.class.isAssignableFrom(returnType)) {
-      return enabledMono.flatMap(
-          enabled ->
-              handleMonoEnabled(
-                  joinPoint, featureName, condition, rolloutMono, scheduleMono, enabled));
+      return decisionMono.flatMap(
+          decision -> {
+            if (decision instanceof AccessDecision.Denied denied) {
+              return Mono.error(new FeatureFlagAccessDeniedException(denied.featureName()));
+            }
+            return proceedAsMono(joinPoint);
+          });
     }
 
     if (Flux.class.isAssignableFrom(returnType)) {
-      return enabledMono.flatMapMany(
-          enabled ->
-              handleFluxEnabled(
-                  joinPoint, featureName, condition, rolloutMono, scheduleMono, enabled));
+      return decisionMono.flatMapMany(
+          decision -> {
+            if (decision instanceof AccessDecision.Denied denied) {
+              return Flux.error(new FeatureFlagAccessDeniedException(denied.featureName()));
+            }
+            return proceedAsFlux(joinPoint);
+          });
     }
 
-    // Non-reactive return type: not supported in WebFlux
     throw new IllegalStateException(
         "@FeatureFlag on WebFlux controller method '"
             + ((MethodSignature) joinPoint.getSignature()).getMethod().getName()
             + "' requires a reactive return type (Mono or Flux). "
             + "Non-reactive return types are not supported.");
-  }
-
-  private Mono<Object> handleMonoEnabled(
-      ProceedingJoinPoint joinPoint,
-      String featureName,
-      String condition,
-      Mono<Integer> rolloutMono,
-      Mono<Boolean> scheduleMono,
-      boolean enabled) {
-    if (!enabled) {
-      return Mono.error(new FeatureFlagAccessDeniedException(featureName));
-    }
-    return scheduleMono.flatMap(
-        active -> {
-          if (!active) {
-            return Mono.error(new FeatureFlagAccessDeniedException(featureName));
-          }
-          if (!condition.isEmpty()) {
-            return evaluateConditionForMono(joinPoint, featureName, condition, rolloutMono);
-          }
-          return rolloutMono.flatMap(
-              rollout -> handleMonoRolloutFromContext(joinPoint, featureName, rollout));
-        });
-  }
-
-  private Mono<Object> evaluateConditionForMono(
-      ProceedingJoinPoint joinPoint,
-      String featureName,
-      String condition,
-      Mono<Integer> rolloutMono) {
-    return Mono.deferContextual(
-        ctx -> {
-          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-          return conditionEvaluator
-              .evaluate(condition, ServerHttpConditionVariables.build(exchange.getRequest()))
-              .flatMap(
-                  passed ->
-                      handleMonoConditionResult(
-                          joinPoint, featureName, rolloutMono, exchange, passed));
-        });
-  }
-
-  private Mono<Object> handleMonoConditionResult(
-      ProceedingJoinPoint joinPoint,
-      String featureName,
-      Mono<Integer> rolloutMono,
-      ServerWebExchange exchange,
-      boolean passed) {
-    if (!passed) {
-      return Mono.error(new FeatureFlagAccessDeniedException(featureName));
-    }
-    return proceedMonoWithRollout(joinPoint, featureName, rolloutMono, exchange);
-  }
-
-  private Mono<Object> handleMonoRolloutFromContext(
-      ProceedingJoinPoint joinPoint, String featureName, int rollout) {
-    if (rollout >= 100) {
-      return proceedAsMono(joinPoint);
-    }
-    return Mono.deferContextual(
-        ctx -> {
-          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-          return shouldProceed(featureName, exchange, rollout)
-              .flatMap(proceed -> handleMonoProceed(joinPoint, featureName, proceed));
-        });
-  }
-
-  private Mono<Object> proceedMonoWithRollout(
-      ProceedingJoinPoint joinPoint,
-      String featureName,
-      Mono<Integer> rolloutMono,
-      ServerWebExchange exchange) {
-    return rolloutMono.flatMap(
-        rollout -> handleMonoRolloutWithExchange(joinPoint, featureName, exchange, rollout));
-  }
-
-  private Mono<Object> handleMonoRolloutWithExchange(
-      ProceedingJoinPoint joinPoint, String featureName, ServerWebExchange exchange, int rollout) {
-    if (rollout >= 100) {
-      return proceedAsMono(joinPoint);
-    }
-    return shouldProceed(featureName, exchange, rollout)
-        .flatMap(proceed -> handleMonoProceed(joinPoint, featureName, proceed));
-  }
-
-  private Mono<Object> handleMonoProceed(
-      ProceedingJoinPoint joinPoint, String featureName, boolean proceed) {
-    if (!proceed) {
-      return Mono.error(new FeatureFlagAccessDeniedException(featureName));
-    }
-    return proceedAsMono(joinPoint);
-  }
-
-  private Flux<Object> handleFluxEnabled(
-      ProceedingJoinPoint joinPoint,
-      String featureName,
-      String condition,
-      Mono<Integer> rolloutMono,
-      Mono<Boolean> scheduleMono,
-      boolean enabled) {
-    if (!enabled) {
-      return Flux.error(new FeatureFlagAccessDeniedException(featureName));
-    }
-    return scheduleMono.flatMapMany(
-        active -> {
-          if (!active) {
-            return Flux.error(new FeatureFlagAccessDeniedException(featureName));
-          }
-          if (!condition.isEmpty()) {
-            return evaluateConditionForFlux(joinPoint, featureName, condition, rolloutMono);
-          }
-          return rolloutMono.flatMapMany(
-              rollout -> handleFluxRolloutFromContext(joinPoint, featureName, rollout));
-        });
-  }
-
-  private Flux<Object> evaluateConditionForFlux(
-      ProceedingJoinPoint joinPoint,
-      String featureName,
-      String condition,
-      Mono<Integer> rolloutMono) {
-    return Flux.deferContextual(
-        ctx -> {
-          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-          return conditionEvaluator
-              .evaluate(condition, ServerHttpConditionVariables.build(exchange.getRequest()))
-              .flatMapMany(
-                  passed ->
-                      handleFluxConditionResult(
-                          joinPoint, featureName, rolloutMono, exchange, passed));
-        });
-  }
-
-  private Flux<Object> handleFluxConditionResult(
-      ProceedingJoinPoint joinPoint,
-      String featureName,
-      Mono<Integer> rolloutMono,
-      ServerWebExchange exchange,
-      boolean passed) {
-    if (!passed) {
-      return Flux.error(new FeatureFlagAccessDeniedException(featureName));
-    }
-    return proceedFluxWithRollout(joinPoint, featureName, rolloutMono, exchange);
-  }
-
-  private Flux<Object> handleFluxRolloutFromContext(
-      ProceedingJoinPoint joinPoint, String featureName, int rollout) {
-    if (rollout >= 100) {
-      return proceedAsFlux(joinPoint);
-    }
-    return Flux.deferContextual(
-        ctx -> {
-          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-          return shouldProceed(featureName, exchange, rollout)
-              .flatMapMany(proceed -> handleFluxProceed(joinPoint, featureName, proceed));
-        });
-  }
-
-  private Flux<Object> proceedFluxWithRollout(
-      ProceedingJoinPoint joinPoint,
-      String featureName,
-      Mono<Integer> rolloutMono,
-      ServerWebExchange exchange) {
-    return rolloutMono.flatMapMany(
-        rollout -> handleFluxRolloutWithExchange(joinPoint, featureName, exchange, rollout));
-  }
-
-  private Flux<Object> handleFluxRolloutWithExchange(
-      ProceedingJoinPoint joinPoint, String featureName, ServerWebExchange exchange, int rollout) {
-    if (rollout >= 100) {
-      return proceedAsFlux(joinPoint);
-    }
-    return shouldProceed(featureName, exchange, rollout)
-        .flatMapMany(proceed -> handleFluxProceed(joinPoint, featureName, proceed));
-  }
-
-  private Flux<Object> handleFluxProceed(
-      ProceedingJoinPoint joinPoint, String featureName, boolean proceed) {
-    if (!proceed) {
-      return Flux.error(new FeatureFlagAccessDeniedException(featureName));
-    }
-    return proceedAsFlux(joinPoint);
-  }
-
-  /**
-   * Resolves whether the request should proceed through the rollout check.
-   *
-   * <p>Returns {@code true} (proceed) when the context is empty (fail-open), or when the context is
-   * within the rollout bucket. Returns {@code false} when the context is outside the rollout
-   * bucket.
-   */
-  private Mono<Boolean> shouldProceed(String featureName, ServerWebExchange exchange, int rollout) {
-    return contextResolver
-        .resolve(exchange.getRequest())
-        .flatMap(context -> rolloutStrategy.isInRollout(featureName, context, rollout))
-        .defaultIfEmpty(true);
   }
 
   @SuppressWarnings("unchecked")
@@ -348,29 +165,19 @@ public class FeatureFlagAspect {
   /**
    * Creates a new {@code FeatureFlagAspect}.
    *
-   * @param reactiveFeatureFlagProvider the provider used to check whether a feature flag is enabled
-   * @param rolloutStrategy the strategy used to determine rollout bucket membership
-   * @param contextResolver the resolver used to extract context from the current request
+   * @param pipeline the reactive evaluation pipeline that performs all feature flag checks; must
+   *     not be null
+   * @param contextResolver the resolver used to extract context from the current request; must not
+   *     be null
    * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
-   *     feature
-   * @param conditionEvaluator the reactive evaluator used to evaluate SpEL condition expressions
-   * @param reactiveScheduleProvider the provider used to look up the schedule per feature
-   * @param clock the clock used to obtain the current time for schedule evaluation
+   *     feature; must not be null
    */
   public FeatureFlagAspect(
-      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      ReactiveRolloutStrategy rolloutStrategy,
+      ReactiveFeatureFlagEvaluationPipeline pipeline,
       ReactiveFeatureFlagContextResolver contextResolver,
-      ReactiveRolloutPercentageProvider rolloutPercentageProvider,
-      ReactiveFeatureFlagConditionEvaluator conditionEvaluator,
-      ReactiveScheduleProvider reactiveScheduleProvider,
-      Clock clock) {
-    this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
-    this.rolloutStrategy = rolloutStrategy;
+      ReactiveRolloutPercentageProvider rolloutPercentageProvider) {
+    this.pipeline = pipeline;
     this.contextResolver = contextResolver;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
-    this.conditionEvaluator = conditionEvaluator;
-    this.reactiveScheduleProvider = reactiveScheduleProvider;
-    this.clock = clock;
   }
 }
