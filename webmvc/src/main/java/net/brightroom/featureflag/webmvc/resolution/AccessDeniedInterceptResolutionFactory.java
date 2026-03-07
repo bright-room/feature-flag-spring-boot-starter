@@ -8,7 +8,7 @@ import net.brightroom.featureflag.core.properties.ResponseProperties;
  * response type.
  *
  * <p>Selects the appropriate resolution implementation from {@link
- * net.brightroom.featureflag.core.properties.ResponseProperties.ResponseType} configured via {@code
+ * net.brightroom.featureflag.core.properties.ResponseType ResponseType} configured via {@code
  * feature-flags.response.type}.
  */
 public class AccessDeniedInterceptResolutionFactory {
