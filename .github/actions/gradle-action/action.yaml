@@ -14,8 +14,7 @@ runs:
         distribution: 'corretto'
         java-version: 25
 
-    - shell: bash
-      run: chmod +x gradlew
+    - uses: gradle/actions/setup-gradle@v4
 
     - shell: bash
-      run: ./gradlew ${{ inputs.command }}
+      run: chmod +x gradlew && ./gradlew ${{ inputs.command }}

@@ -15,9 +15,6 @@ jobs:
         with:
           ref: ${{ github.event.release.tag_name }}
 
-      - name: Gradle Cache
-        uses: ./.github/actions/gradle-cache
-
       - name: Publish to maven central with Gradle
         uses: ./.github/actions/gradle-action
         env:
