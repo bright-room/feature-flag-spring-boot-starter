@@ -1,6 +1,7 @@
 package net.brightroom.featureflag.actuator.health;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
@@ -36,26 +37,47 @@ import reactor.core.publisher.Mono;
  *
  * <p>When a timeout is configured via {@link FeatureFlagHealthProperties#timeout()}, the health
  * check will report {@code DOWN} if the provider does not respond within that duration.
+ *
+ * <p>Additional details can be contributed by registering {@link ReactiveHealthDetailsContributor}
+ * beans.
  */
 public class ReactiveFeatureFlagHealthIndicator extends AbstractReactiveHealthIndicator {
 
   private final ReactiveFeatureFlagProvider provider;
   private final FeatureFlagProperties properties;
   private final Duration timeout;
+  private final List<ReactiveHealthDetailsContributor> contributors;
 
   /**
    * Creates a new {@link ReactiveFeatureFlagHealthIndicator}.
    *
    * @param provider the reactive feature flag provider to check
    * @param properties the feature flag configuration properties
-   * @param timeout the maximum time to wait for the provider, or {@code null} for no timeout
    */
   public ReactiveFeatureFlagHealthIndicator(
-      ReactiveFeatureFlagProvider provider, FeatureFlagProperties properties, Duration timeout) {
+      ReactiveFeatureFlagProvider provider, FeatureFlagProperties properties) {
+    this(provider, properties, null, List.of());
+  }
+
+  /**
+   * Creates a new {@link ReactiveFeatureFlagHealthIndicator} with timeout and custom detail
+   * contributors.
+   *
+   * @param provider the reactive feature flag provider to check
+   * @param properties the feature flag configuration properties
+   * @param timeout the maximum time to wait for the provider, or {@code null} for no timeout
+   * @param contributors the list of contributors that add custom details to the health response
+   */
+  public ReactiveFeatureFlagHealthIndicator(
+      ReactiveFeatureFlagProvider provider,
+      FeatureFlagProperties properties,
+      Duration timeout,
+      List<ReactiveHealthDetailsContributor> contributors) {
     super("Feature flag health check failed");
     this.provider = provider;
     this.properties = properties;
     this.timeout = timeout;
+    this.contributors = contributors;
   }
 
   @Override
@@ -75,20 +97,24 @@ public class ReactiveFeatureFlagHealthIndicator extends AbstractReactiveHealthIn
       featuresMono = featuresMono.timeout(timeout);
     }
 
-    return featuresMono.map(
+    return featuresMono.flatMap(
         features -> {
           long totalCount = features.size();
           long enabledCount = features.values().stream().filter(Boolean::booleanValue).count();
           long disabledCount = totalCount - enabledCount;
 
-          return builder
+          builder
               .up()
               .withDetail("provider", provider.getClass().getSimpleName())
               .withDetail("totalFlags", totalCount)
               .withDetail("enabledFlags", enabledCount)
               .withDetail("disabledFlags", disabledCount)
-              .withDetail("defaultEnabled", properties.defaultEnabled())
-              .build();
+              .withDetail("defaultEnabled", properties.defaultEnabled());
+
+          return Flux.fromIterable(contributors)
+              .flatMap(ReactiveHealthDetailsContributor::contributeDetails)
+              .doOnNext(details -> details.forEach(builder::withDetail))
+              .then(Mono.fromCallable(builder::build));
         });
   }
 }

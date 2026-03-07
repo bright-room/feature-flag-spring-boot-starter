@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveFeatureFlagProvider;
@@ -27,7 +28,7 @@ class ReactiveFeatureFlagHealthIndicatorTest {
         new MutableInMemoryReactiveFeatureFlagProvider(
             Map.of("feature-a", true, "feature-b", false), false);
     when(properties.defaultEnabled()).thenReturn(false);
-    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null);
+    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health().block();
 
@@ -46,7 +47,7 @@ class ReactiveFeatureFlagHealthIndicatorTest {
         featureName -> Mono.just("feature-a".equals(featureName));
     when(properties.featureNames()).thenReturn(Map.of("feature-a", true, "feature-b", false));
     when(properties.defaultEnabled()).thenReturn(false);
-    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null);
+    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health().block();
 
@@ -62,7 +63,7 @@ class ReactiveFeatureFlagHealthIndicatorTest {
     ReactiveFeatureFlagProvider provider =
         featureName -> Mono.error(new RuntimeException("Connection refused"));
     when(properties.featureNames()).thenReturn(Map.of("feature-a", true));
-    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null);
+    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health().block();
 
@@ -74,7 +75,7 @@ class ReactiveFeatureFlagHealthIndicatorTest {
   void health_isUp_withNoFlags() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
     when(properties.defaultEnabled()).thenReturn(false);
-    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null);
+    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health().block();
 
@@ -89,7 +90,7 @@ class ReactiveFeatureFlagHealthIndicatorTest {
   void health_reflectsDefaultEnabled_true() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), true);
     when(properties.defaultEnabled()).thenReturn(true);
-    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null);
+    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health().block();
 
@@ -100,7 +101,7 @@ class ReactiveFeatureFlagHealthIndicatorTest {
   void health_includesProviderClassName() {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
     when(properties.defaultEnabled()).thenReturn(false);
-    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null);
+    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health().block();
 
@@ -114,7 +115,8 @@ class ReactiveFeatureFlagHealthIndicatorTest {
         featureName -> Mono.just(true).delayElement(Duration.ofSeconds(5));
     when(properties.featureNames()).thenReturn(Map.of("feature-a", true));
     var indicator =
-        new ReactiveFeatureFlagHealthIndicator(provider, properties, Duration.ofMillis(100));
+        new ReactiveFeatureFlagHealthIndicator(
+            provider, properties, Duration.ofMillis(100), List.of());
 
     Health health = indicator.health().block();
 
@@ -127,10 +129,57 @@ class ReactiveFeatureFlagHealthIndicatorTest {
     var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of("feature-a", true), false);
     when(properties.defaultEnabled()).thenReturn(false);
     var indicator =
-        new ReactiveFeatureFlagHealthIndicator(provider, properties, Duration.ofSeconds(5));
+        new ReactiveFeatureFlagHealthIndicator(
+            provider, properties, Duration.ofSeconds(5), List.of());
 
     Health health = indicator.health().block();
 
     assertThat(health.getStatus()).isEqualTo(Status.UP);
+  }
+
+  @Test
+  void health_includesContributorDetails() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    when(properties.defaultEnabled()).thenReturn(false);
+    ReactiveHealthDetailsContributor contributor =
+        () -> Mono.just(Map.of("connectionPoolSize", 10, "latencyMs", 5));
+    var indicator =
+        new ReactiveFeatureFlagHealthIndicator(
+            provider, properties, null, List.of(contributor));
+
+    Health health = indicator.health().block();
+
+    assertThat(health.getStatus()).isEqualTo(Status.UP);
+    assertThat(health.getDetails())
+        .containsEntry("connectionPoolSize", 10)
+        .containsEntry("latencyMs", 5);
+  }
+
+  @Test
+  void health_mergesMultipleContributorDetails() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    when(properties.defaultEnabled()).thenReturn(false);
+    ReactiveHealthDetailsContributor contributor1 = () -> Mono.just(Map.of("key1", "value1"));
+    ReactiveHealthDetailsContributor contributor2 = () -> Mono.just(Map.of("key2", "value2"));
+    var indicator =
+        new ReactiveFeatureFlagHealthIndicator(
+            provider, properties, null, List.of(contributor1, contributor2));
+
+    Health health = indicator.health().block();
+
+    assertThat(health.getDetails()).containsEntry("key1", "value1").containsEntry("key2", "value2");
+  }
+
+  @Test
+  void health_withNoContributors_hasDefaultDetails() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    when(properties.defaultEnabled()).thenReturn(false);
+    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, null, List.of());
+
+    Health health = indicator.health().block();
+
+    assertThat(health.getStatus()).isEqualTo(Status.UP);
+    assertThat(health.getDetails())
+        .containsKeys("provider", "totalFlags", "enabledFlags", "disabledFlags", "defaultEnabled");
   }
 }

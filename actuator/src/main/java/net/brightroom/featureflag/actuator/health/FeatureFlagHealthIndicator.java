@@ -2,6 +2,7 @@ package net.brightroom.featureflag.actuator.health;
 
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -37,26 +38,45 @@ import org.springframework.boot.health.contributor.Health;
  *
  * <p>When a timeout is configured via {@link FeatureFlagHealthProperties#timeout()}, the health
  * check will report {@code DOWN} if the provider does not respond within that duration.
+ *
+ * <p>Additional details can be contributed by registering {@link HealthDetailsContributor} beans.
  */
 public class FeatureFlagHealthIndicator extends AbstractHealthIndicator {
 
   private final FeatureFlagProvider provider;
   private final FeatureFlagProperties properties;
   private final Duration timeout;
+  private final List<HealthDetailsContributor> contributors;
 
   /**
    * Creates a new {@link FeatureFlagHealthIndicator}.
    *
    * @param provider the feature flag provider to check
    * @param properties the feature flag configuration properties
-   * @param timeout the maximum time to wait for the provider, or {@code null} for no timeout
    */
   public FeatureFlagHealthIndicator(
-      FeatureFlagProvider provider, FeatureFlagProperties properties, Duration timeout) {
+      FeatureFlagProvider provider, FeatureFlagProperties properties) {
+    this(provider, properties, null, List.of());
+  }
+
+  /**
+   * Creates a new {@link FeatureFlagHealthIndicator} with timeout and custom detail contributors.
+   *
+   * @param provider the feature flag provider to check
+   * @param properties the feature flag configuration properties
+   * @param timeout the maximum time to wait for the provider, or {@code null} for no timeout
+   * @param contributors the list of contributors that add custom details to the health response
+   */
+  public FeatureFlagHealthIndicator(
+      FeatureFlagProvider provider,
+      FeatureFlagProperties properties,
+      Duration timeout,
+      List<HealthDetailsContributor> contributors) {
     super("Feature flag health check failed");
     this.provider = provider;
     this.properties = properties;
     this.timeout = timeout;
+    this.contributors = contributors;
   }
 
   @Override
@@ -81,6 +101,10 @@ public class FeatureFlagHealthIndicator extends AbstractHealthIndicator {
         .withDetail("enabledFlags", enabledCount)
         .withDetail("disabledFlags", disabledCount)
         .withDetail("defaultEnabled", properties.defaultEnabled());
+
+    for (HealthDetailsContributor contributor : contributors) {
+      contributor.contributeDetails().forEach(builder::withDetail);
+    }
   }
 
   private Map<String, Boolean> fetchFeatures() {
