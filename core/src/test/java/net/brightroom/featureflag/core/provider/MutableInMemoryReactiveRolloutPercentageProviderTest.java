@@ -18,7 +18,7 @@ class MutableInMemoryReactiveRolloutPercentageProviderTest {
   void setRolloutPercentage_storesPercentage_whenValueIsValid(int percentage) {
     var provider = new MutableInMemoryReactiveRolloutPercentageProvider(Map.of());
 
-    provider.setRolloutPercentage("feature-a", percentage);
+    provider.setRolloutPercentage("feature-a", percentage).block();
 
     assertEquals(percentage, provider.getRolloutPercentage("feature-a").block());
   }
