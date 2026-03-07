@@ -34,6 +34,10 @@ public class MutableInMemoryRolloutPercentageProvider implements MutableRolloutP
   /** {@inheritDoc} */
   @Override
   public void setRolloutPercentage(String featureName, int percentage) {
+    if (percentage < 0 || percentage > 100) {
+      throw new IllegalArgumentException(
+          "percentage must be between 0 and 100, but was: " + percentage);
+    }
     rolloutPercentages.put(featureName, percentage);
   }
 
