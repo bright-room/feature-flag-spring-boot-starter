@@ -34,14 +34,14 @@ public class MutableInMemoryReactiveRolloutPercentageProvider
 
   /** {@inheritDoc} */
   @Override
-  public void setRolloutPercentage(String featureName, int percentage) {
-    rolloutPercentages.put(featureName, percentage);
+  public Mono<Void> setRolloutPercentage(String featureName, int percentage) {
+    return Mono.<Void>fromRunnable(() -> rolloutPercentages.put(featureName, percentage));
   }
 
   /** {@inheritDoc} */
   @Override
-  public void removeRolloutPercentage(String featureName) {
-    rolloutPercentages.remove(featureName);
+  public Mono<Boolean> removeRolloutPercentage(String featureName) {
+    return Mono.fromCallable(() -> rolloutPercentages.remove(featureName) != null);
   }
 
   /**
