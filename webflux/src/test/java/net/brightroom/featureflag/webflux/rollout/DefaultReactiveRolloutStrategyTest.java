@@ -1,6 +1,7 @@
 package net.brightroom.featureflag.webflux.rollout;
 
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
+import net.brightroom.featureflag.core.rollout.DefaultReactiveRolloutStrategy;
 import org.junit.jupiter.api.Test;
 import reactor.test.StepVerifier;
 
