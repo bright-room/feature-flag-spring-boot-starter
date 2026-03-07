@@ -35,6 +35,13 @@ import org.jspecify.annotations.Nullable;
 public record Schedule(
     @Nullable LocalDateTime start, @Nullable LocalDateTime end, @Nullable ZoneId timezone) {
 
+  public Schedule {
+    if (start != null && end != null && start.isAfter(end)) {
+      throw new IllegalArgumentException(
+          "Schedule start must not be after end, but start=" + start + " end=" + end);
+    }
+  }
+
   /**
    * Returns whether the schedule window is active at the given instant.
    *

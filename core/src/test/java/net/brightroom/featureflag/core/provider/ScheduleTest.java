@@ -1,5 +1,7 @@
 package net.brightroom.featureflag.core.provider;
 
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -140,6 +142,43 @@ class ScheduleTest {
     Schedule schedule = new Schedule(null, LocalDateTime.of(2026, 6, 15, 12, 0), ZoneId.of("UTC"));
 
     assertTrue(schedule.isActive(now));
+  }
+
+  // --- constructor validation ---
+
+  @Test
+  void constructor_throwsIllegalArgumentException_whenStartIsAfterEnd() {
+    assertThatIllegalArgumentException()
+        .isThrownBy(
+            () ->
+                new Schedule(
+                    LocalDateTime.of(2026, 6, 15, 13, 0),
+                    LocalDateTime.of(2026, 6, 15, 12, 0),
+                    ZoneId.of("UTC")))
+        .withMessageContaining("Schedule start must not be after end");
+  }
+
+  @Test
+  void constructor_doesNotThrow_whenStartEqualsEnd() {
+    assertThatNoException()
+        .isThrownBy(
+            () ->
+                new Schedule(
+                    LocalDateTime.of(2026, 6, 15, 12, 0),
+                    LocalDateTime.of(2026, 6, 15, 12, 0),
+                    ZoneId.of("UTC")));
+  }
+
+  @Test
+  void constructor_doesNotThrow_whenStartIsNull() {
+    assertThatNoException()
+        .isThrownBy(() -> new Schedule(null, LocalDateTime.of(2026, 6, 15, 12, 0), null));
+  }
+
+  @Test
+  void constructor_doesNotThrow_whenEndIsNull() {
+    assertThatNoException()
+        .isThrownBy(() -> new Schedule(LocalDateTime.of(2026, 6, 15, 12, 0), null, null));
   }
 
   // --- explicit UTC offset ---
