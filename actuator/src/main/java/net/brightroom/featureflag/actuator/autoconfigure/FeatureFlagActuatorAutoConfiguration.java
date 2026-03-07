@@ -4,6 +4,7 @@ import java.util.List;
 import net.brightroom.featureflag.actuator.endpoint.FeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.endpoint.ReactiveFeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.health.FeatureFlagHealthIndicator;
+import net.brightroom.featureflag.actuator.health.FeatureFlagHealthProperties;
 import net.brightroom.featureflag.actuator.health.HealthDetailsContributor;
 import net.brightroom.featureflag.actuator.health.ReactiveFeatureFlagHealthIndicator;
 import net.brightroom.featureflag.actuator.health.ReactiveHealthDetailsContributor;
@@ -25,6 +26,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.health.autoconfigure.contributor.ConditionalOnEnabledHealthIndicator;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
@@ -53,6 +55,7 @@ import org.springframework.context.annotation.Configuration;
       "net.brightroom.featureflag.webmvc.autoconfigure.FeatureFlagMvcAutoConfiguration",
       "net.brightroom.featureflag.webflux.autoconfigure.FeatureFlagWebFluxAutoConfiguration"
     })
+@EnableConfigurationProperties(FeatureFlagHealthProperties.class)
 public class FeatureFlagActuatorAutoConfiguration {
 
   /** Creates a new {@link FeatureFlagActuatorAutoConfiguration}. */
@@ -63,6 +66,7 @@ public class FeatureFlagActuatorAutoConfiguration {
   static class ServletConfiguration {
 
     private final FeatureFlagProperties featureFlagProperties;
+    private final FeatureFlagHealthProperties featureFlagHealthProperties;
 
     /**
      * Registers a {@link MutableInMemoryFeatureFlagProvider} bean when no other {@link
@@ -103,7 +107,8 @@ public class FeatureFlagActuatorAutoConfiguration {
     @ConditionalOnEnabledHealthIndicator("featureFlag")
     FeatureFlagHealthIndicator featureFlagHealthIndicator(
         FeatureFlagProvider provider, List<HealthDetailsContributor> contributors) {
-      return new FeatureFlagHealthIndicator(provider, featureFlagProperties, contributors);
+      return new FeatureFlagHealthIndicator(
+          provider, featureFlagProperties, featureFlagHealthProperties.timeout(), contributors);
     }
 
     /**
@@ -125,8 +130,11 @@ public class FeatureFlagActuatorAutoConfiguration {
           provider, rolloutProvider, featureFlagProperties.defaultEnabled(), eventPublisher);
     }
 
-    ServletConfiguration(FeatureFlagProperties featureFlagProperties) {
+    ServletConfiguration(
+        FeatureFlagProperties featureFlagProperties,
+        FeatureFlagHealthProperties featureFlagHealthProperties) {
       this.featureFlagProperties = featureFlagProperties;
+      this.featureFlagHealthProperties = featureFlagHealthProperties;
     }
   }
 
@@ -135,6 +143,7 @@ public class FeatureFlagActuatorAutoConfiguration {
   static class ReactiveConfiguration {
 
     private final FeatureFlagProperties featureFlagProperties;
+    private final FeatureFlagHealthProperties featureFlagHealthProperties;
 
     /**
      * Registers a {@link MutableInMemoryReactiveFeatureFlagProvider} bean when no other {@link
@@ -176,7 +185,8 @@ public class FeatureFlagActuatorAutoConfiguration {
     @ConditionalOnEnabledHealthIndicator("featureFlag")
     ReactiveFeatureFlagHealthIndicator featureFlagHealthIndicator(
         ReactiveFeatureFlagProvider provider, List<ReactiveHealthDetailsContributor> contributors) {
-      return new ReactiveFeatureFlagHealthIndicator(provider, featureFlagProperties, contributors);
+      return new ReactiveFeatureFlagHealthIndicator(
+          provider, featureFlagProperties, featureFlagHealthProperties.timeout(), contributors);
     }
 
     /**
@@ -198,8 +208,11 @@ public class FeatureFlagActuatorAutoConfiguration {
           provider, rolloutProvider, featureFlagProperties.defaultEnabled(), eventPublisher);
     }
 
-    ReactiveConfiguration(FeatureFlagProperties featureFlagProperties) {
+    ReactiveConfiguration(
+        FeatureFlagProperties featureFlagProperties,
+        FeatureFlagHealthProperties featureFlagHealthProperties) {
       this.featureFlagProperties = featureFlagProperties;
+      this.featureFlagHealthProperties = featureFlagHealthProperties;
     }
   }
 }

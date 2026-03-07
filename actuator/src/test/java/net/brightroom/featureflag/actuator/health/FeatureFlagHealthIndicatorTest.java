@@ -3,6 +3,7 @@ package net.brightroom.featureflag.actuator.health;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
@@ -26,7 +27,7 @@ class FeatureFlagHealthIndicatorTest {
         new MutableInMemoryFeatureFlagProvider(
             Map.of("feature-a", true, "feature-b", false), false);
     when(properties.defaultEnabled()).thenReturn(false);
-    var indicator = new FeatureFlagHealthIndicator(provider, properties);
+    var indicator = new FeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health();
 
@@ -44,7 +45,7 @@ class FeatureFlagHealthIndicatorTest {
     FeatureFlagProvider provider = featureName -> "feature-a".equals(featureName);
     when(properties.featureNames()).thenReturn(Map.of("feature-a", true, "feature-b", false));
     when(properties.defaultEnabled()).thenReturn(false);
-    var indicator = new FeatureFlagHealthIndicator(provider, properties);
+    var indicator = new FeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health();
 
@@ -62,7 +63,7 @@ class FeatureFlagHealthIndicatorTest {
           throw new RuntimeException("Connection refused");
         };
     when(properties.featureNames()).thenReturn(Map.of("feature-a", true));
-    var indicator = new FeatureFlagHealthIndicator(provider, properties);
+    var indicator = new FeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health();
 
@@ -74,7 +75,7 @@ class FeatureFlagHealthIndicatorTest {
   void health_isUp_withNoFlags() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
     when(properties.defaultEnabled()).thenReturn(false);
-    var indicator = new FeatureFlagHealthIndicator(provider, properties);
+    var indicator = new FeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health();
 
@@ -89,7 +90,7 @@ class FeatureFlagHealthIndicatorTest {
   void health_reflectsDefaultEnabled_true() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), true);
     when(properties.defaultEnabled()).thenReturn(true);
-    var indicator = new FeatureFlagHealthIndicator(provider, properties);
+    var indicator = new FeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health();
 
@@ -100,7 +101,7 @@ class FeatureFlagHealthIndicatorTest {
   void health_includesProviderClassName() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
     when(properties.defaultEnabled()).thenReturn(false);
-    var indicator = new FeatureFlagHealthIndicator(provider, properties);
+    var indicator = new FeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health();
 
@@ -108,11 +109,45 @@ class FeatureFlagHealthIndicatorTest {
   }
 
   @Test
+  void health_isDown_whenProviderExceedsTimeout() throws InterruptedException {
+    FeatureFlagProvider provider =
+        featureName -> {
+          try {
+            Thread.sleep(5_000);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+          return true;
+        };
+    when(properties.featureNames()).thenReturn(Map.of("feature-a", true));
+    var indicator =
+        new FeatureFlagHealthIndicator(provider, properties, Duration.ofMillis(100), List.of());
+
+    Health health = indicator.health();
+
+    assertThat(health.getStatus()).isEqualTo(Status.DOWN);
+    assertThat(health.getDetails()).containsKey("error");
+  }
+
+  @Test
+  void health_isUp_whenProviderRespondsWithinTimeout() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    when(properties.defaultEnabled()).thenReturn(false);
+    var indicator =
+        new FeatureFlagHealthIndicator(provider, properties, Duration.ofSeconds(5), List.of());
+
+    Health health = indicator.health();
+
+    assertThat(health.getStatus()).isEqualTo(Status.UP);
+  }
+
+  @Test
   void health_includesContributorDetails() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
     when(properties.defaultEnabled()).thenReturn(false);
     HealthDetailsContributor contributor = () -> Map.of("connectionPoolSize", 10, "latencyMs", 5);
-    var indicator = new FeatureFlagHealthIndicator(provider, properties, List.of(contributor));
+    var indicator =
+        new FeatureFlagHealthIndicator(provider, properties, null, List.of(contributor));
 
     Health health = indicator.health();
 
@@ -129,7 +164,8 @@ class FeatureFlagHealthIndicatorTest {
     HealthDetailsContributor contributor1 = () -> Map.of("key1", "value1");
     HealthDetailsContributor contributor2 = () -> Map.of("key2", "value2");
     var indicator =
-        new FeatureFlagHealthIndicator(provider, properties, List.of(contributor1, contributor2));
+        new FeatureFlagHealthIndicator(
+            provider, properties, null, List.of(contributor1, contributor2));
 
     Health health = indicator.health();
 
@@ -140,7 +176,7 @@ class FeatureFlagHealthIndicatorTest {
   void health_withNoContributors_hasDefaultDetails() {
     var provider = new MutableInMemoryFeatureFlagProvider(Map.of(), false);
     when(properties.defaultEnabled()).thenReturn(false);
-    var indicator = new FeatureFlagHealthIndicator(provider, properties, List.of());
+    var indicator = new FeatureFlagHealthIndicator(provider, properties, null, List.of());
 
     Health health = indicator.health();
 
