@@ -23,7 +23,8 @@ class ReactiveRolloutEvaluationStepTest {
 
   @Test
   void evaluate_returnsAllowed_whenRolloutIs100() {
-    EvaluationContext ctx = new EvaluationContext("my-feature", "", 100, EMPTY_VARS, FLAG_CTX);
+    EvaluationContext ctx =
+        new EvaluationContext("my-feature", "", 100, EMPTY_VARS, () -> FLAG_CTX);
     StepVerifier.create(step.evaluate(ctx))
         .expectNextMatches(d -> d instanceof AccessDecision.Allowed)
         .verifyComplete();
@@ -32,7 +33,7 @@ class ReactiveRolloutEvaluationStepTest {
 
   @Test
   void evaluate_returnsAllowed_whenFlagContextIsNull_failOpen() {
-    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, null);
+    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, () -> null);
     StepVerifier.create(step.evaluate(ctx))
         .expectNextMatches(d -> d instanceof AccessDecision.Allowed)
         .verifyComplete();
@@ -42,7 +43,7 @@ class ReactiveRolloutEvaluationStepTest {
   @Test
   void evaluate_returnsAllowed_whenStrategyReturnsTrue() {
     when(strategy.isInRollout("my-feature", FLAG_CTX, 50)).thenReturn(Mono.just(true));
-    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, FLAG_CTX);
+    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, () -> FLAG_CTX);
     StepVerifier.create(step.evaluate(ctx))
         .expectNextMatches(d -> d instanceof AccessDecision.Allowed)
         .verifyComplete();
@@ -51,7 +52,7 @@ class ReactiveRolloutEvaluationStepTest {
   @Test
   void evaluate_returnsDenied_whenStrategyReturnsFalse() {
     when(strategy.isInRollout("my-feature", FLAG_CTX, 50)).thenReturn(Mono.just(false));
-    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, FLAG_CTX);
+    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, () -> FLAG_CTX);
     StepVerifier.create(step.evaluate(ctx))
         .expectNextMatches(
             d ->

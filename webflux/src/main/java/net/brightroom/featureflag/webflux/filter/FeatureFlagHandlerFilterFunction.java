@@ -132,7 +132,7 @@ public class FeatureFlagHandlerFilterFunction {
                           condition,
                           tuple.getT1(),
                           ServerHttpConditionVariables.build(request.exchange().getRequest()),
-                          tuple.getT2().orElse(null));
+                          () -> tuple.getT2().orElse(null));
                   return pipeline.evaluate(evalCtx);
                 })
             .flatMap(

@@ -15,7 +15,7 @@ class ReactiveEnabledEvaluationStepTest {
   private static final ConditionVariables EMPTY_VARS =
       new ConditionVariables(null, null, null, null, null, null);
   private static final EvaluationContext CTX =
-      new EvaluationContext("my-feature", "", 100, EMPTY_VARS, null);
+      new EvaluationContext("my-feature", "", 100, EMPTY_VARS, () -> null);
 
   private final ReactiveFeatureFlagProvider provider = mock(ReactiveFeatureFlagProvider.class);
   private final ReactiveEnabledEvaluationStep step = new ReactiveEnabledEvaluationStep(provider);

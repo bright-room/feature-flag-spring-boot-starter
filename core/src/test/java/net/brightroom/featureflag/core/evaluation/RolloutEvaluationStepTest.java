@@ -23,14 +23,14 @@ class RolloutEvaluationStepTest {
 
   @Test
   void evaluate_returnsEmpty_whenRolloutIs100() {
-    EvaluationContext ctx = new EvaluationContext("my-feature", "", 100, EMPTY_VARS, CTX);
+    EvaluationContext ctx = new EvaluationContext("my-feature", "", 100, EMPTY_VARS, () -> CTX);
     assertThat(step.evaluate(ctx)).isEmpty();
     verifyNoInteractions(strategy);
   }
 
   @Test
   void evaluate_returnsEmpty_whenFlagContextIsNull_failOpen() {
-    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, null);
+    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, () -> null);
     assertThat(step.evaluate(ctx)).isEmpty();
     verifyNoInteractions(strategy);
   }
@@ -38,14 +38,14 @@ class RolloutEvaluationStepTest {
   @Test
   void evaluate_returnsEmpty_whenStrategyReturnsTrue() {
     when(strategy.isInRollout("my-feature", CTX, 50)).thenReturn(true);
-    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, CTX);
+    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, () -> CTX);
     assertThat(step.evaluate(ctx)).isEmpty();
   }
 
   @Test
   void evaluate_returnsDenied_whenStrategyReturnsFalse() {
     when(strategy.isInRollout("my-feature", CTX, 50)).thenReturn(false);
-    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, CTX);
+    EvaluationContext ctx = new EvaluationContext("my-feature", "", 50, EMPTY_VARS, () -> CTX);
 
     Optional<AccessDecision> result = step.evaluate(ctx);
     assertThat(result).isPresent();

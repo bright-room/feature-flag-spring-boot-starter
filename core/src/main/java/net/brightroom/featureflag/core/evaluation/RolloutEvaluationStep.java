@@ -1,6 +1,7 @@
 package net.brightroom.featureflag.core.evaluation;
 
 import java.util.Optional;
+import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.evaluation.AccessDecision.DeniedReason;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import org.springframework.core.annotation.Order;
@@ -25,11 +26,12 @@ public class RolloutEvaluationStep implements EvaluationStep {
     if (context.rolloutPercentage() >= 100) {
       return Optional.empty();
     }
-    if (context.flagContext() == null) {
+    FeatureFlagContext flagContext = context.flagContextSupplier().get();
+    if (flagContext == null) {
       return Optional.empty(); // fail-open: no context available
     }
     if (!rolloutStrategy.isInRollout(
-        context.featureName(), context.flagContext(), context.rolloutPercentage())) {
+        context.featureName(), flagContext, context.rolloutPercentage())) {
       return Optional.of(
           AccessDecision.denied(context.featureName(), DeniedReason.ROLLOUT_EXCLUDED));
     }

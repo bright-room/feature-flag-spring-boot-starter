@@ -13,7 +13,7 @@ class ReactiveFeatureFlagEvaluationPipelineTest {
   private static final ConditionVariables EMPTY_VARS =
       new ConditionVariables(null, null, null, null, null, null);
   private static final EvaluationContext CTX =
-      new EvaluationContext("my-feature", "", 100, EMPTY_VARS, null);
+      new EvaluationContext("my-feature", "", 100, EMPTY_VARS, () -> null);
 
   @Test
   void evaluate_returnsAllowed_whenNoSteps() {

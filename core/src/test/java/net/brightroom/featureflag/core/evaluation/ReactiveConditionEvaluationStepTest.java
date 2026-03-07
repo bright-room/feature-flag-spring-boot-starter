@@ -25,7 +25,7 @@ class ReactiveConditionEvaluationStepTest {
 
   @Test
   void evaluate_returnsAllowed_whenConditionIsEmpty() {
-    EvaluationContext ctx = new EvaluationContext("my-feature", "", 100, EMPTY_VARS, null);
+    EvaluationContext ctx = new EvaluationContext("my-feature", "", 100, EMPTY_VARS, () -> null);
     StepVerifier.create(step.evaluate(ctx))
         .expectNextMatches(d -> d instanceof AccessDecision.Allowed)
         .verifyComplete();
@@ -36,7 +36,8 @@ class ReactiveConditionEvaluationStepTest {
   void evaluate_returnsAllowed_whenConditionPasses() {
     when(evaluator.evaluate(eq("headers['X-Beta'] != null"), any())).thenReturn(Mono.just(true));
     EvaluationContext ctx =
-        new EvaluationContext("my-feature", "headers['X-Beta'] != null", 100, EMPTY_VARS, null);
+        new EvaluationContext(
+            "my-feature", "headers['X-Beta'] != null", 100, EMPTY_VARS, () -> null);
     StepVerifier.create(step.evaluate(ctx))
         .expectNextMatches(d -> d instanceof AccessDecision.Allowed)
         .verifyComplete();
@@ -46,7 +47,8 @@ class ReactiveConditionEvaluationStepTest {
   void evaluate_returnsDenied_whenConditionFails() {
     when(evaluator.evaluate(eq("headers['X-Beta'] != null"), any())).thenReturn(Mono.just(false));
     EvaluationContext ctx =
-        new EvaluationContext("my-feature", "headers['X-Beta'] != null", 100, EMPTY_VARS, null);
+        new EvaluationContext(
+            "my-feature", "headers['X-Beta'] != null", 100, EMPTY_VARS, () -> null);
     StepVerifier.create(step.evaluate(ctx))
         .expectNextMatches(
             d ->

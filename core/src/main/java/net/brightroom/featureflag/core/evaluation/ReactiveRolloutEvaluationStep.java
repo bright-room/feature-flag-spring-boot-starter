@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.core.evaluation;
 
+import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.evaluation.AccessDecision.DeniedReason;
 import net.brightroom.featureflag.core.rollout.ReactiveRolloutStrategy;
 import org.springframework.core.annotation.Order;
@@ -25,11 +26,12 @@ public class ReactiveRolloutEvaluationStep implements ReactiveEvaluationStep {
     if (context.rolloutPercentage() >= 100) {
       return Mono.just(AccessDecision.allowed());
     }
-    if (context.flagContext() == null) {
+    FeatureFlagContext flagContext = context.flagContextSupplier().get();
+    if (flagContext == null) {
       return Mono.just(AccessDecision.allowed()); // fail-open: no context available
     }
     return rolloutStrategy
-        .isInRollout(context.featureName(), context.flagContext(), context.rolloutPercentage())
+        .isInRollout(context.featureName(), flagContext, context.rolloutPercentage())
         .map(
             inRollout ->
                 inRollout

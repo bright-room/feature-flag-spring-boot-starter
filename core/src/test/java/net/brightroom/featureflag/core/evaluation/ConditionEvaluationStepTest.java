@@ -23,7 +23,7 @@ class ConditionEvaluationStepTest {
 
   @Test
   void evaluate_returnsEmpty_whenConditionIsEmpty() {
-    EvaluationContext ctx = new EvaluationContext("my-feature", "", 100, EMPTY_VARS, null);
+    EvaluationContext ctx = new EvaluationContext("my-feature", "", 100, EMPTY_VARS, () -> null);
     assertThat(step.evaluate(ctx)).isEmpty();
     verifyNoInteractions(evaluator);
   }
@@ -32,7 +32,8 @@ class ConditionEvaluationStepTest {
   void evaluate_returnsEmpty_whenConditionPasses() {
     when(evaluator.evaluate(eq("headers['X-Beta'] != null"), any())).thenReturn(true);
     EvaluationContext ctx =
-        new EvaluationContext("my-feature", "headers['X-Beta'] != null", 100, EMPTY_VARS, null);
+        new EvaluationContext(
+            "my-feature", "headers['X-Beta'] != null", 100, EMPTY_VARS, () -> null);
     assertThat(step.evaluate(ctx)).isEmpty();
   }
 
@@ -40,7 +41,8 @@ class ConditionEvaluationStepTest {
   void evaluate_returnsDenied_whenConditionFails() {
     when(evaluator.evaluate(eq("headers['X-Beta'] != null"), any())).thenReturn(false);
     EvaluationContext ctx =
-        new EvaluationContext("my-feature", "headers['X-Beta'] != null", 100, EMPTY_VARS, null);
+        new EvaluationContext(
+            "my-feature", "headers['X-Beta'] != null", 100, EMPTY_VARS, () -> null);
 
     Optional<AccessDecision> result = step.evaluate(ctx);
     assertThat(result).isPresent();

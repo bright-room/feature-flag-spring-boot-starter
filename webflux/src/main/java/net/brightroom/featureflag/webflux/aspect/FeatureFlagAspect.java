@@ -88,7 +88,7 @@ public class FeatureFlagAspect {
                                 condition,
                                 tuple.getT1(),
                                 ServerHttpConditionVariables.build(exchange.getRequest()),
-                                tuple.getT2().orElse(null));
+                                () -> tuple.getT2().orElse(null));
                         return pipeline.evaluate(evalCtx);
                       });
             });

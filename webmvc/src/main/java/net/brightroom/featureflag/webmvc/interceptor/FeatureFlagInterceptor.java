@@ -101,6 +101,6 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
         annotation.condition(),
         rollout,
         HttpServletConditionVariables.build(request),
-        contextResolver.resolve(request).orElse(null));
+        () -> contextResolver.resolve(request).orElse(null));
   }
 }

@@ -123,7 +123,7 @@ public class FeatureFlagHandlerFilterFunction {
               condition,
               rollout,
               HttpServletConditionVariables.build(request.servletRequest()),
-              contextResolver.resolve(request.servletRequest()).orElse(null));
+              () -> contextResolver.resolve(request.servletRequest()).orElse(null));
       AccessDecision decision = pipeline.evaluate(context);
       if (decision instanceof AccessDecision.Denied denied) {
         return resolution.resolve(
