@@ -55,7 +55,7 @@ class MutableInMemoryReactiveRolloutPercentageProviderTest {
   void setRolloutPercentage_addsNewEntry() {
     var provider = new MutableInMemoryReactiveRolloutPercentageProvider(Map.of());
 
-    provider.setRolloutPercentage("feature-a", 75);
+    provider.setRolloutPercentage("feature-a", 75).block();
 
     assertEquals(75, provider.getRolloutPercentage("feature-a").block());
     assertEquals(Map.of("feature-a", 75), provider.getRolloutPercentages().block());
@@ -65,7 +65,7 @@ class MutableInMemoryReactiveRolloutPercentageProviderTest {
   void setRolloutPercentage_updatesExistingEntry() {
     var provider = new MutableInMemoryReactiveRolloutPercentageProvider(Map.of("feature-a", 50));
 
-    provider.setRolloutPercentage("feature-a", 80);
+    provider.setRolloutPercentage("feature-a", 80).block();
 
     assertEquals(80, provider.getRolloutPercentage("feature-a").block());
   }
@@ -86,7 +86,7 @@ class MutableInMemoryReactiveRolloutPercentageProviderTest {
     var provider = new MutableInMemoryReactiveRolloutPercentageProvider(Map.of("feature-a", 50));
     var snapshot = provider.getRolloutPercentages().block();
 
-    provider.setRolloutPercentage("feature-a", 80);
+    provider.setRolloutPercentage("feature-a", 80).block();
 
     assertEquals(50, snapshot.get("feature-a"), "snapshot must not reflect subsequent mutations");
   }
@@ -102,7 +102,7 @@ class MutableInMemoryReactiveRolloutPercentageProviderTest {
 
     try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
       for (String feature : features) {
-        executor.submit(() -> provider.setRolloutPercentage(feature, 50));
+        executor.submit(() -> provider.setRolloutPercentage(feature, 50).block());
       }
     }
 
