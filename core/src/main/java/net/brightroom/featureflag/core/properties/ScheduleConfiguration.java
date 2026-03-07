@@ -1,15 +1,15 @@
 package net.brightroom.featureflag.core.properties;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import net.brightroom.featureflag.core.provider.Schedule;
 
 /**
  * Configuration for the schedule window of a single feature flag.
  *
  * <p>Defines an optional {@code start} and {@code end} time (as {@link LocalDateTime}) and an
- * optional {@code timezone}. When {@link #isActive(Instant)} is called, the instant is converted to
- * the configured timezone (or system default if absent) and compared against the window.
+ * optional {@code timezone}. Use {@link #toSchedule()} to obtain the {@link Schedule} SPI value
+ * object which provides the {@code isActive(Instant)} evaluation logic.
  *
  * <p>Configuration example in {@code application.yml}:
  *
@@ -39,17 +39,12 @@ public class ScheduleConfiguration {
   private ZoneId timezone;
 
   /**
-   * Returns whether the schedule window is active at the given instant.
+   * Converts this property binding object to the SPI value type.
    *
-   * @param now the current instant to check; must not be null
-   * @return {@code true} if {@code now} falls within the configured window, {@code false} otherwise
+   * @return a new {@link Schedule} with the same start, end, and timezone values
    */
-  public boolean isActive(Instant now) {
-    ZoneId zone = timezone != null ? timezone : ZoneId.systemDefault();
-    LocalDateTime localNow = now.atZone(zone).toLocalDateTime();
-    if (start != null && localNow.isBefore(start)) return false;
-    if (end != null && localNow.isAfter(end)) return false;
-    return true;
+  Schedule toSchedule() {
+    return new Schedule(start, end, timezone);
   }
 
   /**
@@ -82,6 +77,10 @@ public class ScheduleConfiguration {
 
   // for property binding
   void setStart(LocalDateTime start) {
+    if (start != null && this.end != null && start.isAfter(this.end)) {
+      throw new IllegalArgumentException(
+          "schedule.start must not be after schedule.end, but start=" + start + " end=" + this.end);
+    }
     this.start = start;
   }
 

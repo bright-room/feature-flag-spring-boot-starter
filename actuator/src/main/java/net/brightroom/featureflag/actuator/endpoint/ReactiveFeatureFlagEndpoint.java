@@ -5,10 +5,10 @@ import java.util.List;
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
-import net.brightroom.featureflag.core.properties.ScheduleConfiguration;
 import net.brightroom.featureflag.core.provider.MutableReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
+import net.brightroom.featureflag.core.provider.Schedule;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.actuate.endpoint.Access;
 import org.springframework.boot.actuate.endpoint.annotation.DeleteOperation;
@@ -147,7 +147,7 @@ public class ReactiveFeatureFlagEndpoint {
 
   @Nullable
   private ScheduleEndpointResponse buildScheduleResponse(String featureName) {
-    ScheduleConfiguration schedule =
+    Schedule schedule =
         reactiveScheduleProvider.getSchedule(featureName).blockOptional().orElse(null);
     if (schedule == null) {
       return null;

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Method;
 import java.time.Clock;
+import java.time.LocalDateTime;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
@@ -15,6 +16,7 @@ import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedExceptio
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
+import net.brightroom.featureflag.core.provider.Schedule;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
 import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
@@ -122,6 +124,104 @@ class FeatureFlagAspectTest {
     public Mono<String> noAnnotationMethod() {
       return Mono.just("no-annotation");
     }
+  }
+
+  // --- checkSchedule for Mono ---
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void checkFeatureFlag_emitsError_whenScheduleIsInactive_forMono() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("monoMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Mono.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    // end in the past → inactive
+    Schedule inactiveSchedule = new Schedule(null, LocalDateTime.of(2020, 1, 1, 0, 0), null);
+    when(reactiveScheduleProvider.getSchedule("some-feature"))
+        .thenReturn(Mono.just(inactiveSchedule));
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    StepVerifier.create((Mono<Object>) result)
+        .expectError(FeatureFlagAccessDeniedException.class)
+        .verify();
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void checkFeatureFlag_proceeds_whenScheduleIsActive_forMono() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("monoMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Mono.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    // start in the past, no end → active
+    Schedule activeSchedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
+    when(reactiveScheduleProvider.getSchedule("some-feature"))
+        .thenReturn(Mono.just(activeSchedule));
+    when(joinPoint.proceed()).thenReturn(Mono.just("result"));
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    StepVerifier.create((Mono<Object>) result).expectNext("result").verifyComplete();
+  }
+
+  // --- checkSchedule for Flux ---
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void checkFeatureFlag_emitsError_whenScheduleIsInactive_forFlux() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("fluxMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Flux.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    // end in the past → inactive
+    Schedule inactiveSchedule = new Schedule(null, LocalDateTime.of(2020, 1, 1, 0, 0), null);
+    when(reactiveScheduleProvider.getSchedule("some-feature"))
+        .thenReturn(Mono.just(inactiveSchedule));
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    StepVerifier.create((Flux<Object>) result)
+        .expectError(FeatureFlagAccessDeniedException.class)
+        .verify();
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void checkFeatureFlag_proceeds_whenScheduleIsActive_forFlux() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("fluxMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Flux.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    // start in the past, no end → active
+    Schedule activeSchedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
+    when(reactiveScheduleProvider.getSchedule("some-feature"))
+        .thenReturn(Mono.just(activeSchedule));
+    when(joinPoint.proceed()).thenReturn(Flux.just("r1", "r2"));
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    StepVerifier.create((Flux<Object>) result).expectNext("r1", "r2").verifyComplete();
   }
 
   @Test

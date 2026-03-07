@@ -100,7 +100,8 @@ public class FeatureFlagHandlerFilterFunction {
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag,
    * SpEL condition expression, and rollout percentage.
    *
-   * <p>The evaluation order is: feature enabled check → condition check → rollout check.
+   * <p>The evaluation order is: feature enabled check → schedule check → condition check → rollout
+   * check.
    *
    * @param featureName the name of the feature flag to check; must not be null or blank
    * @param condition SpEL expression evaluated against request context; empty string means no

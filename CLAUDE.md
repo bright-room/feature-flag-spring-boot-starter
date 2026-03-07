@@ -47,9 +47,10 @@ This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides f
 1. `FeatureFlagMvcInterceptorRegistrationAutoConfiguration` registers `FeatureFlagInterceptor` for all paths (`/**`).
 2. `FeatureFlagInterceptor.preHandle()` checks `@FeatureFlag` on the method first, then on the class. Method-level annotation takes priority.
 3. If the feature is disabled, `FeatureFlagAccessDeniedException` is thrown.
-4. If `condition` is non-empty, the SpEL expression is evaluated against request context variables (`headers`, `params`, `cookies`, `path`, `method`, `remoteAddress`). If the condition is not satisfied, `FeatureFlagAccessDeniedException` is thrown.
-5. If `rollout < 100`, the rollout percentage check is performed.
-6. `FeatureFlagExceptionHandler` (`@ControllerAdvice`, `@Order(Ordered.LOWEST_PRECEDENCE)`) catches the exception and delegates to `AccessDeniedInterceptResolution.resolution()` to write the response.
+4. If a schedule is configured for the feature (via `ScheduleProvider`) and it is currently inactive, `FeatureFlagAccessDeniedException` is thrown.
+5. If `condition` is non-empty, the SpEL expression is evaluated against request context variables (`headers`, `params`, `cookies`, `path`, `method`, `remoteAddress`). If the condition is not satisfied, `FeatureFlagAccessDeniedException` is thrown.
+6. If `rollout < 100`, the rollout percentage check is performed.
+7. `FeatureFlagExceptionHandler` (`@ControllerAdvice`, `@Order(Ordered.LOWEST_PRECEDENCE)`) catches the exception and delegates to `AccessDeniedInterceptResolution.resolution()` to write the response.
 
 ### Extension Points
 
@@ -57,6 +58,7 @@ This is a multi-module Gradle project (Java 25, Spring Boot 4.x) that provides f
 - **Custom denied response**: Define a `@ControllerAdvice` that handles `FeatureFlagAccessDeniedException`. It takes priority over the library's default handler.
 - **Conditional access**: Use `@FeatureFlag(value = "name", condition = "headers['X-Beta'] != null")` to enable a feature only when a SpEL condition evaluated against request context is satisfied. Implement `FeatureFlagConditionEvaluator` (webmvc) or `ReactiveFeatureFlagConditionEvaluator` (webflux) to replace the default SpEL evaluator. The `@FeatureFlag` annotation also exposes a `condition` attribute; the `ConditionVariablesBuilder` in core centralizes the available variable key names (`headers`, `params`, `cookies`, `path`, `method`, `remoteAddress`). Configure fail-on-error behavior with `feature-flags.condition.fail-on-error`.
 - **Gradual rollout**: Use `@FeatureFlag(value = "name", rollout = 50)` to enable a feature for a percentage of requests. Implement `FeatureFlagContextResolver` (webmvc) or `ReactiveFeatureFlagContextResolver` (webflux) for sticky rollout. Implement `RolloutStrategy` (webmvc) or `ReactiveRolloutStrategy` (webflux) to customize bucketing.
+- **Schedule-based activation**: Configure `feature-flags.features.<name>.schedule.start/end/timezone` in properties to activate a feature only during a time window. The check uses server-side `Clock.instant()` evaluated against the configured schedule. Implement `ScheduleProvider` (webmvc/actuator) or `ReactiveScheduleProvider` (webflux/actuator) and register as a `@Bean` to load schedules from a custom source (database, remote config, etc.). The default `InMemoryScheduleProvider` / `InMemoryReactiveScheduleProvider` reads from the property binding. The `Schedule` record (`core/provider/`) is the SPI value type returned by these providers.
 
 ### Auto-configuration Registration
 

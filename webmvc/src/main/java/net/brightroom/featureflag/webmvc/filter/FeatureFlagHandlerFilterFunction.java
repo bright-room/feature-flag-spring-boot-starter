@@ -99,7 +99,8 @@ public class FeatureFlagHandlerFilterFunction {
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag,
    * SpEL condition expression, and rollout percentage.
    *
-   * <p>The evaluation order is: feature enabled check → condition check → rollout check.
+   * <p>The evaluation order is: feature enabled check → schedule check → condition check → rollout
+   * check.
    *
    * @param featureName the name of the feature flag to check; must not be null or blank
    * @param condition SpEL expression evaluated against request context; empty string means no
@@ -126,8 +127,7 @@ public class FeatureFlagHandlerFilterFunction {
       if (!featureFlagProvider.isFeatureEnabled(featureName)) {
         return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
       }
-      Optional<net.brightroom.featureflag.core.properties.ScheduleConfiguration> schedule =
-          scheduleProvider.getSchedule(featureName);
+      var schedule = scheduleProvider.getSchedule(featureName);
       if (schedule.isPresent() && !schedule.get().isActive(clock.instant())) {
         return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
       }

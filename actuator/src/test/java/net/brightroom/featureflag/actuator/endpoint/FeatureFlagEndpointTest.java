@@ -12,12 +12,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
 import net.brightroom.featureflag.core.provider.InMemoryScheduleProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableInMemoryRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.Schedule;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -46,6 +50,19 @@ class FeatureFlagEndpointTest {
       boolean defaultEnabled) {
     return new FeatureFlagEndpoint(
         provider, rolloutProvider, emptyScheduleProvider(), defaultEnabled, eventPublisher, clock);
+  }
+
+  private FeatureFlagEndpoint endpointWithSchedule(
+      MutableInMemoryFeatureFlagProvider provider,
+      Map<String, Schedule> schedules,
+      boolean defaultEnabled) {
+    return new FeatureFlagEndpoint(
+        provider,
+        emptyRolloutProvider(),
+        new InMemoryScheduleProvider(schedules),
+        defaultEnabled,
+        eventPublisher,
+        clock);
   }
 
   @Test
@@ -404,5 +421,85 @@ class FeatureFlagEndpointTest {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> endpoint.deleteFeature("   "))
         .withMessageContaining("featureName must not be null or blank");
+  }
+
+  // --- schedule response (M-2) ---
+
+  @Test
+  void feature_returnsSchedule_whenScheduleIsConfigured() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    // active schedule: start in the past, no end
+    var schedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
+    var endpoint = endpointWithSchedule(provider, Map.of("feature-a", schedule), false);
+
+    var response = endpoint.feature("feature-a");
+
+    assertThat(response.schedule()).isNotNull();
+    assertThat(response.schedule().start()).isEqualTo(LocalDateTime.of(2020, 1, 1, 0, 0));
+    assertThat(response.schedule().end()).isNull();
+    assertTrue(response.schedule().active());
+  }
+
+  @Test
+  void feature_returnsNullSchedule_whenNoScheduleIsConfigured() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
+
+    var response = endpoint.feature("feature-a");
+
+    assertNull(response.schedule());
+  }
+
+  @Test
+  void feature_returnsInactiveSchedule_whenScheduleWindowHasPassed() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    // Inactive: end in the past
+    var schedule =
+        new Schedule(
+            null,
+            LocalDateTime.ofInstant(Instant.EPOCH, ZoneId.of("UTC")).plusDays(1),
+            ZoneId.of("UTC"));
+    // Use a fixed clock far in the future so the schedule is inactive
+    var fixedClock = Clock.fixed(Instant.now().plusSeconds(86400 * 365 * 100), ZoneId.of("UTC"));
+    var endpointWithFixedClock =
+        new FeatureFlagEndpoint(
+            provider,
+            emptyRolloutProvider(),
+            new InMemoryScheduleProvider(Map.of("feature-a", schedule)),
+            false,
+            eventPublisher,
+            fixedClock);
+
+    var response = endpointWithFixedClock.feature("feature-a");
+
+    assertThat(response.schedule()).isNotNull();
+    assertFalse(response.schedule().active());
+  }
+
+  @Test
+  void features_includesSchedule_whenScheduleIsConfigured() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var schedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
+    var endpoint = endpointWithSchedule(provider, Map.of("feature-a", schedule), false);
+
+    var response = endpoint.features();
+
+    assertThat(response.features())
+        .filteredOn(f -> f.featureName().equals("feature-a"))
+        .extracting(FeatureFlagEndpointResponse::schedule)
+        .doesNotContainNull();
+  }
+
+  @Test
+  void features_hasNullSchedule_whenNoScheduleConfigured() {
+    var provider = new MutableInMemoryFeatureFlagProvider(Map.of("feature-a", true), false);
+    var endpoint = endpoint(provider, emptyRolloutProvider(), false);
+
+    var response = endpoint.features();
+
+    assertThat(response.features())
+        .filteredOn(f -> f.featureName().equals("feature-a"))
+        .extracting(FeatureFlagEndpointResponse::schedule)
+        .containsOnlyNulls();
   }
 }

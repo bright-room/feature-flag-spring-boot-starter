@@ -1,7 +1,6 @@
 package net.brightroom.featureflag.core.provider;
 
 import java.util.Optional;
-import net.brightroom.featureflag.core.properties.ScheduleConfiguration;
 
 /**
  * SPI for resolving the schedule configuration for a given feature flag.
@@ -19,8 +18,8 @@ public interface ScheduleProvider {
    * Returns the configured schedule for the specified feature.
    *
    * @param featureName the name of the feature flag
-   * @return an {@link Optional} containing the {@link ScheduleConfiguration}, or {@link
-   *     Optional#empty()} if no schedule is configured for this feature
+   * @return an {@link Optional} containing the {@link Schedule}, or {@link Optional#empty()} if no
+   *     schedule is configured for this feature
    */
-  Optional<ScheduleConfiguration> getSchedule(String featureName);
+  Optional<Schedule> getSchedule(String featureName);
 }

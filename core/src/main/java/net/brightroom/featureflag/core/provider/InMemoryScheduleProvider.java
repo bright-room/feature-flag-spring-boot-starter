@@ -2,7 +2,6 @@ package net.brightroom.featureflag.core.provider;
 
 import java.util.Map;
 import java.util.Optional;
-import net.brightroom.featureflag.core.properties.ScheduleConfiguration;
 
 /**
  * An implementation of {@link ScheduleProvider} that stores schedule configurations in memory using
@@ -13,7 +12,7 @@ import net.brightroom.featureflag.core.properties.ScheduleConfiguration;
  */
 public class InMemoryScheduleProvider implements ScheduleProvider {
 
-  private final Map<String, ScheduleConfiguration> schedules;
+  private final Map<String, Schedule> schedules;
 
   /**
    * {@inheritDoc}
@@ -21,7 +20,7 @@ public class InMemoryScheduleProvider implements ScheduleProvider {
    * <p>Returns {@link Optional#empty()} for features not present in the schedule map.
    */
   @Override
-  public Optional<ScheduleConfiguration> getSchedule(String featureName) {
+  public Optional<Schedule> getSchedule(String featureName) {
     return Optional.ofNullable(schedules.get(featureName));
   }
 
@@ -31,7 +30,7 @@ public class InMemoryScheduleProvider implements ScheduleProvider {
    * @param schedules a map containing feature flag names as keys and their schedule configurations
    *     as values; copied defensively on construction
    */
-  public InMemoryScheduleProvider(Map<String, ScheduleConfiguration> schedules) {
+  public InMemoryScheduleProvider(Map<String, Schedule> schedules) {
     this.schedules = Map.copyOf(schedules);
   }
 }

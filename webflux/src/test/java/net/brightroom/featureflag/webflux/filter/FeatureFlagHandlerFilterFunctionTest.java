@@ -9,12 +9,14 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
+import java.time.LocalDateTime;
 import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
+import net.brightroom.featureflag.core.provider.Schedule;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
@@ -68,6 +70,50 @@ class FeatureFlagHandlerFilterFunctionTest {
           conditionEvaluator,
           reactiveScheduleProvider,
           Clock.systemDefaultZone());
+
+  // --- checkSchedule ---
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void of_delegatesToResolution_whenScheduleIsInactive() {
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(Mono.just(true));
+    // end in the past → inactive
+    Schedule inactiveSchedule = new Schedule(null, LocalDateTime.of(2020, 1, 1, 0, 0), null);
+    when(reactiveScheduleProvider.getSchedule("my-feature"))
+        .thenReturn(Mono.just(inactiveSchedule));
+
+    ServerRequest request = mock(ServerRequest.class);
+    HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
+    ServerResponse deniedResponse = mock(ServerResponse.class);
+    when(resolution.resolve(eq(request), any(FeatureFlagAccessDeniedException.class)))
+        .thenReturn(Mono.just(deniedResponse));
+
+    HandlerFilterFunction<ServerResponse, ServerResponse> filter = filterFunction.of("my-feature");
+    StepVerifier.create(filter.filter(request, next)).expectNext(deniedResponse).verifyComplete();
+
+    verifyNoInteractions(next);
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void of_delegatesToNext_whenScheduleIsActive() {
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature")).thenReturn(Mono.empty());
+    // start in the past, no end → active
+    Schedule activeSchedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
+    when(reactiveScheduleProvider.getSchedule("my-feature")).thenReturn(Mono.just(activeSchedule));
+
+    ServerRequest request = mock(ServerRequest.class);
+    HandlerFunction<ServerResponse> next = mock(HandlerFunction.class);
+    ServerResponse okResponse = mock(ServerResponse.class);
+    when(next.handle(request)).thenReturn(Mono.just(okResponse));
+
+    HandlerFilterFunction<ServerResponse, ServerResponse> filter = filterFunction.of("my-feature");
+    StepVerifier.create(filter.filter(request, next)).expectNext(okResponse).verifyComplete();
+
+    verify(next).handle(request);
+    verifyNoInteractions(resolution);
+  }
 
   @Test
   void of_throwsIllegalArgumentException_whenFeatureNameIsNull() {

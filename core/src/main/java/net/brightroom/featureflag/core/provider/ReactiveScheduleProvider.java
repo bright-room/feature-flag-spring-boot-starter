@@ -1,6 +1,5 @@
 package net.brightroom.featureflag.core.provider;
 
-import net.brightroom.featureflag.core.properties.ScheduleConfiguration;
 import reactor.core.publisher.Mono;
 
 /**
@@ -19,8 +18,8 @@ public interface ReactiveScheduleProvider {
    * Returns the configured schedule for the specified feature.
    *
    * @param featureName the name of the feature flag
-   * @return a {@link Mono} emitting the {@link ScheduleConfiguration}, or an empty {@link Mono} if
-   *     no schedule is configured for this feature
+   * @return a {@link Mono} emitting the {@link Schedule}, or an empty {@link Mono} if no schedule
+   *     is configured for this feature
    */
-  Mono<ScheduleConfiguration> getSchedule(String featureName);
+  Mono<Schedule> getSchedule(String featureName);
 }

@@ -2,6 +2,7 @@ package net.brightroom.featureflag.core.properties;
 
 import java.util.HashMap;
 import java.util.Map;
+import net.brightroom.featureflag.core.provider.Schedule;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -59,17 +60,17 @@ public class FeatureFlagProperties {
   }
 
   /**
-   * Returns a map of feature names to their schedule configurations. Features without a schedule
-   * are excluded.
+   * Returns a map of feature names to their schedule value objects. Features without a schedule are
+   * excluded.
    *
-   * @return an immutable map of feature names to their {@link ScheduleConfiguration}
+   * @return an immutable map of feature names to their {@link Schedule}
    */
-  public Map<String, ScheduleConfiguration> schedules() {
-    var result = new HashMap<String, ScheduleConfiguration>();
+  public Map<String, Schedule> schedules() {
+    var result = new HashMap<String, Schedule>();
     features.forEach(
         (name, config) -> {
           if (config.schedule() != null) {
-            result.put(name, config.schedule());
+            result.put(name, config.schedule().toSchedule());
           }
         });
     return Map.copyOf(result);

@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -20,6 +21,7 @@ import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.Schedule;
 import net.brightroom.featureflag.core.provider.ScheduleProvider;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
@@ -69,6 +71,37 @@ class FeatureFlagInterceptorTest {
     when(annotation.condition()).thenReturn(condition);
     when(annotation.rollout()).thenReturn(rollout);
     return annotation;
+  }
+
+  // --- checkSchedule ---
+
+  @Test
+  void preHandle_throwsFeatureFlagAccessDeniedException_whenScheduleIsInactive() {
+    FeatureFlag annotation = featureFlagAnnotation("my-feature", 100);
+    HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    // end in the past → inactive
+    Schedule inactiveSchedule = new Schedule(null, LocalDateTime.of(2020, 1, 1, 0, 0), null);
+    when(scheduleProvider.getSchedule("my-feature")).thenReturn(Optional.of(inactiveSchedule));
+
+    assertThatThrownBy(() -> interceptor.preHandle(request, response, handlerMethod))
+        .isInstanceOf(FeatureFlagAccessDeniedException.class);
+  }
+
+  @Test
+  void preHandle_returnsTrue_whenScheduleIsActive() throws Exception {
+    FeatureFlag annotation = featureFlagAnnotation("my-feature", 100);
+    HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
+        .thenReturn(OptionalInt.empty());
+    // start in the past, no end → active
+    Schedule activeSchedule = new Schedule(LocalDateTime.of(2020, 1, 1, 0, 0), null, null);
+    when(scheduleProvider.getSchedule("my-feature")).thenReturn(Optional.of(activeSchedule));
+
+    boolean result = interceptor.preHandle(request, response, handlerMethod);
+
+    assertTrue(result);
   }
 
   // --- validateAnnotation ---
