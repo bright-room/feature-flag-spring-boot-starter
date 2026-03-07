@@ -8,7 +8,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.brightroom.featureflag.actuator.endpoint.FeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.endpoint.ReactiveFeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.health.FeatureFlagHealthIndicator;
+import net.brightroom.featureflag.actuator.health.HealthDetailsContributor;
 import net.brightroom.featureflag.actuator.health.ReactiveFeatureFlagHealthIndicator;
+import net.brightroom.featureflag.actuator.health.ReactiveHealthDetailsContributor;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
@@ -26,6 +28,7 @@ import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.health.contributor.Health;
 import org.springframework.boot.test.context.runner.ReactiveWebApplicationContextRunner;
 import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import reactor.core.publisher.Mono;
@@ -106,6 +109,18 @@ class FeatureFlagActuatorAutoConfigurationTest {
           .run(
               context -> {
                 assertThat(context).hasSingleBean(FeatureFlagHealthIndicator.class);
+              });
+    }
+
+    @Test
+    void healthIndicator_includesContributorDetails_whenContributorBeanPresent() {
+      contextRunner
+          .withBean(HealthDetailsContributor.class, () -> () -> Map.of("custom", "value"))
+          .run(
+              context -> {
+                var indicator = context.getBean(FeatureFlagHealthIndicator.class);
+                Health health = indicator.health();
+                assertThat(health.getDetails()).containsEntry("custom", "value");
               });
     }
 
@@ -197,6 +212,20 @@ class FeatureFlagActuatorAutoConfigurationTest {
           .run(
               context -> {
                 assertThat(context).hasSingleBean(ReactiveFeatureFlagHealthIndicator.class);
+              });
+    }
+
+    @Test
+    void reactiveHealthIndicator_includesContributorDetails_whenContributorBeanPresent() {
+      contextRunner
+          .withBean(
+              ReactiveHealthDetailsContributor.class,
+              () -> () -> Mono.just(Map.of("custom", "value")))
+          .run(
+              context -> {
+                var indicator = context.getBean(ReactiveFeatureFlagHealthIndicator.class);
+                Health health = indicator.health().block();
+                assertThat(health.getDetails()).containsEntry("custom", "value");
               });
     }
 

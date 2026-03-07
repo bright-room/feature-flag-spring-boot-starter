@@ -1,6 +1,7 @@
 package net.brightroom.featureflag.actuator.health;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
@@ -31,11 +32,14 @@ import org.springframework.boot.health.contributor.Health;
  * via {@link MutableFeatureFlagProvider#getFeatures()}. Otherwise, the configured feature names
  * from {@link FeatureFlagProperties} are probed individually via {@link
  * FeatureFlagProvider#isFeatureEnabled(String)}.
+ *
+ * <p>Additional details can be contributed by registering {@link HealthDetailsContributor} beans.
  */
 public class FeatureFlagHealthIndicator extends AbstractHealthIndicator {
 
   private final FeatureFlagProvider provider;
   private final FeatureFlagProperties properties;
+  private final List<HealthDetailsContributor> contributors;
 
   /**
    * Creates a new {@link FeatureFlagHealthIndicator}.
@@ -45,9 +49,24 @@ public class FeatureFlagHealthIndicator extends AbstractHealthIndicator {
    */
   public FeatureFlagHealthIndicator(
       FeatureFlagProvider provider, FeatureFlagProperties properties) {
+    this(provider, properties, List.of());
+  }
+
+  /**
+   * Creates a new {@link FeatureFlagHealthIndicator} with custom detail contributors.
+   *
+   * @param provider the feature flag provider to check
+   * @param properties the feature flag configuration properties
+   * @param contributors the list of contributors that add custom details to the health response
+   */
+  public FeatureFlagHealthIndicator(
+      FeatureFlagProvider provider,
+      FeatureFlagProperties properties,
+      List<HealthDetailsContributor> contributors) {
     super("Feature flag health check failed");
     this.provider = provider;
     this.properties = properties;
+    this.contributors = contributors;
   }
 
   @Override
@@ -74,5 +93,9 @@ public class FeatureFlagHealthIndicator extends AbstractHealthIndicator {
         .withDetail("enabledFlags", enabledCount)
         .withDetail("disabledFlags", disabledCount)
         .withDetail("defaultEnabled", properties.defaultEnabled());
+
+    for (HealthDetailsContributor contributor : contributors) {
+      contributor.contributeDetails().forEach(builder::withDetail);
+    }
   }
 }

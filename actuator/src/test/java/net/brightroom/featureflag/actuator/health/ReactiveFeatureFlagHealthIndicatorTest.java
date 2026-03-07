@@ -3,6 +3,7 @@ package net.brightroom.featureflag.actuator.health;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import java.util.List;
 import java.util.Map;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.MutableInMemoryReactiveFeatureFlagProvider;
@@ -105,5 +106,50 @@ class ReactiveFeatureFlagHealthIndicatorTest {
 
     assertThat(health.getDetails())
         .containsEntry("provider", "MutableInMemoryReactiveFeatureFlagProvider");
+  }
+
+  @Test
+  void health_includesContributorDetails() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    when(properties.defaultEnabled()).thenReturn(false);
+    ReactiveHealthDetailsContributor contributor =
+        () -> Mono.just(Map.of("connectionPoolSize", 10, "latencyMs", 5));
+    var indicator =
+        new ReactiveFeatureFlagHealthIndicator(provider, properties, List.of(contributor));
+
+    Health health = indicator.health().block();
+
+    assertThat(health.getStatus()).isEqualTo(Status.UP);
+    assertThat(health.getDetails())
+        .containsEntry("connectionPoolSize", 10)
+        .containsEntry("latencyMs", 5);
+  }
+
+  @Test
+  void health_mergesMultipleContributorDetails() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    when(properties.defaultEnabled()).thenReturn(false);
+    ReactiveHealthDetailsContributor contributor1 = () -> Mono.just(Map.of("key1", "value1"));
+    ReactiveHealthDetailsContributor contributor2 = () -> Mono.just(Map.of("key2", "value2"));
+    var indicator =
+        new ReactiveFeatureFlagHealthIndicator(
+            provider, properties, List.of(contributor1, contributor2));
+
+    Health health = indicator.health().block();
+
+    assertThat(health.getDetails()).containsEntry("key1", "value1").containsEntry("key2", "value2");
+  }
+
+  @Test
+  void health_withNoContributors_hasDefaultDetails() {
+    var provider = new MutableInMemoryReactiveFeatureFlagProvider(Map.of(), false);
+    when(properties.defaultEnabled()).thenReturn(false);
+    var indicator = new ReactiveFeatureFlagHealthIndicator(provider, properties, List.of());
+
+    Health health = indicator.health().block();
+
+    assertThat(health.getStatus()).isEqualTo(Status.UP);
+    assertThat(health.getDetails())
+        .containsKeys("provider", "totalFlags", "enabledFlags", "disabledFlags", "defaultEnabled");
   }
 }
