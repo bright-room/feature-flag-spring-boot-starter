@@ -45,9 +45,9 @@ public class FeatureFlagHandlerFilterFunction {
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
    *
-   * @param featureName the name of the feature flag to check; must not be null or empty
+   * @param featureName the name of the feature flag to check; must not be null or blank
    * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag
-   * @throws IllegalArgumentException if {@code featureName} is null or empty
+   * @throws IllegalArgumentException if {@code featureName} is null or blank
    */
   public HandlerFilterFunction<ServerResponse, ServerResponse> of(String featureName) {
     return of(featureName, 100);
@@ -61,20 +61,20 @@ public class FeatureFlagHandlerFilterFunction {
    * If no rollout percentage is configured in the provider, the {@code rolloutFallback} argument is
    * used as a fallback.
    *
-   * @param featureName the name of the feature flag to check; must not be null or empty
+   * @param featureName the name of the feature flag to check; must not be null or blank
    * @param rolloutFallback the fallback rollout percentage (0–100) when no value is configured in
    *     the provider; 100 means fully enabled
    * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag
    *     and rollout
-   * @throws IllegalArgumentException if {@code featureName} is null or empty, or if {@code
+   * @throws IllegalArgumentException if {@code featureName} is null or blank, or if {@code
    *     rolloutFallback} is not between 0 and 100
    */
   public HandlerFilterFunction<ServerResponse, ServerResponse> of(
       String featureName, int rolloutFallback) {
-    if (featureName == null || featureName.isEmpty()) {
+    if (featureName == null || featureName.isBlank()) {
       throw new IllegalArgumentException(
-          "featureName must not be null or empty. "
-              + "An empty value causes fail-open behavior and allows access unconditionally.");
+          "featureName must not be null or blank. "
+              + "A blank value causes fail-open behavior and allows access unconditionally.");
     }
     if (rolloutFallback < 0 || rolloutFallback > 100) {
       throw new IllegalArgumentException(

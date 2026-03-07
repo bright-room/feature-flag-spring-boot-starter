@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.actuator.endpoint;
 
+import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
 import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
@@ -54,6 +55,9 @@ public class FeatureFlagEndpoint {
    */
   @ReadOperation
   public FeatureFlagEndpointResponse feature(@Selector String featureName) {
+    if (featureName == null || featureName.isBlank()) {
+      throw new IllegalArgumentException("featureName must not be null or blank");
+    }
     return new FeatureFlagEndpointResponse(
         featureName,
         provider.isFeatureEnabled(featureName),
@@ -117,6 +121,7 @@ public class FeatureFlagEndpoint {
     var rolloutPercentages = rolloutProvider.getRolloutPercentages();
     var featureList =
         provider.getFeatures().entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
             .map(
                 e ->
                     new FeatureFlagEndpointResponse(

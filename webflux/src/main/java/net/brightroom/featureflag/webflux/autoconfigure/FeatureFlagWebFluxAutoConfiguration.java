@@ -56,6 +56,7 @@ public class FeatureFlagWebFluxAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean
   AccessDeniedExceptionHandlerResolution accessDeniedExceptionHandlerResolution() {
     return new AccessDeniedExceptionHandlerResolutionFactory().create(featureFlagProperties);
   }

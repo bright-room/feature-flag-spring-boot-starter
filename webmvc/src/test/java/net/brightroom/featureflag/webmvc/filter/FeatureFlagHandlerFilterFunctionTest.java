@@ -52,14 +52,14 @@ class FeatureFlagHandlerFilterFunctionTest {
   void of_throwsIllegalArgumentException_whenFeatureNameIsNull() {
     assertThatThrownBy(() -> filterFunction.of(null))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("null or empty");
+        .hasMessageContaining("null or blank");
   }
 
   @Test
   void of_throwsIllegalArgumentException_whenFeatureNameIsEmpty() {
     assertThatThrownBy(() -> filterFunction.of(""))
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("null or empty");
+        .hasMessageContaining("null or blank");
   }
 
   @Test

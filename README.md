@@ -525,7 +525,7 @@ When the provider responds normally, the component reports `UP` with flag statis
     "featureFlag": {
       "status": "UP",
       "details": {
-        "provider": "InMemoryFeatureFlagProvider",
+        "provider": "MutableInMemoryFeatureFlagProvider",
         "totalFlags": 2,
         "enabledFlags": 1,
         "disabledFlags": 1,
