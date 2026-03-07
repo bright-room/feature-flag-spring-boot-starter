@@ -1,7 +1,7 @@
 package net.brightroom.featureflag.webmvc.filter;
 
-import java.util.Map;
 import java.util.Optional;
+import net.brightroom.featureflag.core.condition.ConditionVariables;
 import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
@@ -123,7 +123,7 @@ public class FeatureFlagHandlerFilterFunction {
         return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
       }
       if (condition != null && !condition.isEmpty()) {
-        Map<String, Object> variables =
+        ConditionVariables variables =
             HttpServletConditionVariables.build(request.servletRequest());
         if (!conditionEvaluator.evaluate(condition, variables)) {
           return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));

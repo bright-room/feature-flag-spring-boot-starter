@@ -2,9 +2,9 @@ package net.brightroom.featureflag.webmvc.interceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import java.util.Map;
 import java.util.Optional;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
+import net.brightroom.featureflag.core.condition.ConditionVariables;
 import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
@@ -115,7 +115,7 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
     if (condition.isEmpty()) {
       return;
     }
-    Map<String, Object> variables = HttpServletConditionVariables.build(request);
+    ConditionVariables variables = HttpServletConditionVariables.build(request);
     if (!conditionEvaluator.evaluate(condition, variables)) {
       throw new FeatureFlagAccessDeniedException(annotation.value());
     }

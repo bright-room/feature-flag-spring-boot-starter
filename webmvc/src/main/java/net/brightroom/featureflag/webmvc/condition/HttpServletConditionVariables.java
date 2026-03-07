@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import net.brightroom.featureflag.core.condition.ConditionVariables;
 import net.brightroom.featureflag.core.condition.ConditionVariablesBuilder;
 
 /**
@@ -20,17 +21,26 @@ public final class HttpServletConditionVariables {
   private HttpServletConditionVariables() {}
 
   /**
-   * Builds the condition variables map from the given request.
+   * Builds the condition variables from the given request.
    *
    * @param request the incoming HTTP servlet request
-   * @return a map of condition variables keyed by name
+   * @return the condition variables for the request
    */
-  public static Map<String, Object> build(HttpServletRequest request) {
+  public static ConditionVariables build(HttpServletRequest request) {
     Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     Collections.list(request.getHeaderNames())
         .forEach(name -> headers.put(name, request.getHeader(name)));
     Map<String, String> params = new HashMap<>();
-    request.getParameterMap().forEach((k, v) -> params.put(k, v.length > 0 ? v[0] : ""));
+    request
+        .getParameterMap()
+        .forEach(
+            (k, v) -> {
+              if (v.length > 0) {
+                params.put(k, v[0]);
+              } else {
+                params.put(k, "");
+              }
+            });
     Map<String, String> cookies = new HashMap<>();
     if (request.getCookies() != null) {
       Arrays.stream(request.getCookies()).forEach(c -> cookies.put(c.getName(), c.getValue()));

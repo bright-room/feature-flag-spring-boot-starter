@@ -45,6 +45,12 @@
       "type": "java.lang.Boolean",
       "description": "Whether undefined feature flags are enabled by default. Defaults to false (fail-closed): undefined flags block access. Set to true for fail-open behavior: undefined flags allow access.",
       "defaultValue": false
+    },
+    {
+      "name": "feature-flags.condition.fail-on-error",
+      "type": "java.lang.Boolean",
+      "description": "Whether condition evaluation errors should cause access denial. Defaults to true (fail-closed): evaluation errors block access. Set to false for fail-open behavior: evaluation errors allow access.",
+      "defaultValue": true
     }
   ]
 }

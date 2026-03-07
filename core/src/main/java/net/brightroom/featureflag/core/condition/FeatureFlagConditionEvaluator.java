@@ -1,7 +1,5 @@
 package net.brightroom.featureflag.core.condition;
 
-import java.util.Map;
-
 /**
  * SPI for evaluating SpEL condition expressions against request context variables.
  *
@@ -27,5 +25,5 @@ public interface FeatureFlagConditionEvaluator {
    * @param variables the variables available in the expression context
    * @return {@code true} if the condition is satisfied
    */
-  boolean evaluate(String expression, Map<String, Object> variables);
+  boolean evaluate(String expression, ConditionVariables variables);
 }

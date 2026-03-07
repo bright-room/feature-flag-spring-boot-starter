@@ -11,15 +11,15 @@ class SpelFeatureFlagConditionEvaluatorTest {
   private final SpelFeatureFlagConditionEvaluator evaluator =
       new SpelFeatureFlagConditionEvaluator(true);
 
-  private Map<String, Object> buildVariables() {
-    Map<String, Object> variables = new HashMap<>();
-    variables.put("headers", new HashMap<>(Map.of("X-Beta", "true", "X-Region", "us-east-1")));
-    variables.put("params", new HashMap<>(Map.of("variant", "B", "debug", "true")));
-    variables.put("cookies", new HashMap<>(Map.of("session", "abc123")));
-    variables.put("path", "/api/v2/users");
-    variables.put("method", "POST");
-    variables.put("remoteAddress", "192.168.1.1");
-    return variables;
+  private ConditionVariables buildVariables() {
+    return new ConditionVariablesBuilder()
+        .headers(new HashMap<>(Map.of("X-Beta", "true", "X-Region", "us-east-1")))
+        .params(new HashMap<>(Map.of("variant", "B", "debug", "true")))
+        .cookies(new HashMap<>(Map.of("session", "abc123")))
+        .path("/api/v2/users")
+        .method("POST")
+        .remoteAddress("192.168.1.1")
+        .build();
   }
 
   // --- header checks ---
@@ -115,8 +115,15 @@ class SpelFeatureFlagConditionEvaluatorTest {
 
   @Test
   void evaluate_returnsFalse_whenHeaderMapIsEmpty() {
-    Map<String, Object> variables = buildVariables();
-    variables.put("headers", new HashMap<>());
+    ConditionVariables variables =
+        new ConditionVariablesBuilder()
+            .headers(new HashMap<>())
+            .params(new HashMap<>(Map.of("variant", "B", "debug", "true")))
+            .cookies(new HashMap<>(Map.of("session", "abc123")))
+            .path("/api/v2/users")
+            .method("POST")
+            .remoteAddress("192.168.1.1")
+            .build();
     assertThat(evaluator.evaluate("headers['X-Beta'] != null", variables)).isFalse();
   }
 
@@ -156,7 +163,7 @@ class SpelFeatureFlagConditionEvaluatorTest {
 
   @Test
   void evaluate_cachesExpression_acrossMultipleEvaluations() {
-    Map<String, Object> variables = buildVariables();
+    ConditionVariables variables = buildVariables();
     // Evaluate the same expression multiple times; should not throw
     for (int i = 0; i < 5; i++) {
       assertThat(evaluator.evaluate("headers['X-Beta'] != null", variables)).isTrue();

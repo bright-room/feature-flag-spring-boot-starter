@@ -4,6 +4,7 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import net.brightroom.featureflag.core.condition.ConditionVariables;
 import net.brightroom.featureflag.core.condition.ConditionVariablesBuilder;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 
@@ -19,12 +20,12 @@ public final class ServerHttpConditionVariables {
   private ServerHttpConditionVariables() {}
 
   /**
-   * Builds the condition variables map from the given request.
+   * Builds the condition variables from the given request.
    *
    * @param request the incoming reactive HTTP request
-   * @return a map of condition variables keyed by name
+   * @return the condition variables for the request
    */
-  public static Map<String, Object> build(ServerHttpRequest request) {
+  public static ConditionVariables build(ServerHttpRequest request) {
     Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     request.getHeaders().forEach((name, values) -> headers.put(name, values.getFirst()));
     Map<String, String> params = new HashMap<>();

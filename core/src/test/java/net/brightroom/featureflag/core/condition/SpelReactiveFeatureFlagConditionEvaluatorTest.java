@@ -1,10 +1,12 @@
 package net.brightroom.featureflag.core.condition;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Map;
+import java.util.HashMap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -15,10 +17,21 @@ class SpelReactiveFeatureFlagConditionEvaluatorTest {
 
   @Mock FeatureFlagConditionEvaluator delegate;
 
+  private ConditionVariables buildVariables() {
+    return new ConditionVariablesBuilder()
+        .headers(new HashMap<>())
+        .params(new HashMap<>())
+        .cookies(new HashMap<>())
+        .path("/test")
+        .method("GET")
+        .remoteAddress("127.0.0.1")
+        .build();
+  }
+
   @Test
   void evaluate_returnsTrue_whenDelegateReturnsTrue() {
-    Map<String, Object> variables = Map.of("method", "GET");
-    when(delegate.evaluate("method == 'GET'", variables)).thenReturn(true);
+    ConditionVariables variables = buildVariables();
+    when(delegate.evaluate(eq("method == 'GET'"), any(ConditionVariables.class))).thenReturn(true);
 
     SpelReactiveFeatureFlagConditionEvaluator evaluator =
         new SpelReactiveFeatureFlagConditionEvaluator(delegate);
@@ -26,13 +39,13 @@ class SpelReactiveFeatureFlagConditionEvaluatorTest {
     Boolean result = evaluator.evaluate("method == 'GET'", variables).block();
 
     assertThat(result).isTrue();
-    verify(delegate).evaluate("method == 'GET'", variables);
+    verify(delegate).evaluate(eq("method == 'GET'"), any(ConditionVariables.class));
   }
 
   @Test
   void evaluate_returnsFalse_whenDelegateReturnsFalse() {
-    Map<String, Object> variables = Map.of("method", "POST");
-    when(delegate.evaluate("method == 'GET'", variables)).thenReturn(false);
+    ConditionVariables variables = buildVariables();
+    when(delegate.evaluate(eq("method == 'GET'"), any(ConditionVariables.class))).thenReturn(false);
 
     SpelReactiveFeatureFlagConditionEvaluator evaluator =
         new SpelReactiveFeatureFlagConditionEvaluator(delegate);
@@ -40,6 +53,6 @@ class SpelReactiveFeatureFlagConditionEvaluatorTest {
     Boolean result = evaluator.evaluate("method == 'GET'", variables).block();
 
     assertThat(result).isFalse();
-    verify(delegate).evaluate("method == 'GET'", variables);
+    verify(delegate).evaluate(eq("method == 'GET'"), any(ConditionVariables.class));
   }
 }

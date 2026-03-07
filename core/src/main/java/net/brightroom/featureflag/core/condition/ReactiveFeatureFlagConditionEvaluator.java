@@ -1,6 +1,5 @@
 package net.brightroom.featureflag.core.condition;
 
-import java.util.Map;
 import reactor.core.publisher.Mono;
 
 /**
@@ -32,5 +31,5 @@ public interface ReactiveFeatureFlagConditionEvaluator {
    * @param variables the variables available in the expression context
    * @return a {@link Mono} emitting {@code true} if the condition is satisfied
    */
-  Mono<Boolean> evaluate(String expression, Map<String, Object> variables);
+  Mono<Boolean> evaluate(String expression, ConditionVariables variables);
 }

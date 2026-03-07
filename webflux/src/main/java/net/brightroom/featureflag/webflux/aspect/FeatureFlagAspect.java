@@ -78,94 +78,12 @@ public class FeatureFlagAspect {
 
     if (Mono.class.isAssignableFrom(returnType)) {
       return enabledMono.flatMap(
-          enabled -> {
-            if (!enabled) {
-              return Mono.error(new FeatureFlagAccessDeniedException(featureName));
-            }
-            if (!condition.isEmpty()) {
-              return Mono.deferContextual(
-                  ctx -> {
-                    ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-                    return conditionEvaluator
-                        .evaluate(
-                            condition, ServerHttpConditionVariables.build(exchange.getRequest()))
-                        .flatMap(
-                            passed -> {
-                              if (!passed) {
-                                return Mono.error(
-                                    new FeatureFlagAccessDeniedException(featureName));
-                              }
-                              return proceedMonoWithRollout(
-                                  joinPoint, featureName, rolloutMono, exchange);
-                            });
-                  });
-            }
-            return rolloutMono.flatMap(
-                rollout -> {
-                  if (rollout < 100) {
-                    return Mono.deferContextual(
-                        ctx -> {
-                          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-                          return shouldProceed(featureName, exchange, rollout)
-                              .flatMap(
-                                  proceed -> {
-                                    if (!proceed) {
-                                      return Mono.error(
-                                          new FeatureFlagAccessDeniedException(featureName));
-                                    }
-                                    return proceedAsMono(joinPoint);
-                                  });
-                        });
-                  }
-                  return proceedAsMono(joinPoint);
-                });
-          });
+          enabled -> handleMonoEnabled(joinPoint, featureName, condition, rolloutMono, enabled));
     }
 
     if (Flux.class.isAssignableFrom(returnType)) {
       return enabledMono.flatMapMany(
-          enabled -> {
-            if (!enabled) {
-              return Flux.error(new FeatureFlagAccessDeniedException(featureName));
-            }
-            if (!condition.isEmpty()) {
-              return Flux.deferContextual(
-                  ctx -> {
-                    ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-                    return conditionEvaluator
-                        .evaluate(
-                            condition, ServerHttpConditionVariables.build(exchange.getRequest()))
-                        .flatMapMany(
-                            passed -> {
-                              if (!passed) {
-                                return Flux.error(
-                                    new FeatureFlagAccessDeniedException(featureName));
-                              }
-                              return proceedFluxWithRollout(
-                                  joinPoint, featureName, rolloutMono, exchange);
-                            });
-                  });
-            }
-            return rolloutMono.flatMapMany(
-                rollout -> {
-                  if (rollout < 100) {
-                    return Flux.deferContextual(
-                        ctx -> {
-                          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-                          return shouldProceed(featureName, exchange, rollout)
-                              .flatMapMany(
-                                  proceed -> {
-                                    if (!proceed) {
-                                      return Flux.error(
-                                          new FeatureFlagAccessDeniedException(featureName));
-                                    }
-                                    return proceedAsFlux(joinPoint);
-                                  });
-                        });
-                  }
-                  return proceedAsFlux(joinPoint);
-                });
-          });
+          enabled -> handleFluxEnabled(joinPoint, featureName, condition, rolloutMono, enabled));
     }
 
     // Non-reactive return type: not supported in WebFlux
@@ -176,24 +94,145 @@ public class FeatureFlagAspect {
             + "Non-reactive return types are not supported.");
   }
 
+  private Mono<Object> handleMonoEnabled(
+      ProceedingJoinPoint joinPoint,
+      String featureName,
+      String condition,
+      Mono<Integer> rolloutMono,
+      boolean enabled) {
+    if (!enabled) {
+      return Mono.error(new FeatureFlagAccessDeniedException(featureName));
+    }
+    if (!condition.isEmpty()) {
+      return evaluateConditionForMono(joinPoint, featureName, condition, rolloutMono);
+    }
+    return rolloutMono.flatMap(
+        rollout -> handleMonoRolloutFromContext(joinPoint, featureName, rollout));
+  }
+
+  private Mono<Object> evaluateConditionForMono(
+      ProceedingJoinPoint joinPoint,
+      String featureName,
+      String condition,
+      Mono<Integer> rolloutMono) {
+    return Mono.deferContextual(
+        ctx -> {
+          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
+          return conditionEvaluator
+              .evaluate(condition, ServerHttpConditionVariables.build(exchange.getRequest()))
+              .flatMap(
+                  passed ->
+                      handleMonoConditionResult(
+                          joinPoint, featureName, rolloutMono, exchange, passed));
+        });
+  }
+
+  private Mono<Object> handleMonoConditionResult(
+      ProceedingJoinPoint joinPoint,
+      String featureName,
+      Mono<Integer> rolloutMono,
+      ServerWebExchange exchange,
+      boolean passed) {
+    if (!passed) {
+      return Mono.error(new FeatureFlagAccessDeniedException(featureName));
+    }
+    return proceedMonoWithRollout(joinPoint, featureName, rolloutMono, exchange);
+  }
+
+  private Mono<Object> handleMonoRolloutFromContext(
+      ProceedingJoinPoint joinPoint, String featureName, int rollout) {
+    if (rollout >= 100) {
+      return proceedAsMono(joinPoint);
+    }
+    return Mono.deferContextual(
+        ctx -> {
+          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
+          return shouldProceed(featureName, exchange, rollout)
+              .flatMap(proceed -> handleMonoProceed(joinPoint, featureName, proceed));
+        });
+  }
+
   private Mono<Object> proceedMonoWithRollout(
       ProceedingJoinPoint joinPoint,
       String featureName,
       Mono<Integer> rolloutMono,
       ServerWebExchange exchange) {
     return rolloutMono.flatMap(
-        rollout -> {
-          if (rollout < 100) {
-            return shouldProceed(featureName, exchange, rollout)
-                .flatMap(
-                    proceed -> {
-                      if (!proceed) {
-                        return Mono.error(new FeatureFlagAccessDeniedException(featureName));
-                      }
-                      return proceedAsMono(joinPoint);
-                    });
-          }
-          return proceedAsMono(joinPoint);
+        rollout -> handleMonoRolloutWithExchange(joinPoint, featureName, exchange, rollout));
+  }
+
+  private Mono<Object> handleMonoRolloutWithExchange(
+      ProceedingJoinPoint joinPoint, String featureName, ServerWebExchange exchange, int rollout) {
+    if (rollout >= 100) {
+      return proceedAsMono(joinPoint);
+    }
+    return shouldProceed(featureName, exchange, rollout)
+        .flatMap(proceed -> handleMonoProceed(joinPoint, featureName, proceed));
+  }
+
+  private Mono<Object> handleMonoProceed(
+      ProceedingJoinPoint joinPoint, String featureName, boolean proceed) {
+    if (!proceed) {
+      return Mono.error(new FeatureFlagAccessDeniedException(featureName));
+    }
+    return proceedAsMono(joinPoint);
+  }
+
+  private Flux<Object> handleFluxEnabled(
+      ProceedingJoinPoint joinPoint,
+      String featureName,
+      String condition,
+      Mono<Integer> rolloutMono,
+      boolean enabled) {
+    if (!enabled) {
+      return Flux.error(new FeatureFlagAccessDeniedException(featureName));
+    }
+    if (!condition.isEmpty()) {
+      return evaluateConditionForFlux(joinPoint, featureName, condition, rolloutMono);
+    }
+    return rolloutMono.flatMapMany(
+        rollout -> handleFluxRolloutFromContext(joinPoint, featureName, rollout));
+  }
+
+  private Flux<Object> evaluateConditionForFlux(
+      ProceedingJoinPoint joinPoint,
+      String featureName,
+      String condition,
+      Mono<Integer> rolloutMono) {
+    return Flux.deferContextual(
+        ctx -> {
+          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
+          return conditionEvaluator
+              .evaluate(condition, ServerHttpConditionVariables.build(exchange.getRequest()))
+              .flatMapMany(
+                  passed ->
+                      handleFluxConditionResult(
+                          joinPoint, featureName, rolloutMono, exchange, passed));
+        });
+  }
+
+  private Flux<Object> handleFluxConditionResult(
+      ProceedingJoinPoint joinPoint,
+      String featureName,
+      Mono<Integer> rolloutMono,
+      ServerWebExchange exchange,
+      boolean passed) {
+    if (!passed) {
+      return Flux.error(new FeatureFlagAccessDeniedException(featureName));
+    }
+    return proceedFluxWithRollout(joinPoint, featureName, rolloutMono, exchange);
+  }
+
+  private Flux<Object> handleFluxRolloutFromContext(
+      ProceedingJoinPoint joinPoint, String featureName, int rollout) {
+    if (rollout >= 100) {
+      return proceedAsFlux(joinPoint);
+    }
+    return Flux.deferContextual(
+        ctx -> {
+          ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
+          return shouldProceed(featureName, exchange, rollout)
+              .flatMapMany(proceed -> handleFluxProceed(joinPoint, featureName, proceed));
         });
   }
 
@@ -203,19 +242,24 @@ public class FeatureFlagAspect {
       Mono<Integer> rolloutMono,
       ServerWebExchange exchange) {
     return rolloutMono.flatMapMany(
-        rollout -> {
-          if (rollout < 100) {
-            return shouldProceed(featureName, exchange, rollout)
-                .flatMapMany(
-                    proceed -> {
-                      if (!proceed) {
-                        return Flux.error(new FeatureFlagAccessDeniedException(featureName));
-                      }
-                      return proceedAsFlux(joinPoint);
-                    });
-          }
-          return proceedAsFlux(joinPoint);
-        });
+        rollout -> handleFluxRolloutWithExchange(joinPoint, featureName, exchange, rollout));
+  }
+
+  private Flux<Object> handleFluxRolloutWithExchange(
+      ProceedingJoinPoint joinPoint, String featureName, ServerWebExchange exchange, int rollout) {
+    if (rollout >= 100) {
+      return proceedAsFlux(joinPoint);
+    }
+    return shouldProceed(featureName, exchange, rollout)
+        .flatMapMany(proceed -> handleFluxProceed(joinPoint, featureName, proceed));
+  }
+
+  private Flux<Object> handleFluxProceed(
+      ProceedingJoinPoint joinPoint, String featureName, boolean proceed) {
+    if (!proceed) {
+      return Flux.error(new FeatureFlagAccessDeniedException(featureName));
+    }
+    return proceedAsFlux(joinPoint);
   }
 
   /**

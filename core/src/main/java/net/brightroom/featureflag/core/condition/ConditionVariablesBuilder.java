@@ -1,15 +1,14 @@
 package net.brightroom.featureflag.core.condition;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Builder for constructing the variables map passed to {@link FeatureFlagConditionEvaluator} and
- * {@link ReactiveFeatureFlagConditionEvaluator}.
+ * Builder for constructing {@link ConditionVariables} passed to {@link
+ * FeatureFlagConditionEvaluator} and {@link ReactiveFeatureFlagConditionEvaluator}.
  *
  * <p>Centralizes the variable key names so that all modules ({@code webmvc}, {@code webflux}) use
  * consistent keys. Each module extracts the request-specific data and delegates to this builder to
- * construct the final map.
+ * construct the {@link ConditionVariables}.
  *
  * <p>Available variable keys:
  *
@@ -24,46 +23,51 @@ import java.util.Map;
  */
 public final class ConditionVariablesBuilder {
 
-  private final Map<String, Object> variables = new HashMap<>();
+  private Map<String, String> headers;
+  private Map<String, String> params;
+  private Map<String, String> cookies;
+  private String path;
+  private String method;
+  private String remoteAddress;
 
   /** Sets the {@code headers} variable. */
   public ConditionVariablesBuilder headers(Map<String, String> headers) {
-    variables.put("headers", headers);
+    this.headers = headers;
     return this;
   }
 
   /** Sets the {@code params} variable. */
   public ConditionVariablesBuilder params(Map<String, String> params) {
-    variables.put("params", params);
+    this.params = params;
     return this;
   }
 
   /** Sets the {@code cookies} variable. */
   public ConditionVariablesBuilder cookies(Map<String, String> cookies) {
-    variables.put("cookies", cookies);
+    this.cookies = cookies;
     return this;
   }
 
   /** Sets the {@code path} variable. */
   public ConditionVariablesBuilder path(String path) {
-    variables.put("path", path);
+    this.path = path;
     return this;
   }
 
   /** Sets the {@code method} variable. */
   public ConditionVariablesBuilder method(String method) {
-    variables.put("method", method);
+    this.method = method;
     return this;
   }
 
   /** Sets the {@code remoteAddress} variable. */
   public ConditionVariablesBuilder remoteAddress(String remoteAddress) {
-    variables.put("remoteAddress", remoteAddress);
+    this.remoteAddress = remoteAddress;
     return this;
   }
 
-  /** Returns the built variables map. */
-  public Map<String, Object> build() {
-    return Map.copyOf(variables);
+  /** Returns the built {@link ConditionVariables}. */
+  public ConditionVariables build() {
+    return new ConditionVariables(headers, params, cookies, path, method, remoteAddress);
   }
 }

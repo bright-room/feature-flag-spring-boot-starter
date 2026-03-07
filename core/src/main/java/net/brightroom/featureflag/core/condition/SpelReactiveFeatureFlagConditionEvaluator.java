@@ -1,6 +1,5 @@
 package net.brightroom.featureflag.core.condition;
 
-import java.util.Map;
 import reactor.core.publisher.Mono;
 
 /**
@@ -27,7 +26,7 @@ public class SpelReactiveFeatureFlagConditionEvaluator
   }
 
   @Override
-  public Mono<Boolean> evaluate(String expression, Map<String, Object> variables) {
+  public Mono<Boolean> evaluate(String expression, ConditionVariables variables) {
     return Mono.fromCallable(() -> delegate.evaluate(expression, variables));
   }
 }
