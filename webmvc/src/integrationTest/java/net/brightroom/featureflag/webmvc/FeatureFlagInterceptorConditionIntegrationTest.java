@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @TestPropertySource(
     properties = {
       "feature-flags.features.conditional-feature.enabled=true",
+      "feature-flags.features.conditional-feature.rollout=100",
     })
 class FeatureFlagInterceptorConditionIntegrationTest {
 
@@ -68,6 +69,22 @@ class FeatureFlagInterceptorConditionIntegrationTest {
   @Test
   void shouldBlockAccess_whenParamIsMissing() throws Exception {
     mockMvc.perform(get("/condition/param")).andExpect(status().isForbidden());
+  }
+
+  @Test
+  void shouldBlockAccess_onConditionWithRollout_whenConditionIsNotSatisfied() throws Exception {
+    // condition fails (no X-Beta header) — access denied regardless of rollout
+    mockMvc.perform(get("/condition/with-rollout")).andExpect(status().isForbidden());
+  }
+
+  @Test
+  void shouldAllowAccess_onConditionWithRollout_whenConditionSatisfiedAndRolloutFull()
+      throws Exception {
+    // rollout overridden to 100% via property, condition satisfied
+    mockMvc
+        .perform(get("/condition/with-rollout").header("X-Beta", "true"))
+        .andExpect(status().isOk())
+        .andExpect(content().string("Allowed"));
   }
 
   @Autowired

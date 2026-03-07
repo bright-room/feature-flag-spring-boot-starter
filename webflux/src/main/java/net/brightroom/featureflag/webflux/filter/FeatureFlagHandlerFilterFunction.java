@@ -1,16 +1,13 @@
 package net.brightroom.featureflag.webflux.filter;
 
-import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
-import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
+import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.webflux.condition.ServerHttpConditionVariables;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.reactive.function.server.HandlerFilterFunction;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
@@ -46,7 +43,7 @@ public class FeatureFlagHandlerFilterFunction {
   private final ReactiveRolloutStrategy rolloutStrategy;
   private final ReactiveFeatureFlagContextResolver contextResolver;
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
-  private final FeatureFlagConditionEvaluator conditionEvaluator;
+  private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -129,64 +126,46 @@ public class FeatureFlagHandlerFilterFunction {
                     return resolution.resolve(
                         request, new FeatureFlagAccessDeniedException(featureName));
                   }
-                  if (condition != null && !condition.isEmpty()) {
-                    Map<String, Object> variables =
-                        buildConditionVariables(request.exchange().getRequest());
-                    if (!conditionEvaluator.evaluate(condition, variables)) {
-                      return resolution.resolve(
-                          request, new FeatureFlagAccessDeniedException(featureName));
-                    }
-                  }
-                  return rolloutPercentageProvider
-                      .getRolloutPercentage(featureName)
-                      .defaultIfEmpty(rolloutFallback)
-                      .flatMap(
-                          rollout -> {
-                            if (rollout < 100) {
-                              return contextResolver
-                                  .resolve(request.exchange().getRequest())
-                                  .flatMap(
-                                      ctx ->
-                                          rolloutStrategy
-                                              .isInRollout(featureName, ctx, rollout)
-                                              .flatMap(
-                                                  inRollout -> {
-                                                    if (!inRollout) {
-                                                      return resolution.resolve(
-                                                          request,
-                                                          new FeatureFlagAccessDeniedException(
-                                                              featureName));
-                                                    }
-                                                    return next.handle(request);
-                                                  }))
-                                  .switchIfEmpty(Mono.defer(() -> next.handle(request)));
-                            }
-                            return next.handle(request);
-                          });
+                  Mono<Boolean> conditionMono =
+                      (condition != null && !condition.isEmpty())
+                          ? conditionEvaluator.evaluate(
+                              condition,
+                              ServerHttpConditionVariables.build(request.exchange().getRequest()))
+                          : Mono.just(true);
+                  return conditionMono.flatMap(
+                      conditionPassed -> {
+                        if (!conditionPassed) {
+                          return resolution.resolve(
+                              request, new FeatureFlagAccessDeniedException(featureName));
+                        }
+                        return rolloutPercentageProvider
+                            .getRolloutPercentage(featureName)
+                            .defaultIfEmpty(rolloutFallback)
+                            .flatMap(
+                                rollout -> {
+                                  if (rollout < 100) {
+                                    return contextResolver
+                                        .resolve(request.exchange().getRequest())
+                                        .flatMap(
+                                            ctx ->
+                                                rolloutStrategy
+                                                    .isInRollout(featureName, ctx, rollout)
+                                                    .flatMap(
+                                                        inRollout -> {
+                                                          if (!inRollout) {
+                                                            return resolution.resolve(
+                                                                request,
+                                                                new FeatureFlagAccessDeniedException(
+                                                                    featureName));
+                                                          }
+                                                          return next.handle(request);
+                                                        }))
+                                        .switchIfEmpty(Mono.defer(() -> next.handle(request)));
+                                  }
+                                  return next.handle(request);
+                                });
+                      });
                 });
-  }
-
-  private Map<String, Object> buildConditionVariables(ServerHttpRequest request) {
-    Map<String, Object> variables = new HashMap<>();
-    Map<String, String> headers = new HashMap<>();
-    request.getHeaders().forEach((name, values) -> headers.put(name, values.getFirst()));
-    variables.put("headers", headers);
-    Map<String, String> params = new HashMap<>();
-    request.getQueryParams().forEach((name, values) -> params.put(name, values.getFirst()));
-    variables.put("params", params);
-    Map<String, String> cookies = new HashMap<>();
-    request
-        .getCookies()
-        .forEach(
-            (name, cookieList) -> {
-              if (!cookieList.isEmpty()) cookies.put(name, cookieList.getFirst().getValue());
-            });
-    variables.put("cookies", cookies);
-    variables.put("path", request.getPath().value());
-    variables.put("method", request.getMethod().name());
-    InetSocketAddress remoteAddr = request.getRemoteAddress();
-    variables.put("remoteAddress", remoteAddr != null ? remoteAddr.getHostString() : "");
-    return variables;
   }
 
   /**
@@ -198,7 +177,7 @@ public class FeatureFlagHandlerFilterFunction {
    * @param contextResolver the resolver used to extract context from the current request
    * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
    *     feature
-   * @param conditionEvaluator the evaluator used to evaluate SpEL condition expressions
+   * @param conditionEvaluator the reactive evaluator used to evaluate SpEL condition expressions
    */
   public FeatureFlagHandlerFilterFunction(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
@@ -206,7 +185,7 @@ public class FeatureFlagHandlerFilterFunction {
       ReactiveRolloutStrategy rolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver,
       ReactiveRolloutPercentageProvider rolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator) {
+      ReactiveFeatureFlagConditionEvaluator conditionEvaluator) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.resolution = resolution;
     this.rolloutStrategy = rolloutStrategy;

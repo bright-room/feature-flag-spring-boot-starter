@@ -1,9 +1,5 @@
 package net.brightroom.featureflag.webmvc.filter;
 
-import jakarta.servlet.http.HttpServletRequest;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
@@ -12,6 +8,7 @@ import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedExceptio
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
+import net.brightroom.featureflag.webmvc.condition.HttpServletConditionVariables;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
 import net.brightroom.featureflag.webmvc.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import org.springframework.web.servlet.function.HandlerFilterFunction;
@@ -126,7 +123,8 @@ public class FeatureFlagHandlerFilterFunction {
         return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
       }
       if (condition != null && !condition.isEmpty()) {
-        Map<String, Object> variables = buildConditionVariables(request.servletRequest());
+        Map<String, Object> variables =
+            HttpServletConditionVariables.build(request.servletRequest());
         if (!conditionEvaluator.evaluate(condition, variables)) {
           return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
         }
@@ -141,26 +139,6 @@ public class FeatureFlagHandlerFilterFunction {
       }
       return next.handle(request);
     };
-  }
-
-  private Map<String, Object> buildConditionVariables(HttpServletRequest request) {
-    Map<String, Object> variables = new HashMap<>();
-    Map<String, String> headers = new HashMap<>();
-    Collections.list(request.getHeaderNames())
-        .forEach(name -> headers.put(name, request.getHeader(name)));
-    variables.put("headers", headers);
-    Map<String, String> params = new HashMap<>();
-    request.getParameterMap().forEach((k, v) -> params.put(k, v.length > 0 ? v[0] : ""));
-    variables.put("params", params);
-    Map<String, String> cookies = new HashMap<>();
-    if (request.getCookies() != null) {
-      Arrays.stream(request.getCookies()).forEach(c -> cookies.put(c.getName(), c.getValue()));
-    }
-    variables.put("cookies", cookies);
-    variables.put("path", request.getRequestURI());
-    variables.put("method", request.getMethod());
-    variables.put("remoteAddress", request.getRemoteAddr());
-    return variables;
   }
 
   /**

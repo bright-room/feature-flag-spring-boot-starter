@@ -1,14 +1,12 @@
 package net.brightroom.featureflag.webflux.aspect;
 
 import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
-import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
+import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.webflux.condition.ServerHttpConditionVariables;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -17,7 +15,6 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.core.annotation.AnnotationUtils;
-import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -42,7 +39,7 @@ public class FeatureFlagAspect {
   private final ReactiveRolloutStrategy rolloutStrategy;
   private final ReactiveFeatureFlagContextResolver contextResolver;
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
-  private final FeatureFlagConditionEvaluator conditionEvaluator;
+  private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator;
 
   /**
    * Around advice that checks the feature flag before proceeding with the annotated method.
@@ -89,11 +86,18 @@ public class FeatureFlagAspect {
               return Mono.deferContextual(
                   ctx -> {
                     ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-                    Map<String, Object> variables = buildConditionVariables(exchange.getRequest());
-                    if (!conditionEvaluator.evaluate(condition, variables)) {
-                      return Mono.error(new FeatureFlagAccessDeniedException(featureName));
-                    }
-                    return proceedMonoWithRollout(joinPoint, featureName, rolloutMono, exchange);
+                    return conditionEvaluator
+                        .evaluate(
+                            condition, ServerHttpConditionVariables.build(exchange.getRequest()))
+                        .flatMap(
+                            passed -> {
+                              if (!passed) {
+                                return Mono.error(
+                                    new FeatureFlagAccessDeniedException(featureName));
+                              }
+                              return proceedMonoWithRollout(
+                                  joinPoint, featureName, rolloutMono, exchange);
+                            });
                   });
             }
             return rolloutMono.flatMap(
@@ -128,11 +132,18 @@ public class FeatureFlagAspect {
               return Flux.deferContextual(
                   ctx -> {
                     ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
-                    Map<String, Object> variables = buildConditionVariables(exchange.getRequest());
-                    if (!conditionEvaluator.evaluate(condition, variables)) {
-                      return Flux.error(new FeatureFlagAccessDeniedException(featureName));
-                    }
-                    return proceedFluxWithRollout(joinPoint, featureName, rolloutMono, exchange);
+                    return conditionEvaluator
+                        .evaluate(
+                            condition, ServerHttpConditionVariables.build(exchange.getRequest()))
+                        .flatMapMany(
+                            passed -> {
+                              if (!passed) {
+                                return Flux.error(
+                                    new FeatureFlagAccessDeniedException(featureName));
+                              }
+                              return proceedFluxWithRollout(
+                                  joinPoint, featureName, rolloutMono, exchange);
+                            });
                   });
             }
             return rolloutMono.flatMapMany(
@@ -239,29 +250,6 @@ public class FeatureFlagAspect {
     }
   }
 
-  private Map<String, Object> buildConditionVariables(ServerHttpRequest request) {
-    Map<String, Object> variables = new HashMap<>();
-    Map<String, String> headers = new HashMap<>();
-    request.getHeaders().forEach((name, values) -> headers.put(name, values.getFirst()));
-    variables.put("headers", headers);
-    Map<String, String> params = new HashMap<>();
-    request.getQueryParams().forEach((name, values) -> params.put(name, values.getFirst()));
-    variables.put("params", params);
-    Map<String, String> cookies = new HashMap<>();
-    request
-        .getCookies()
-        .forEach(
-            (name, cookieList) -> {
-              if (!cookieList.isEmpty()) cookies.put(name, cookieList.getFirst().getValue());
-            });
-    variables.put("cookies", cookies);
-    variables.put("path", request.getPath().value());
-    variables.put("method", request.getMethod().name());
-    InetSocketAddress remoteAddr = request.getRemoteAddress();
-    variables.put("remoteAddress", remoteAddr != null ? remoteAddr.getHostString() : "");
-    return variables;
-  }
-
   private FeatureFlag resolveAnnotation(ProceedingJoinPoint joinPoint) {
     MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
     Method method =
@@ -294,14 +282,14 @@ public class FeatureFlagAspect {
    * @param contextResolver the resolver used to extract context from the current request
    * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
    *     feature
-   * @param conditionEvaluator the evaluator used to evaluate SpEL condition expressions
+   * @param conditionEvaluator the reactive evaluator used to evaluate SpEL condition expressions
    */
   public FeatureFlagAspect(
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       ReactiveRolloutStrategy rolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver,
       ReactiveRolloutPercentageProvider rolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator) {
+      ReactiveFeatureFlagConditionEvaluator conditionEvaluator) {
     this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
     this.rolloutStrategy = rolloutStrategy;
     this.contextResolver = contextResolver;

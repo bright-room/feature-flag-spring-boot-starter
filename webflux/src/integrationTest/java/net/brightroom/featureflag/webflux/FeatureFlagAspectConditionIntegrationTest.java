@@ -14,6 +14,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @TestPropertySource(
     properties = {
       "feature-flags.features.conditional-feature.enabled=true",
+      "feature-flags.features.conditional-feature.rollout=100",
     })
 class FeatureFlagAspectConditionIntegrationTest {
 
@@ -73,6 +74,26 @@ class FeatureFlagAspectConditionIntegrationTest {
   @Test
   void shouldBlockAccess_whenParamIsMissing() {
     webTestClient.get().uri("/condition/param").exchange().expectStatus().isForbidden();
+  }
+
+  @Test
+  void shouldBlockAccess_onConditionWithRollout_whenConditionIsNotSatisfied() {
+    // condition fails (no X-Beta header) — access denied regardless of rollout
+    webTestClient.get().uri("/condition/with-rollout").exchange().expectStatus().isForbidden();
+  }
+
+  @Test
+  void shouldAllowAccess_onConditionWithRollout_whenConditionSatisfiedAndRolloutFull() {
+    // rollout overridden to 100% via property, condition satisfied
+    webTestClient
+        .get()
+        .uri("/condition/with-rollout")
+        .header("X-Beta", "true")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(String.class)
+        .isEqualTo("Allowed");
   }
 
   @Autowired

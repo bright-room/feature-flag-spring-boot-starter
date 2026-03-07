@@ -2,7 +2,9 @@ package net.brightroom.featureflag.webflux.autoconfigure;
 
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
+import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.condition.SpelFeatureFlagConditionEvaluator;
+import net.brightroom.featureflag.core.condition.SpelReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.InMemoryReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
@@ -94,6 +96,13 @@ public class FeatureFlagWebFluxAutoConfiguration {
     return new SpelFeatureFlagConditionEvaluator(featureFlagProperties.condition().failOnError());
   }
 
+  @Bean
+  @ConditionalOnMissingBean(ReactiveFeatureFlagConditionEvaluator.class)
+  ReactiveFeatureFlagConditionEvaluator reactiveFeatureFlagConditionEvaluator(
+      FeatureFlagConditionEvaluator conditionEvaluator) {
+    return new SpelReactiveFeatureFlagConditionEvaluator(conditionEvaluator);
+  }
+
   /**
    * Propagates {@link ServerWebExchange} into the Reactor context so that {@link FeatureFlagAspect}
    * can access it via {@code Mono.deferContextual} during rollout percentage checks.
@@ -116,7 +125,7 @@ public class FeatureFlagWebFluxAutoConfiguration {
       ReactiveRolloutStrategy reactiveRolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver,
       ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator) {
+      ReactiveFeatureFlagConditionEvaluator conditionEvaluator) {
     return new FeatureFlagAspect(
         reactiveFeatureFlagProvider,
         reactiveRolloutStrategy,
@@ -139,7 +148,7 @@ public class FeatureFlagWebFluxAutoConfiguration {
       ReactiveRolloutStrategy reactiveRolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver,
       ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator) {
+      ReactiveFeatureFlagConditionEvaluator conditionEvaluator) {
     return new FeatureFlagHandlerFilterFunction(
         reactiveFeatureFlagProvider,
         accessDeniedHandlerResolution,
