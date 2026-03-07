@@ -9,9 +9,12 @@ import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
+import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
@@ -28,9 +31,15 @@ class FeatureFlagInterceptorTest {
   private final FeatureFlagContextResolver contextResolver = mock(FeatureFlagContextResolver.class);
   private final RolloutPercentageProvider rolloutPercentageProvider =
       mock(RolloutPercentageProvider.class);
+  private final FeatureFlagConditionEvaluator conditionEvaluator =
+      mock(FeatureFlagConditionEvaluator.class);
   private final FeatureFlagInterceptor interceptor =
       new FeatureFlagInterceptor(
-          provider, rolloutStrategy, contextResolver, rolloutPercentageProvider);
+          provider,
+          rolloutStrategy,
+          contextResolver,
+          rolloutPercentageProvider,
+          conditionEvaluator);
 
   private final HttpServletRequest request = mock(HttpServletRequest.class);
   private final HttpServletResponse response = mock(HttpServletResponse.class);
@@ -45,8 +54,13 @@ class FeatureFlagInterceptorTest {
   }
 
   private FeatureFlag featureFlagAnnotation(String value, int rollout) {
+    return featureFlagAnnotation(value, "", rollout);
+  }
+
+  private FeatureFlag featureFlagAnnotation(String value, String condition, int rollout) {
     FeatureFlag annotation = mock(FeatureFlag.class);
     when(annotation.value()).thenReturn(value);
+    when(annotation.condition()).thenReturn(condition);
     when(annotation.rollout()).thenReturn(rollout);
     return annotation;
   }
@@ -222,5 +236,80 @@ class FeatureFlagInterceptorTest {
 
     assertThatThrownBy(() -> interceptor.preHandle(request, response, handlerMethod))
         .isInstanceOf(FeatureFlagAccessDeniedException.class);
+  }
+
+  // --- condition ---
+
+  private void stubRequestForConditionVariables() {
+    when(request.getHeaderNames()).thenReturn(Collections.emptyEnumeration());
+    when(request.getParameterMap()).thenReturn(Map.of());
+    when(request.getCookies()).thenReturn(null);
+    when(request.getRequestURI()).thenReturn("/test");
+    when(request.getMethod()).thenReturn("GET");
+    when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+  }
+
+  @Test
+  void preHandle_returnsTrue_whenConditionIsTrue() throws Exception {
+    FeatureFlag annotation = featureFlagAnnotation("my-feature", "headers['X-Beta'] != null", 100);
+    HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
+        .thenReturn(OptionalInt.empty());
+    stubRequestForConditionVariables();
+    when(conditionEvaluator.evaluate(
+            org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
+            org.mockito.ArgumentMatchers.any()))
+        .thenReturn(true);
+
+    boolean result = interceptor.preHandle(request, response, handlerMethod);
+
+    assertTrue(result);
+  }
+
+  @Test
+  void preHandle_throwsFeatureFlagAccessDeniedException_whenConditionIsFalse() {
+    FeatureFlag annotation = featureFlagAnnotation("my-feature", "headers['X-Beta'] != null", 100);
+    HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    stubRequestForConditionVariables();
+    when(conditionEvaluator.evaluate(
+            org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
+            org.mockito.ArgumentMatchers.any()))
+        .thenReturn(false);
+
+    assertThatThrownBy(() -> interceptor.preHandle(request, response, handlerMethod))
+        .isInstanceOf(FeatureFlagAccessDeniedException.class);
+  }
+
+  @Test
+  void preHandle_skipsConditionCheck_whenConditionIsEmpty() throws Exception {
+    FeatureFlag annotation = featureFlagAnnotation("my-feature", "", 100);
+    HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
+        .thenReturn(OptionalInt.empty());
+
+    boolean result = interceptor.preHandle(request, response, handlerMethod);
+
+    assertTrue(result);
+    verifyNoInteractions(conditionEvaluator);
+  }
+
+  @Test
+  void preHandle_evaluatesConditionBeforeRollout() throws Exception {
+    FeatureFlag annotation = featureFlagAnnotation("my-feature", "headers['X-Beta'] != null", 50);
+    HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
+    when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    stubRequestForConditionVariables();
+    when(conditionEvaluator.evaluate(
+            org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
+            org.mockito.ArgumentMatchers.any()))
+        .thenReturn(false);
+
+    // Condition fails, so rollout should not be checked
+    assertThatThrownBy(() -> interceptor.preHandle(request, response, handlerMethod))
+        .isInstanceOf(FeatureFlagAccessDeniedException.class);
+    verifyNoInteractions(rolloutStrategy);
   }
 }

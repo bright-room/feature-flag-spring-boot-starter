@@ -1,6 +1,8 @@
 package net.brightroom.featureflag.webflux.autoconfigure;
 
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
+import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
+import net.brightroom.featureflag.core.condition.SpelFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.InMemoryReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
@@ -86,6 +88,12 @@ public class FeatureFlagWebFluxAutoConfiguration {
         featureFlagProperties.rolloutPercentages());
   }
 
+  @Bean
+  @ConditionalOnMissingBean
+  FeatureFlagConditionEvaluator featureFlagConditionEvaluator() {
+    return new SpelFeatureFlagConditionEvaluator(featureFlagProperties.condition().failOnError());
+  }
+
   /**
    * Propagates {@link ServerWebExchange} into the Reactor context so that {@link FeatureFlagAspect}
    * can access it via {@code Mono.deferContextual} during rollout percentage checks.
@@ -107,12 +115,14 @@ public class FeatureFlagWebFluxAutoConfiguration {
       ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
       ReactiveRolloutStrategy reactiveRolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver,
-      ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider) {
+      ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider,
+      FeatureFlagConditionEvaluator conditionEvaluator) {
     return new FeatureFlagAspect(
         reactiveFeatureFlagProvider,
         reactiveRolloutStrategy,
         contextResolver,
-        reactiveRolloutPercentageProvider);
+        reactiveRolloutPercentageProvider,
+        conditionEvaluator);
   }
 
   @Bean
@@ -128,13 +138,15 @@ public class FeatureFlagWebFluxAutoConfiguration {
       AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution,
       ReactiveRolloutStrategy reactiveRolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver,
-      ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider) {
+      ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider,
+      FeatureFlagConditionEvaluator conditionEvaluator) {
     return new FeatureFlagHandlerFilterFunction(
         reactiveFeatureFlagProvider,
         accessDeniedHandlerResolution,
         reactiveRolloutStrategy,
         contextResolver,
-        reactiveRolloutPercentageProvider);
+        reactiveRolloutPercentageProvider,
+        conditionEvaluator);
   }
 
   /**

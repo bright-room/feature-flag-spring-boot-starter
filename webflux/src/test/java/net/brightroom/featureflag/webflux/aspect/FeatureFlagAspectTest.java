@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Method;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
+import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
@@ -32,17 +33,25 @@ class FeatureFlagAspectTest {
   // Default: no rollout percentage configured in provider, falls back to annotation value
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider =
       mock(ReactiveRolloutPercentageProvider.class, invocation -> Mono.empty());
+  private final FeatureFlagConditionEvaluator conditionEvaluator =
+      mock(FeatureFlagConditionEvaluator.class);
   private final FeatureFlagAspect aspect =
       new FeatureFlagAspect(
           provider,
           new DefaultReactiveRolloutStrategy(),
           contextResolver,
-          rolloutPercentageProvider);
+          rolloutPercentageProvider,
+          conditionEvaluator);
 
   // Aspect with mocked rollout strategy for rollout-specific tests
   private final ReactiveRolloutStrategy rolloutStrategy = mock(ReactiveRolloutStrategy.class);
   private final FeatureFlagAspect aspectWithRollout =
-      new FeatureFlagAspect(provider, rolloutStrategy, contextResolver, rolloutPercentageProvider);
+      new FeatureFlagAspect(
+          provider,
+          rolloutStrategy,
+          contextResolver,
+          rolloutPercentageProvider,
+          conditionEvaluator);
 
   static class TestController {
 

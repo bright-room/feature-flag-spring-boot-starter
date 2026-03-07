@@ -45,6 +45,28 @@ public @interface FeatureFlag {
   String value();
 
   /**
+   * SpEL condition expression evaluated against request context.
+   *
+   * <p>When non-empty, the feature is enabled only if the expression evaluates to {@code true}.
+   *
+   * <p>Available variables:
+   *
+   * <ul>
+   *   <li>{@code headers} — request headers as {@code Map<String, String>}
+   *   <li>{@code params} — query parameters as {@code Map<String, String>}
+   *   <li>{@code cookies} — cookies as {@code Map<String, String>}
+   *   <li>{@code path} — request path as {@code String}
+   *   <li>{@code method} — HTTP method as {@code String}
+   *   <li>{@code remoteAddress} — client IP as {@code String}
+   * </ul>
+   *
+   * <p>Example: {@code @FeatureFlag(value = "beta", condition = "headers['X-Beta'] != null")}
+   *
+   * @return SpEL expression; empty string (default) means no condition
+   */
+  String condition() default "";
+
+  /**
    * Rollout percentage (0–100). 100 means fully enabled (default).
    *
    * <p>When less than 100, the feature is enabled only for a percentage of requests (or users, if a

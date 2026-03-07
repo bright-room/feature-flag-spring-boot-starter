@@ -30,6 +30,7 @@ public class FeatureFlagProperties {
 
   private Map<String, FeatureConfiguration> features = new HashMap<>();
   private ResponseProperties response = new ResponseProperties();
+  private ConditionProperties condition = new ConditionProperties();
   private boolean defaultEnabled = false;
 
   /**
@@ -76,6 +77,15 @@ public class FeatureFlagProperties {
   }
 
   /**
+   * Returns the condition evaluation properties.
+   *
+   * @return the condition properties
+   */
+  public ConditionProperties condition() {
+    return condition;
+  }
+
+  /**
    * Returns whether undefined feature flags are enabled by default.
    *
    * @return {@code true} if undefined flags are enabled (fail-open), {@code false} if disabled
@@ -93,6 +103,11 @@ public class FeatureFlagProperties {
   // for property binding
   void setResponse(ResponseProperties response) {
     this.response = response;
+  }
+
+  // for property binding
+  void setCondition(ConditionProperties condition) {
+    this.condition = condition;
   }
 
   // for property binding

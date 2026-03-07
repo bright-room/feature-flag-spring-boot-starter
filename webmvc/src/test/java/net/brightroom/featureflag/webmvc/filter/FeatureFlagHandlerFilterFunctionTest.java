@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Optional;
 import java.util.OptionalInt;
+import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
@@ -34,19 +35,27 @@ class FeatureFlagHandlerFilterFunctionTest {
   private final FeatureFlagContextResolver contextResolver = mock(FeatureFlagContextResolver.class);
   private final RolloutPercentageProvider rolloutPercentageProvider =
       mock(RolloutPercentageProvider.class);
+  private final FeatureFlagConditionEvaluator conditionEvaluator =
+      mock(FeatureFlagConditionEvaluator.class);
   private final FeatureFlagHandlerFilterFunction filterFunction =
       new FeatureFlagHandlerFilterFunction(
           provider,
           resolution,
           new DefaultRolloutStrategy(),
           contextResolver,
-          rolloutPercentageProvider);
+          rolloutPercentageProvider,
+          conditionEvaluator);
 
   // Filter function with mocked rollout strategy for rollout-specific tests
   private final RolloutStrategy rolloutStrategy = mock(RolloutStrategy.class);
   private final FeatureFlagHandlerFilterFunction filterFunctionWithRollout =
       new FeatureFlagHandlerFilterFunction(
-          provider, resolution, rolloutStrategy, contextResolver, rolloutPercentageProvider);
+          provider,
+          resolution,
+          rolloutStrategy,
+          contextResolver,
+          rolloutPercentageProvider,
+          conditionEvaluator);
 
   @Test
   void of_throwsIllegalArgumentException_whenFeatureNameIsNull() {

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
@@ -35,19 +36,27 @@ class FeatureFlagHandlerFilterFunctionTest {
       mock(ReactiveFeatureFlagContextResolver.class);
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider =
       mock(ReactiveRolloutPercentageProvider.class);
+  private final FeatureFlagConditionEvaluator conditionEvaluator =
+      mock(FeatureFlagConditionEvaluator.class);
   private final FeatureFlagHandlerFilterFunction filterFunction =
       new FeatureFlagHandlerFilterFunction(
           provider,
           resolution,
           new DefaultReactiveRolloutStrategy(),
           contextResolver,
-          rolloutPercentageProvider);
+          rolloutPercentageProvider,
+          conditionEvaluator);
 
   // Filter function with mocked rollout strategy for rollout-specific tests
   private final ReactiveRolloutStrategy rolloutStrategy = mock(ReactiveRolloutStrategy.class);
   private final FeatureFlagHandlerFilterFunction filterFunctionWithRollout =
       new FeatureFlagHandlerFilterFunction(
-          provider, resolution, rolloutStrategy, contextResolver, rolloutPercentageProvider);
+          provider,
+          resolution,
+          rolloutStrategy,
+          contextResolver,
+          rolloutPercentageProvider,
+          conditionEvaluator);
 
   @Test
   void of_throwsIllegalArgumentException_whenFeatureNameIsNull() {

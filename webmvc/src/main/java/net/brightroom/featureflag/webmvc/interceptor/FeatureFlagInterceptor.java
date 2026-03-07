@@ -2,8 +2,13 @@ package net.brightroom.featureflag.webmvc.interceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
+import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
@@ -28,6 +33,7 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
   private final RolloutStrategy rolloutStrategy;
   private final FeatureFlagContextResolver contextResolver;
   private final RolloutPercentageProvider rolloutPercentageProvider;
+  private final FeatureFlagConditionEvaluator conditionEvaluator;
 
   /**
    * Creates a new {@link FeatureFlagInterceptor}.
@@ -40,16 +46,20 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
    *     must not be null
    * @param rolloutPercentageProvider the provider that supplies per-flag rollout percentages,
    *     overriding annotation-level values when present; must not be null
+   * @param conditionEvaluator the evaluator used to evaluate SpEL condition expressions; must not
+   *     be null
    */
   public FeatureFlagInterceptor(
       FeatureFlagProvider featureFlagProvider,
       RolloutStrategy rolloutStrategy,
       FeatureFlagContextResolver contextResolver,
-      RolloutPercentageProvider rolloutPercentageProvider) {
+      RolloutPercentageProvider rolloutPercentageProvider,
+      FeatureFlagConditionEvaluator conditionEvaluator) {
     this.featureFlagProvider = featureFlagProvider;
     this.rolloutStrategy = rolloutStrategy;
     this.contextResolver = contextResolver;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
+    this.conditionEvaluator = conditionEvaluator;
   }
 
   @Override
@@ -67,6 +77,7 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
       if (checkFeatureFlag(methodAnnotation)) {
         throw new FeatureFlagAccessDeniedException(methodAnnotation.value());
       }
+      checkCondition(request, methodAnnotation);
       checkRollout(request, methodAnnotation);
       return true;
     }
@@ -79,6 +90,7 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
     if (checkFeatureFlag(classAnnotation)) {
       throw new FeatureFlagAccessDeniedException(classAnnotation.value());
     }
+    checkCondition(request, classAnnotation);
     checkRollout(request, classAnnotation);
 
     return true;
@@ -98,6 +110,37 @@ public class FeatureFlagInterceptor implements HandlerInterceptor {
 
   private boolean checkFeatureFlag(FeatureFlag annotation) {
     return !featureFlagProvider.isFeatureEnabled(annotation.value());
+  }
+
+  private void checkCondition(HttpServletRequest request, FeatureFlag annotation) {
+    String condition = annotation.condition();
+    if (condition.isEmpty()) {
+      return;
+    }
+    Map<String, Object> variables = buildConditionVariables(request);
+    if (!conditionEvaluator.evaluate(condition, variables)) {
+      throw new FeatureFlagAccessDeniedException(annotation.value());
+    }
+  }
+
+  private Map<String, Object> buildConditionVariables(HttpServletRequest request) {
+    Map<String, Object> variables = new HashMap<>();
+    Map<String, String> headers = new HashMap<>();
+    Collections.list(request.getHeaderNames())
+        .forEach(name -> headers.put(name, request.getHeader(name)));
+    variables.put("headers", headers);
+    Map<String, String> params = new HashMap<>();
+    request.getParameterMap().forEach((k, v) -> params.put(k, v.length > 0 ? v[0] : ""));
+    variables.put("params", params);
+    Map<String, String> cookies = new HashMap<>();
+    if (request.getCookies() != null) {
+      Arrays.stream(request.getCookies()).forEach(c -> cookies.put(c.getName(), c.getValue()));
+    }
+    variables.put("cookies", cookies);
+    variables.put("path", request.getRequestURI());
+    variables.put("method", request.getMethod());
+    variables.put("remoteAddress", request.getRemoteAddr());
+    return variables;
   }
 
   private void checkRollout(HttpServletRequest request, FeatureFlag annotation) {
