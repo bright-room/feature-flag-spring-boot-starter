@@ -34,15 +34,19 @@ public interface MutableReactiveRolloutPercentageProvider
    *
    * @param featureName the name of the feature flag to update
    * @param percentage the new rollout percentage (0–100)
+   * @return a {@link Mono} that completes when the update is applied
    */
-  void setRolloutPercentage(String featureName, int percentage);
+  Mono<Void> setRolloutPercentage(String featureName, int percentage);
 
   /**
    * Removes the rollout percentage for the specified feature flag.
    *
-   * <p>If the feature flag does not have a configured rollout percentage, this method is a no-op.
+   * <p>If the feature flag does not have a configured rollout percentage, this method is a no-op
+   * and emits {@code false}.
    *
    * @param featureName the name of the feature flag whose rollout percentage to remove
+   * @return a {@link Mono} emitting {@code true} if the rollout percentage existed and was removed,
+   *     {@code false} if it did not exist
    */
-  void removeRolloutPercentage(String featureName);
+  Mono<Boolean> removeRolloutPercentage(String featureName);
 }
