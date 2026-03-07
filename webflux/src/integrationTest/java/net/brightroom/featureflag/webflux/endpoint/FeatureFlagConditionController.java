@@ -26,5 +26,11 @@ public class FeatureFlagConditionController {
     return Mono.just("Allowed");
   }
 
+  @FeatureFlag(value = "conditional-feature", condition = "remoteAddress == '127.0.0.1'")
+  @GetMapping("/condition/remote-address")
+  Mono<String> remoteAddressCondition() {
+    return Mono.just("Allowed");
+  }
+
   public FeatureFlagConditionController() {}
 }

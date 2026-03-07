@@ -64,6 +64,6 @@ public final class ConditionVariablesBuilder {
 
   /** Returns the built variables map. */
   public Map<String, Object> build() {
-    return variables;
+    return Map.copyOf(variables);
   }
 }

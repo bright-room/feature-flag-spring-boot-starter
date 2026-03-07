@@ -8,5 +8,7 @@ feature-flags:
       enabled: true
     disable-class-level-feature:
       enabled: false
+    conditional-feature:
+      enabled: true
   response:
     type: json

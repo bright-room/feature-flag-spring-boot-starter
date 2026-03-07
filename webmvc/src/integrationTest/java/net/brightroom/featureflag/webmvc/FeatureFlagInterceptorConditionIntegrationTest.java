@@ -87,6 +87,15 @@ class FeatureFlagInterceptorConditionIntegrationTest {
         .andExpect(content().string("Allowed"));
   }
 
+  @Test
+  void shouldAllowAccess_whenRemoteAddressConditionIsSatisfied() throws Exception {
+    // MockMvc defaults remoteAddr to 127.0.0.1
+    mockMvc
+        .perform(get("/condition/remote-address"))
+        .andExpect(status().isOk())
+        .andExpect(content().string("Allowed"));
+  }
+
   @Autowired
   FeatureFlagInterceptorConditionIntegrationTest(MockMvc mockMvc) {
     this.mockMvc = mockMvc;

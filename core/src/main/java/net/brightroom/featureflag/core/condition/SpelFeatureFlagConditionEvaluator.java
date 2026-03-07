@@ -28,6 +28,9 @@ import org.springframework.expression.spel.support.SimpleEvaluationContext;
 public class SpelFeatureFlagConditionEvaluator implements FeatureFlagConditionEvaluator {
 
   private static final Log log = LogFactory.getLog(SpelFeatureFlagConditionEvaluator.class);
+  private static final DataBindingPropertyAccessor READ_ONLY_ACCESSOR =
+      DataBindingPropertyAccessor.forReadOnlyAccess();
+  private static final MapAccessor MAP_ACCESSOR = new MapAccessor();
 
   private final SpelExpressionParser parser = new SpelExpressionParser();
   private final ConcurrentMap<String, Expression> cache = new ConcurrentHashMap<>();
@@ -48,8 +51,7 @@ public class SpelFeatureFlagConditionEvaluator implements FeatureFlagConditionEv
     try {
       Expression expr = cache.computeIfAbsent(expression, parser::parseExpression);
       SimpleEvaluationContext context =
-          SimpleEvaluationContext.forPropertyAccessors(
-                  DataBindingPropertyAccessor.forReadOnlyAccess(), new MapAccessor())
+          SimpleEvaluationContext.forPropertyAccessors(READ_ONLY_ACCESSOR, MAP_ACCESSOR)
               .withRootObject(variables)
               .build();
       Boolean result = expr.getValue(context, Boolean.class);

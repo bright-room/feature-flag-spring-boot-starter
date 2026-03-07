@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import net.brightroom.featureflag.core.condition.ConditionVariablesBuilder;
 
 /**
@@ -25,7 +26,7 @@ public final class HttpServletConditionVariables {
    * @return a map of condition variables keyed by name
    */
   public static Map<String, Object> build(HttpServletRequest request) {
-    Map<String, String> headers = new HashMap<>();
+    Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     Collections.list(request.getHeaderNames())
         .forEach(name -> headers.put(name, request.getHeader(name)));
     Map<String, String> params = new HashMap<>();

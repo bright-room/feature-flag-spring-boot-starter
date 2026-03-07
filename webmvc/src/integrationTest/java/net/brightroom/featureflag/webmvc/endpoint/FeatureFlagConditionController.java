@@ -25,5 +25,11 @@ public class FeatureFlagConditionController {
     return "Allowed";
   }
 
+  @FeatureFlag(value = "conditional-feature", condition = "remoteAddress == '127.0.0.1'")
+  @GetMapping("/condition/remote-address")
+  String remoteAddressCondition() {
+    return "Allowed";
+  }
+
   public FeatureFlagConditionController() {}
 }

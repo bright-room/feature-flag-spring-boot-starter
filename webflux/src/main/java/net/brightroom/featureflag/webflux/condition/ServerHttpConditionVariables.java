@@ -3,6 +3,7 @@ package net.brightroom.featureflag.webflux.condition;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import net.brightroom.featureflag.core.condition.ConditionVariablesBuilder;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 
@@ -24,7 +25,7 @@ public final class ServerHttpConditionVariables {
    * @return a map of condition variables keyed by name
    */
   public static Map<String, Object> build(ServerHttpRequest request) {
-    Map<String, String> headers = new HashMap<>();
+    Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     request.getHeaders().forEach((name, values) -> headers.put(name, values.getFirst()));
     Map<String, String> params = new HashMap<>();
     request.getQueryParams().forEach((name, values) -> params.put(name, values.getFirst()));
