@@ -4,7 +4,24 @@ on:
   pull_request:
 
 jobs:
-  check:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Gradle Cache
+        uses: ./.github/actions/gradle-cache
+
+      - name: Spotless Check
+        uses: ./.github/actions/gradle-action
+        with:
+          command: spotlessCheck
+
+  unit-test:
+    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -15,7 +32,24 @@ jobs:
       - name: Gradle Cache
         uses: ./.github/actions/gradle-cache
 
-      - name: Check with Gradle
+      - name: Unit Test
         uses: ./.github/actions/gradle-action
         with:
-          command: check
+          command: test
+
+  integration-test:
+    needs: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Gradle Cache
+        uses: ./.github/actions/gradle-cache
+
+      - name: Integration Test
+        uses: ./.github/actions/gradle-action
+        with:
+          command: integrationTest
