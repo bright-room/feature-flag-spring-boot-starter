@@ -6,6 +6,7 @@ changelog:
       - "Close: Wontfix"
       - "Type: Publishing"
       - "Type: Test"
+      - "Release note ignored"
   categories:
     - title: New Features 🎉
       labels:
