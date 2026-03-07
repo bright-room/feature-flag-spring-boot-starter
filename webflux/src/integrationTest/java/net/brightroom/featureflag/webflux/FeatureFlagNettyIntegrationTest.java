@@ -45,4 +45,17 @@ class FeatureFlagNettyIntegrationTest {
         .expectStatus()
         .isForbidden();
   }
+
+  @Test
+  void shouldAllowAccess_whenRemoteAddressConditionIsSatisfied() {
+    // Real Netty server: remoteAddress resolves to 127.0.0.1 for localhost connections
+    webTestClient
+        .get()
+        .uri("/condition/remote-address")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(String.class)
+        .isEqualTo("Allowed");
+  }
 }

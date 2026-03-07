@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Method;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
+import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
@@ -18,7 +19,10 @@ import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -32,17 +36,25 @@ class FeatureFlagAspectTest {
   // Default: no rollout percentage configured in provider, falls back to annotation value
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider =
       mock(ReactiveRolloutPercentageProvider.class, invocation -> Mono.empty());
+  private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator =
+      mock(ReactiveFeatureFlagConditionEvaluator.class);
   private final FeatureFlagAspect aspect =
       new FeatureFlagAspect(
           provider,
           new DefaultReactiveRolloutStrategy(),
           contextResolver,
-          rolloutPercentageProvider);
+          rolloutPercentageProvider,
+          conditionEvaluator);
 
   // Aspect with mocked rollout strategy for rollout-specific tests
   private final ReactiveRolloutStrategy rolloutStrategy = mock(ReactiveRolloutStrategy.class);
   private final FeatureFlagAspect aspectWithRollout =
-      new FeatureFlagAspect(provider, rolloutStrategy, contextResolver, rolloutPercentageProvider);
+      new FeatureFlagAspect(
+          provider,
+          rolloutStrategy,
+          contextResolver,
+          rolloutPercentageProvider,
+          conditionEvaluator);
 
   static class TestController {
 
@@ -73,6 +85,16 @@ class FeatureFlagAspectTest {
 
     @FeatureFlag(value = "some-feature", rollout = 50)
     public Flux<String> rolloutFluxMethod() {
+      return Flux.just("result1", "result2");
+    }
+
+    @FeatureFlag(value = "some-feature", condition = "headers['X-Beta'] != null")
+    public Mono<String> conditionMonoMethod() {
+      return Mono.just("result");
+    }
+
+    @FeatureFlag(value = "some-feature", condition = "headers['X-Beta'] != null")
+    public Flux<String> conditionFluxMethod() {
       return Flux.just("result1", "result2");
     }
 
@@ -452,6 +474,168 @@ class FeatureFlagAspectTest {
                 e instanceof FeatureFlagAccessDeniedException
                     && ((FeatureFlagAccessDeniedException) e).featureName().equals("some-feature"))
         .verify();
+  }
+
+  // --- condition ---
+
+  private void stubRequestForConditionVariables(ServerHttpRequest httpRequest) {
+    when(httpRequest.getHeaders()).thenReturn(new HttpHeaders());
+    when(httpRequest.getQueryParams()).thenReturn(new LinkedMultiValueMap<>());
+    when(httpRequest.getCookies()).thenReturn(new LinkedMultiValueMap<>());
+    org.springframework.http.server.RequestPath path =
+        mock(org.springframework.http.server.RequestPath.class);
+    when(path.value()).thenReturn("/test");
+    when(httpRequest.getPath()).thenReturn(path);
+    when(httpRequest.getMethod()).thenReturn(HttpMethod.GET);
+    when(httpRequest.getRemoteAddress()).thenReturn(null);
+  }
+
+  @Test
+  void checkFeatureFlag_returnsMono_whenConditionIsTrue() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("conditionMonoMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Mono.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(joinPoint.proceed()).thenReturn(Mono.just("result"));
+    when(conditionEvaluator.evaluate(
+            org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
+            org.mockito.ArgumentMatchers.any()))
+        .thenReturn(Mono.just(true));
+
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    @SuppressWarnings("unchecked")
+    Mono<String> mono = (Mono<String>) result;
+    StepVerifier.create(mono.contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNext("result")
+        .verifyComplete();
+  }
+
+  @Test
+  void checkFeatureFlag_returnsMonoError_whenConditionIsFalse() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("conditionMonoMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Mono.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(conditionEvaluator.evaluate(
+            org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
+            org.mockito.ArgumentMatchers.any()))
+        .thenReturn(Mono.just(false));
+
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    StepVerifier.create(
+            ((Mono<?>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectErrorMatches(
+            e ->
+                e instanceof FeatureFlagAccessDeniedException
+                    && ((FeatureFlagAccessDeniedException) e).featureName().equals("some-feature"))
+        .verify();
+  }
+
+  @Test
+  void checkFeatureFlag_returnsFlux_whenConditionIsTrue() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("conditionFluxMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Flux.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(joinPoint.proceed()).thenReturn(Flux.just("result1", "result2"));
+    when(conditionEvaluator.evaluate(
+            org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
+            org.mockito.ArgumentMatchers.any()))
+        .thenReturn(Mono.just(true));
+
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    @SuppressWarnings("unchecked")
+    Flux<String> flux = (Flux<String>) result;
+    StepVerifier.create(flux.contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectNext("result1", "result2")
+        .verifyComplete();
+  }
+
+  @Test
+  void checkFeatureFlag_returnsFluxError_whenConditionIsFalse() throws Throwable {
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("conditionFluxMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Flux.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(conditionEvaluator.evaluate(
+            org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
+            org.mockito.ArgumentMatchers.any()))
+        .thenReturn(Mono.just(false));
+
+    ServerWebExchange exchange = mock(ServerWebExchange.class);
+    ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
+    when(exchange.getRequest()).thenReturn(httpRequest);
+    stubRequestForConditionVariables(httpRequest);
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    StepVerifier.create(
+            ((Flux<?>) result).contextWrite(ctx -> ctx.put(ServerWebExchange.class, exchange)))
+        .expectErrorMatches(
+            e ->
+                e instanceof FeatureFlagAccessDeniedException
+                    && ((FeatureFlagAccessDeniedException) e).featureName().equals("some-feature"))
+        .verify();
+  }
+
+  @Test
+  void checkFeatureFlag_skipsConditionCheck_whenConditionIsEmpty() throws Throwable {
+    // monoMethod() has no condition attribute — evaluator must not be called
+    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
+    MethodSignature signature = mock(MethodSignature.class);
+    when(joinPoint.getSignature()).thenReturn(signature);
+
+    Method method = TestController.class.getMethod("monoMethod");
+    when(signature.getMethod()).thenReturn(method);
+    when(signature.getReturnType()).thenReturn(Mono.class);
+    when(joinPoint.getTarget()).thenReturn(new TestController());
+    when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(joinPoint.proceed()).thenReturn(Mono.just("result"));
+
+    Object result = aspect.checkFeatureFlag(joinPoint);
+
+    @SuppressWarnings("unchecked")
+    Mono<Object> mono = (Mono<Object>) result;
+    StepVerifier.create(mono).expectNextCount(1).verifyComplete();
+    verifyNoInteractions(conditionEvaluator);
   }
 
   @Test

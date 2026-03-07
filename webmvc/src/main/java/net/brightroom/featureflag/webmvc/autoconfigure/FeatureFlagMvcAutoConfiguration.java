@@ -1,6 +1,8 @@
 package net.brightroom.featureflag.webmvc.autoconfigure;
 
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
+import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
+import net.brightroom.featureflag.core.condition.SpelFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
@@ -70,13 +72,24 @@ public class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean
+  FeatureFlagConditionEvaluator featureFlagConditionEvaluator() {
+    return new SpelFeatureFlagConditionEvaluator(featureFlagProperties.condition().failOnError());
+  }
+
+  @Bean
   FeatureFlagInterceptor featureFlagInterceptor(
       FeatureFlagProvider featureFlagProvider,
       RolloutStrategy rolloutStrategy,
       FeatureFlagContextResolver contextResolver,
-      RolloutPercentageProvider rolloutPercentageProvider) {
+      RolloutPercentageProvider rolloutPercentageProvider,
+      FeatureFlagConditionEvaluator conditionEvaluator) {
     return new FeatureFlagInterceptor(
-        featureFlagProvider, rolloutStrategy, contextResolver, rolloutPercentageProvider);
+        featureFlagProvider,
+        rolloutStrategy,
+        contextResolver,
+        rolloutPercentageProvider,
+        conditionEvaluator);
   }
 
   @Bean
@@ -98,13 +111,15 @@ public class FeatureFlagMvcAutoConfiguration {
       AccessDeniedHandlerFilterResolution accessDeniedHandlerFilterResolution,
       RolloutStrategy rolloutStrategy,
       FeatureFlagContextResolver contextResolver,
-      RolloutPercentageProvider rolloutPercentageProvider) {
+      RolloutPercentageProvider rolloutPercentageProvider,
+      FeatureFlagConditionEvaluator conditionEvaluator) {
     return new FeatureFlagHandlerFilterFunction(
         featureFlagProvider,
         accessDeniedHandlerFilterResolution,
         rolloutStrategy,
         contextResolver,
-        rolloutPercentageProvider);
+        rolloutPercentageProvider,
+        conditionEvaluator);
   }
 
   /**

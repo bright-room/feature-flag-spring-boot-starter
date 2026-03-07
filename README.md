@@ -325,6 +325,99 @@ public class CustomHandlerFilterResolutionConfig {
 }
 ```
 
+## Conditional Feature Flags
+
+Use the `condition` attribute on `@FeatureFlag` to enable a feature only when a SpEL expression
+evaluated against the incoming request is satisfied.
+
+```java
+@RestController
+class BetaController {
+
+  @GetMapping("/new-feature")
+  @FeatureFlag(value = "new-feature", condition = "headers['X-Beta'] != null")
+  String newFeature() {
+    return "You're in the beta!";
+  }
+}
+```
+
+The evaluation order is: **feature enabled** → **condition** → **rollout**. If the condition is not
+satisfied, `403 Forbidden` is returned.
+
+### Available Variables
+
+| Variable | Type | Description |
+|---|---|---|
+| `headers` | `Map<String, String>` | Request headers (first value per name) |
+| `params` | `Map<String, String>` | Query parameters (first value per name) |
+| `cookies` | `Map<String, String>` | Cookie values keyed by name |
+| `path` | `String` | Request path (e.g. `/api/resource`) |
+| `method` | `String` | HTTP method (e.g. `GET`, `POST`) |
+| `remoteAddress` | `String` | Client IP address |
+
+### Configuration
+
+By default, if the SpEL expression throws an error, access is denied (fail-closed). Set
+`feature-flags.condition.fail-on-error: false` to allow access instead (fail-open).
+
+```yaml
+feature-flags:
+  condition:
+    fail-on-error: true  # true (fail-closed, default) | false (fail-open)
+```
+
+### WebFlux Functional Endpoints
+
+Pass a condition expression as the second argument to `of`:
+
+```java
+@Bean
+RouterFunction<ServerResponse> routes(FeatureFlagHandlerFilterFunction featureFlagFilter) {
+    return route()
+        .GET("/new-feature", handler::handle)
+        .filter(featureFlagFilter.of("new-feature", "headers['X-Beta'] != null"))
+        .build();
+}
+```
+
+You can also combine condition and rollout:
+
+```java
+.filter(featureFlagFilter.of("new-feature", "headers['X-Beta'] != null", 50))
+```
+
+### Custom Condition Evaluator
+
+Implement `FeatureFlagConditionEvaluator` (Spring MVC) or `ReactiveFeatureFlagConditionEvaluator`
+(Spring WebFlux) and register it as a `@Bean` to replace the default SpEL-based evaluator.
+
+```java
+// Spring MVC
+@Component
+class CustomConditionEvaluator implements FeatureFlagConditionEvaluator {
+
+  @Override
+  public boolean evaluate(String expression, Map<String, Object> variables) {
+    // custom evaluation logic
+    return true;
+  }
+}
+```
+
+```java
+// Spring WebFlux
+@Component
+class CustomReactiveConditionEvaluator implements ReactiveFeatureFlagConditionEvaluator {
+
+  @Override
+  public Mono<Boolean> evaluate(String expression, Map<String, Object> variables) {
+    // non-blocking evaluation logic
+    return Mono.just(true);
+  }
+}
+```
+
 ## Gradual Rollout
 
 Use the `rollout` attribute on `@FeatureFlag` to enable a feature for only a percentage of requests.

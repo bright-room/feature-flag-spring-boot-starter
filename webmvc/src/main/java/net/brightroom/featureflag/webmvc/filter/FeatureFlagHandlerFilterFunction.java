@@ -1,11 +1,14 @@
 package net.brightroom.featureflag.webmvc.filter;
 
 import java.util.Optional;
+import net.brightroom.featureflag.core.condition.ConditionVariables;
+import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
+import net.brightroom.featureflag.webmvc.condition.HttpServletConditionVariables;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
 import net.brightroom.featureflag.webmvc.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import org.springframework.web.servlet.function.HandlerFilterFunction;
@@ -42,6 +45,7 @@ public class FeatureFlagHandlerFilterFunction {
   private final RolloutStrategy rolloutStrategy;
   private final FeatureFlagContextResolver contextResolver;
   private final RolloutPercentageProvider rolloutPercentageProvider;
+  private final FeatureFlagConditionEvaluator conditionEvaluator;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -51,16 +55,28 @@ public class FeatureFlagHandlerFilterFunction {
    * @throws IllegalArgumentException if {@code featureName} is null or blank
    */
   public HandlerFilterFunction<ServerResponse, ServerResponse> of(String featureName) {
-    return of(featureName, 100);
+    return of(featureName, "", 100);
+  }
+
+  /**
+   * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag
+   * and SpEL condition expression.
+   *
+   * @param featureName the name of the feature flag to check; must not be null or blank
+   * @param condition SpEL expression evaluated against request context; empty string means no
+   *     condition
+   * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag
+   *     and condition
+   * @throws IllegalArgumentException if {@code featureName} is null or blank
+   */
+  public HandlerFilterFunction<ServerResponse, ServerResponse> of(
+      String featureName, String condition) {
+    return of(featureName, condition, 100);
   }
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag
    * and rollout percentage.
-   *
-   * <p>The rollout percentage is resolved from the {@link RolloutPercentageProvider} first. If no
-   * rollout percentage is configured in the provider, the {@code rolloutFallback} argument is used
-   * as a fallback.
    *
    * @param featureName the name of the feature flag to check; must not be null or blank
    * @param rolloutFallback the fallback rollout percentage (0–100) when no value is configured in
@@ -72,6 +88,27 @@ public class FeatureFlagHandlerFilterFunction {
    */
   public HandlerFilterFunction<ServerResponse, ServerResponse> of(
       String featureName, int rolloutFallback) {
+    return of(featureName, "", rolloutFallback);
+  }
+
+  /**
+   * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag,
+   * SpEL condition expression, and rollout percentage.
+   *
+   * <p>The evaluation order is: feature enabled check → condition check → rollout check.
+   *
+   * @param featureName the name of the feature flag to check; must not be null or blank
+   * @param condition SpEL expression evaluated against request context; empty string means no
+   *     condition
+   * @param rolloutFallback the fallback rollout percentage (0–100) when no value is configured in
+   *     the provider; 100 means fully enabled
+   * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag,
+   *     condition, and rollout
+   * @throws IllegalArgumentException if {@code featureName} is null or blank, or if {@code
+   *     rolloutFallback} is not between 0 and 100
+   */
+  public HandlerFilterFunction<ServerResponse, ServerResponse> of(
+      String featureName, String condition, int rolloutFallback) {
     if (featureName == null || featureName.isBlank()) {
       throw new IllegalArgumentException(
           "featureName must not be null or blank. "
@@ -84,6 +121,13 @@ public class FeatureFlagHandlerFilterFunction {
     return (request, next) -> {
       if (!featureFlagProvider.isFeatureEnabled(featureName)) {
         return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
+      }
+      if (condition != null && !condition.isEmpty()) {
+        ConditionVariables variables =
+            HttpServletConditionVariables.build(request.servletRequest());
+        if (!conditionEvaluator.evaluate(condition, variables)) {
+          return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
+        }
       }
       int rollout =
           rolloutPercentageProvider.getRolloutPercentage(featureName).orElse(rolloutFallback);
@@ -109,17 +153,21 @@ public class FeatureFlagHandlerFilterFunction {
    *     must not be null
    * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
    *     feature; must not be null
+   * @param conditionEvaluator the evaluator used to evaluate SpEL condition expressions; must not
+   *     be null
    */
   public FeatureFlagHandlerFilterFunction(
       FeatureFlagProvider featureFlagProvider,
       AccessDeniedHandlerFilterResolution resolution,
       RolloutStrategy rolloutStrategy,
       FeatureFlagContextResolver contextResolver,
-      RolloutPercentageProvider rolloutPercentageProvider) {
+      RolloutPercentageProvider rolloutPercentageProvider,
+      FeatureFlagConditionEvaluator conditionEvaluator) {
     this.featureFlagProvider = featureFlagProvider;
     this.resolution = resolution;
     this.rolloutStrategy = rolloutStrategy;
     this.contextResolver = contextResolver;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
+    this.conditionEvaluator = conditionEvaluator;
   }
 }

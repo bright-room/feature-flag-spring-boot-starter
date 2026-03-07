@@ -64,6 +64,22 @@ public class FeatureFlagRouterConfiguration {
         .build();
   }
 
+  @Bean
+  RouterFunction<ServerResponse> functionalConditionRoute() {
+    return route()
+        .GET("/functional/condition/header", req -> ServerResponse.ok().bodyValue("Allowed"))
+        .filter(featureFlagFilter.of("conditional-feature", "headers['X-Beta'] != null"))
+        .build();
+  }
+
+  @Bean
+  RouterFunction<ServerResponse> functionalConditionParamRoute() {
+    return route()
+        .GET("/functional/condition/param", req -> ServerResponse.ok().bodyValue("Allowed"))
+        .filter(featureFlagFilter.of("conditional-feature", "params['variant'] == 'B'"))
+        .build();
+  }
+
   public FeatureFlagRouterConfiguration(FeatureFlagHandlerFilterFunction featureFlagFilter) {
     this.featureFlagFilter = featureFlagFilter;
   }
