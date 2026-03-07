@@ -119,8 +119,7 @@ class FeatureFlagHealthIndicatorTest {
           return true;
         };
     when(properties.featureNames()).thenReturn(Map.of("feature-a", true));
-    var indicator =
-        new FeatureFlagHealthIndicator(provider, properties, Duration.ofMillis(100));
+    var indicator = new FeatureFlagHealthIndicator(provider, properties, Duration.ofMillis(100));
 
     Health health = indicator.health();
 
