@@ -59,6 +59,23 @@ public class FeatureFlagProperties {
   }
 
   /**
+   * Returns a map of feature names to their schedule configurations. Features without a schedule
+   * are excluded.
+   *
+   * @return an immutable map of feature names to their {@link ScheduleConfiguration}
+   */
+  public Map<String, ScheduleConfiguration> schedules() {
+    var result = new HashMap<String, ScheduleConfiguration>();
+    features.forEach(
+        (name, config) -> {
+          if (config.schedule() != null) {
+            result.put(name, config.schedule());
+          }
+        });
+    return Map.copyOf(result);
+  }
+
+  /**
    * Returns the full feature configuration map.
    *
    * @return an immutable map of feature names to their {@link FeatureConfiguration}

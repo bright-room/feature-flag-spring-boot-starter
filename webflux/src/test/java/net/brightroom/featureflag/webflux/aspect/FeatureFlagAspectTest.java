@@ -7,12 +7,14 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Method;
+import java.time.Clock;
 import net.brightroom.featureflag.core.annotation.FeatureFlag;
 import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
 import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
@@ -38,13 +40,17 @@ class FeatureFlagAspectTest {
       mock(ReactiveRolloutPercentageProvider.class, invocation -> Mono.empty());
   private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator =
       mock(ReactiveFeatureFlagConditionEvaluator.class);
+  private final ReactiveScheduleProvider reactiveScheduleProvider =
+      mock(ReactiveScheduleProvider.class, invocation -> Mono.empty());
   private final FeatureFlagAspect aspect =
       new FeatureFlagAspect(
           provider,
           new DefaultReactiveRolloutStrategy(),
           contextResolver,
           rolloutPercentageProvider,
-          conditionEvaluator);
+          conditionEvaluator,
+          reactiveScheduleProvider,
+          Clock.systemDefaultZone());
 
   // Aspect with mocked rollout strategy for rollout-specific tests
   private final ReactiveRolloutStrategy rolloutStrategy = mock(ReactiveRolloutStrategy.class);
@@ -54,7 +60,9 @@ class FeatureFlagAspectTest {
           rolloutStrategy,
           contextResolver,
           rolloutPercentageProvider,
-          conditionEvaluator);
+          conditionEvaluator,
+          reactiveScheduleProvider,
+          Clock.systemDefaultZone());
 
   static class TestController {
 

@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.webmvc.filter;
 
+import java.time.Clock;
 import java.util.Optional;
 import net.brightroom.featureflag.core.condition.ConditionVariables;
 import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
@@ -7,6 +8,7 @@ import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ScheduleProvider;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.condition.HttpServletConditionVariables;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
@@ -46,6 +48,8 @@ public class FeatureFlagHandlerFilterFunction {
   private final FeatureFlagContextResolver contextResolver;
   private final RolloutPercentageProvider rolloutPercentageProvider;
   private final FeatureFlagConditionEvaluator conditionEvaluator;
+  private final ScheduleProvider scheduleProvider;
+  private final Clock clock;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -122,6 +126,11 @@ public class FeatureFlagHandlerFilterFunction {
       if (!featureFlagProvider.isFeatureEnabled(featureName)) {
         return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
       }
+      Optional<net.brightroom.featureflag.core.properties.ScheduleConfiguration> schedule =
+          scheduleProvider.getSchedule(featureName);
+      if (schedule.isPresent() && !schedule.get().isActive(clock.instant())) {
+        return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
+      }
       if (condition != null && !condition.isEmpty()) {
         ConditionVariables variables =
             HttpServletConditionVariables.build(request.servletRequest());
@@ -155,6 +164,9 @@ public class FeatureFlagHandlerFilterFunction {
    *     feature; must not be null
    * @param conditionEvaluator the evaluator used to evaluate SpEL condition expressions; must not
    *     be null
+   * @param scheduleProvider the provider used to look up the schedule per feature; must not be null
+   * @param clock the clock used to obtain the current time for schedule evaluation; must not be
+   *     null
    */
   public FeatureFlagHandlerFilterFunction(
       FeatureFlagProvider featureFlagProvider,
@@ -162,12 +174,16 @@ public class FeatureFlagHandlerFilterFunction {
       RolloutStrategy rolloutStrategy,
       FeatureFlagContextResolver contextResolver,
       RolloutPercentageProvider rolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator) {
+      FeatureFlagConditionEvaluator conditionEvaluator,
+      ScheduleProvider scheduleProvider,
+      Clock clock) {
     this.featureFlagProvider = featureFlagProvider;
     this.resolution = resolution;
     this.rolloutStrategy = rolloutStrategy;
     this.contextResolver = contextResolver;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
     this.conditionEvaluator = conditionEvaluator;
+    this.scheduleProvider = scheduleProvider;
+    this.clock = clock;
   }
 }

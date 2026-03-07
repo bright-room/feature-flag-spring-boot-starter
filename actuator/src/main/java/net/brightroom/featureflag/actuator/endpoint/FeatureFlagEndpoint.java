@@ -1,10 +1,12 @@
 package net.brightroom.featureflag.actuator.endpoint;
 
+import java.time.Clock;
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
 import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ScheduleProvider;
 import org.jspecify.annotations.Nullable;
 import org.springframework.boot.actuate.endpoint.Access;
 import org.springframework.boot.actuate.endpoint.annotation.DeleteOperation;
@@ -32,8 +34,10 @@ public class FeatureFlagEndpoint {
 
   private final MutableFeatureFlagProvider provider;
   private final MutableRolloutPercentageProvider rolloutProvider;
+  private final ScheduleProvider scheduleProvider;
   private final boolean defaultEnabled;
   private final ApplicationEventPublisher eventPublisher;
+  private final Clock clock;
 
   /**
    * Returns the current state of all feature flags.
@@ -61,7 +65,8 @@ public class FeatureFlagEndpoint {
     return new FeatureFlagEndpointResponse(
         featureName,
         provider.isFeatureEnabled(featureName),
-        rolloutProvider.getRolloutPercentage(featureName).orElse(100));
+        rolloutProvider.getRolloutPercentage(featureName).orElse(100),
+        buildScheduleResponse(featureName));
   }
 
   /**
@@ -125,9 +130,26 @@ public class FeatureFlagEndpoint {
             .map(
                 e ->
                     new FeatureFlagEndpointResponse(
-                        e.getKey(), e.getValue(), rolloutPercentages.getOrDefault(e.getKey(), 100)))
+                        e.getKey(),
+                        e.getValue(),
+                        rolloutPercentages.getOrDefault(e.getKey(), 100),
+                        buildScheduleResponse(e.getKey())))
             .toList();
     return new FeatureFlagsEndpointResponse(featureList, defaultEnabled);
+  }
+
+  @Nullable
+  private ScheduleEndpointResponse buildScheduleResponse(String featureName) {
+    return scheduleProvider
+        .getSchedule(featureName)
+        .map(
+            schedule ->
+                new ScheduleEndpointResponse(
+                    schedule.start(),
+                    schedule.end(),
+                    schedule.timezone(),
+                    schedule.isActive(clock.instant())))
+        .orElse(null);
   }
 
   /**
@@ -135,17 +157,23 @@ public class FeatureFlagEndpoint {
    *
    * @param provider the mutable feature flag provider
    * @param rolloutProvider the mutable rollout percentage provider
+   * @param scheduleProvider the schedule provider used to look up schedules per feature
    * @param defaultEnabled the default-enabled value to include in responses
    * @param eventPublisher the publisher used to broadcast flag change events
+   * @param clock the clock used to determine schedule active status in responses
    */
   public FeatureFlagEndpoint(
       MutableFeatureFlagProvider provider,
       MutableRolloutPercentageProvider rolloutProvider,
+      ScheduleProvider scheduleProvider,
       boolean defaultEnabled,
-      ApplicationEventPublisher eventPublisher) {
+      ApplicationEventPublisher eventPublisher,
+      Clock clock) {
     this.provider = provider;
     this.rolloutProvider = rolloutProvider;
+    this.scheduleProvider = scheduleProvider;
     this.defaultEnabled = defaultEnabled;
     this.eventPublisher = eventPublisher;
+    this.clock = clock;
   }
 }

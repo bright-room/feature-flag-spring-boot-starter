@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -19,6 +20,7 @@ import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ScheduleProvider;
 import net.brightroom.featureflag.core.rollout.DefaultRolloutStrategy;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
@@ -39,6 +41,8 @@ class FeatureFlagHandlerFilterFunctionTest {
       mock(RolloutPercentageProvider.class);
   private final FeatureFlagConditionEvaluator conditionEvaluator =
       mock(FeatureFlagConditionEvaluator.class);
+  private final ScheduleProvider scheduleProvider =
+      mock(ScheduleProvider.class, invocation -> Optional.empty());
   private final FeatureFlagHandlerFilterFunction filterFunction =
       new FeatureFlagHandlerFilterFunction(
           provider,
@@ -46,7 +50,9 @@ class FeatureFlagHandlerFilterFunctionTest {
           new DefaultRolloutStrategy(),
           contextResolver,
           rolloutPercentageProvider,
-          conditionEvaluator);
+          conditionEvaluator,
+          scheduleProvider,
+          Clock.systemDefaultZone());
 
   // Filter function with a mocked rollout strategy for rollout-specific tests
   private final RolloutStrategy rolloutStrategy = mock(RolloutStrategy.class);
@@ -57,7 +63,9 @@ class FeatureFlagHandlerFilterFunctionTest {
           rolloutStrategy,
           contextResolver,
           rolloutPercentageProvider,
-          conditionEvaluator);
+          conditionEvaluator,
+          scheduleProvider,
+          Clock.systemDefaultZone());
 
   @Test
   void of_throwsIllegalArgumentException_whenFeatureNameIsNull() {

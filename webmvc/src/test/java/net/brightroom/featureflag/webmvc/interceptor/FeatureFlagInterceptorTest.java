@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -19,6 +20,7 @@ import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ScheduleProvider;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
 import org.junit.jupiter.api.Test;
@@ -33,13 +35,17 @@ class FeatureFlagInterceptorTest {
       mock(RolloutPercentageProvider.class);
   private final FeatureFlagConditionEvaluator conditionEvaluator =
       mock(FeatureFlagConditionEvaluator.class);
+  private final ScheduleProvider scheduleProvider =
+      mock(ScheduleProvider.class, invocation -> Optional.empty());
   private final FeatureFlagInterceptor interceptor =
       new FeatureFlagInterceptor(
           provider,
           rolloutStrategy,
           contextResolver,
           rolloutPercentageProvider,
-          conditionEvaluator);
+          conditionEvaluator,
+          scheduleProvider,
+          Clock.systemDefaultZone());
 
   private final HttpServletRequest request = mock(HttpServletRequest.class);
   private final HttpServletResponse response = mock(HttpServletResponse.class);

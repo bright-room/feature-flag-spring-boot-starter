@@ -1,5 +1,6 @@
 package net.brightroom.featureflag.webflux.autoconfigure;
 
+import java.time.Clock;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
@@ -7,8 +8,10 @@ import net.brightroom.featureflag.core.condition.SpelFeatureFlagConditionEvaluat
 import net.brightroom.featureflag.core.condition.SpelReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.InMemoryReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.InMemoryReactiveScheduleProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
+import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
 import net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect;
 import net.brightroom.featureflag.webflux.context.RandomReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
@@ -92,6 +95,18 @@ public class FeatureFlagWebFluxAutoConfiguration {
 
   @Bean
   @ConditionalOnMissingBean
+  Clock featureFlagClock() {
+    return Clock.systemDefaultZone();
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ReactiveScheduleProvider.class)
+  ReactiveScheduleProvider reactiveScheduleProvider() {
+    return new InMemoryReactiveScheduleProvider(featureFlagProperties.schedules());
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   FeatureFlagConditionEvaluator featureFlagConditionEvaluator() {
     return new SpelFeatureFlagConditionEvaluator(featureFlagProperties.condition().failOnError());
   }
@@ -125,13 +140,17 @@ public class FeatureFlagWebFluxAutoConfiguration {
       ReactiveRolloutStrategy reactiveRolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver,
       ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider,
-      ReactiveFeatureFlagConditionEvaluator conditionEvaluator) {
+      ReactiveFeatureFlagConditionEvaluator conditionEvaluator,
+      ReactiveScheduleProvider reactiveScheduleProvider,
+      Clock clock) {
     return new FeatureFlagAspect(
         reactiveFeatureFlagProvider,
         reactiveRolloutStrategy,
         contextResolver,
         reactiveRolloutPercentageProvider,
-        conditionEvaluator);
+        conditionEvaluator,
+        reactiveScheduleProvider,
+        clock);
   }
 
   @Bean
@@ -148,14 +167,18 @@ public class FeatureFlagWebFluxAutoConfiguration {
       ReactiveRolloutStrategy reactiveRolloutStrategy,
       ReactiveFeatureFlagContextResolver contextResolver,
       ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider,
-      ReactiveFeatureFlagConditionEvaluator conditionEvaluator) {
+      ReactiveFeatureFlagConditionEvaluator conditionEvaluator,
+      ReactiveScheduleProvider reactiveScheduleProvider,
+      Clock clock) {
     return new FeatureFlagHandlerFilterFunction(
         reactiveFeatureFlagProvider,
         accessDeniedHandlerResolution,
         reactiveRolloutStrategy,
         contextResolver,
         reactiveRolloutPercentageProvider,
-        conditionEvaluator);
+        conditionEvaluator,
+        reactiveScheduleProvider,
+        clock);
   }
 
   /**

@@ -51,6 +51,22 @@
       "type": "java.lang.Boolean",
       "description": "Whether condition evaluation errors should cause access denial. Defaults to true (fail-closed): evaluation errors block access. Set to false for fail-open behavior: evaluation errors allow access.",
       "defaultValue": true
+    },
+    {
+      "name": "feature-flags.features.[*].schedule.start",
+      "type": "java.time.LocalDateTime",
+      "description": "The start date-time of the schedule window. The feature is treated as disabled before this time. If omitted, the feature has no start restriction."
+    },
+    {
+      "name": "feature-flags.features.[*].schedule.end",
+      "type": "java.time.LocalDateTime",
+      "description": "The end date-time of the schedule window. The feature is treated as disabled after this time. If omitted, the feature has no end restriction."
+    },
+    {
+      "name": "feature-flags.features.[*].schedule.timezone",
+      "type": "java.time.ZoneId",
+      "description": "The timezone used to evaluate start and end times. If omitted, the system default timezone is used.",
+      "defaultValue": "system default"
     }
   ]
 }
