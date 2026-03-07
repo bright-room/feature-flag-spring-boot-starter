@@ -23,4 +23,4 @@ jobs:
           PGP_SIGNING_KEY: ${{ secrets.PGP_SIGNING_KEY }}
           PGP_SIGNING_KEY_PASSPHRASE: ${{ secrets.PGP_SIGNING_KEY_PASSPHRASE }}
         with:
-          command: sonatypeCentralUpload -PreleaseVersion=${{ github.event.release.tag_name }}
+          command: sonatypeCentralUpload -PreleaseVersion=${{ github.event.release.tag_name }} --no-configuration-cache

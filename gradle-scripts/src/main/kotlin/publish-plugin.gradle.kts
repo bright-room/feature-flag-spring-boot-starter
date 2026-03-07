@@ -1,4 +1,3 @@
-import org.gradle.api.publish.maven.tasks.GenerateMavenPom
 import util.by
 
 plugins {
@@ -64,10 +63,6 @@ publishing {
 }
 
 tasks {
-    withType<GenerateMavenPom>().configureEach {
-        notCompatibleWithConfigurationCache("https://github.com/gradle/gradle/issues/24329")
-    }
-
     sonatypeCentralUpload {
         dependsOn("jar", "sourcesJar", "javadocJar", "generatePomFileForMavenJavaPublication")
 
