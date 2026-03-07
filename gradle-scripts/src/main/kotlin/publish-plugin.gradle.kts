@@ -70,9 +70,7 @@ tasks {
         // preventing partial uploads when a sibling module's javadoc fails.
         rootProject.subprojects.forEach { sub ->
             if (sub != project) {
-                sub.tasks.matching { it.name == "javadocJar" }.all {
-                    this@sonatypeCentralUpload.dependsOn(this)
-                }
+                dependsOn("${sub.path}:javadocJar")
             }
         }
 
