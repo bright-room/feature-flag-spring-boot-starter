@@ -46,6 +46,7 @@ public class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean
   AccessDeniedInterceptResolution featureFlagAccessDeniedResponse() {
     return new AccessDeniedInterceptResolutionFactory().create(featureFlagProperties);
   }
@@ -96,9 +97,14 @@ public class FeatureFlagMvcAutoConfiguration {
       FeatureFlagProvider featureFlagProvider,
       AccessDeniedHandlerFilterResolution accessDeniedHandlerFilterResolution,
       RolloutStrategy rolloutStrategy,
-      FeatureFlagContextResolver contextResolver) {
+      FeatureFlagContextResolver contextResolver,
+      RolloutPercentageProvider rolloutPercentageProvider) {
     return new FeatureFlagHandlerFilterFunction(
-        featureFlagProvider, accessDeniedHandlerFilterResolution, rolloutStrategy, contextResolver);
+        featureFlagProvider,
+        accessDeniedHandlerFilterResolution,
+        rolloutStrategy,
+        contextResolver,
+        rolloutPercentageProvider);
   }
 
   /**

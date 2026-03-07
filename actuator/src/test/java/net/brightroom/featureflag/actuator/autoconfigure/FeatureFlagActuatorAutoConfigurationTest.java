@@ -310,13 +310,13 @@ class FeatureFlagActuatorAutoConfigurationTest {
     }
 
     @Override
-    public void setRolloutPercentage(String featureName, int percentage) {
-      store.put(featureName, percentage);
+    public Mono<Void> setRolloutPercentage(String featureName, int percentage) {
+      return Mono.<Void>fromRunnable(() -> store.put(featureName, percentage));
     }
 
     @Override
-    public void removeRolloutPercentage(String featureName) {
-      store.remove(featureName);
+    public Mono<Boolean> removeRolloutPercentage(String featureName) {
+      return Mono.fromCallable(() -> store.remove(featureName) != null);
     }
   }
 }

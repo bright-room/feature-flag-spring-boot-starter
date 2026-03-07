@@ -25,7 +25,7 @@ class InMemoryFeatureFlagProviderTest {
   }
 
   @Test
-  void validatePredefinedFunctions() {
+  void validatePredefinedFeatures() {
     assertTrue(featureFlagProvider.isFeatureEnabled("experimental-stage-endpoint"));
     assertFalse(featureFlagProvider.isFeatureEnabled("development-stage-endpoint"));
   }
