@@ -57,6 +57,9 @@ public class ReactiveFeatureFlagEndpoint {
    */
   @ReadOperation
   public FeatureFlagEndpointResponse feature(@Selector String featureName) {
+    if (featureName == null || featureName.isBlank()) {
+      throw new IllegalArgumentException("featureName must not be null or blank");
+    }
     var enabled = provider.isFeatureEnabled(featureName).block();
     var rollout = rolloutProvider.getRolloutPercentage(featureName).blockOptional().orElse(100);
     return new FeatureFlagEndpointResponse(featureName, Boolean.TRUE.equals(enabled), rollout);
@@ -124,6 +127,7 @@ public class ReactiveFeatureFlagEndpoint {
         rolloutProvider.getRolloutPercentages().blockOptional().orElse(Map.of());
     var featureList =
         features.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
             .map(
                 e ->
                     new FeatureFlagEndpointResponse(
