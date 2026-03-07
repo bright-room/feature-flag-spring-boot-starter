@@ -1,7 +1,10 @@
 package net.brightroom.featureflag.actuator.health;
 
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
@@ -15,7 +18,7 @@ import org.springframework.boot.health.contributor.Health;
  * <p>Reports {@link org.springframework.boot.health.contributor.Status#UP UP} when the provider
  * responds normally and flag information can be retrieved, and {@link
  * org.springframework.boot.health.contributor.Status#DOWN DOWN} when an exception occurs during the
- * health check.
+ * health check or when the provider does not respond within the configured timeout.
  *
  * <p>Health details include:
  *
@@ -31,36 +34,40 @@ import org.springframework.boot.health.contributor.Health;
  * via {@link MutableFeatureFlagProvider#getFeatures()}. Otherwise, the configured feature names
  * from {@link FeatureFlagProperties} are probed individually via {@link
  * FeatureFlagProvider#isFeatureEnabled(String)}.
+ *
+ * <p>When a timeout is configured via {@link FeatureFlagHealthProperties#timeout()}, the health
+ * check will report {@code DOWN} if the provider does not respond within that duration.
  */
 public class FeatureFlagHealthIndicator extends AbstractHealthIndicator {
 
   private final FeatureFlagProvider provider;
   private final FeatureFlagProperties properties;
+  private final Duration timeout;
 
   /**
    * Creates a new {@link FeatureFlagHealthIndicator}.
    *
    * @param provider the feature flag provider to check
    * @param properties the feature flag configuration properties
+   * @param timeout the maximum time to wait for the provider, or {@code null} for no timeout
    */
   public FeatureFlagHealthIndicator(
-      FeatureFlagProvider provider, FeatureFlagProperties properties) {
+      FeatureFlagProvider provider, FeatureFlagProperties properties, Duration timeout) {
     super("Feature flag health check failed");
     this.provider = provider;
     this.properties = properties;
+    this.timeout = timeout;
   }
 
   @Override
-  protected void doHealthCheck(Health.Builder builder) {
+  protected void doHealthCheck(Health.Builder builder) throws Exception {
     Map<String, Boolean> features;
-    if (provider instanceof MutableFeatureFlagProvider mutableProvider) {
-      features = mutableProvider.getFeatures();
+    if (timeout != null) {
+      features =
+          CompletableFuture.supplyAsync(this::fetchFeatures)
+              .get(timeout.toMillis(), TimeUnit.MILLISECONDS);
     } else {
-      var map = new LinkedHashMap<String, Boolean>();
-      for (String name : properties.featureNames().keySet()) {
-        map.put(name, provider.isFeatureEnabled(name));
-      }
-      features = map;
+      features = fetchFeatures();
     }
 
     long totalCount = features.size();
@@ -74,5 +81,16 @@ public class FeatureFlagHealthIndicator extends AbstractHealthIndicator {
         .withDetail("enabledFlags", enabledCount)
         .withDetail("disabledFlags", disabledCount)
         .withDetail("defaultEnabled", properties.defaultEnabled());
+  }
+
+  private Map<String, Boolean> fetchFeatures() {
+    if (provider instanceof MutableFeatureFlagProvider mutableProvider) {
+      return mutableProvider.getFeatures();
+    }
+    var map = new LinkedHashMap<String, Boolean>();
+    for (String name : properties.featureNames().keySet()) {
+      map.put(name, provider.isFeatureEnabled(name));
+    }
+    return map;
   }
 }
