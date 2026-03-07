@@ -13,8 +13,15 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 @Import(FeatureFlagWebFluxTestAutoConfiguration.class)
 @TestPropertySource(
     properties = {
-      "feature-flags.features.conditional-feature.enabled=true",
-      "feature-flags.features.conditional-feature.rollout=100",
+      "feature-flags.features.header-condition-feature.enabled=true",
+      "feature-flags.features.header-condition-feature.condition=headers['X-Beta'] != null",
+      "feature-flags.features.param-condition-feature.enabled=true",
+      "feature-flags.features.param-condition-feature.condition=params['variant'] == 'B'",
+      "feature-flags.features.condition-rollout-feature.enabled=true",
+      "feature-flags.features.condition-rollout-feature.condition=headers['X-Beta'] != null",
+      "feature-flags.features.condition-rollout-feature.rollout=100",
+      "feature-flags.features.remote-address-condition-feature.enabled=true",
+      "feature-flags.features.remote-address-condition-feature.condition=remoteAddress == '127.0.0.1'",
     })
 class FeatureFlagAspectConditionIntegrationTest {
 
@@ -45,7 +52,7 @@ class FeatureFlagAspectConditionIntegrationTest {
         .json(
             """
             {
-              "detail" : "Feature 'conditional-feature' is not available",
+              "detail" : "Feature 'header-condition-feature' is not available",
               "instance" : "/condition/header",
               "status" : 403,
               "title" : "Feature flag access denied",

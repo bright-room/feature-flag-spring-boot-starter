@@ -14,8 +14,10 @@ import net.brightroom.featureflag.core.evaluation.ReactiveFeatureFlagEvaluationP
 import net.brightroom.featureflag.core.evaluation.ReactiveRolloutEvaluationStep;
 import net.brightroom.featureflag.core.evaluation.ReactiveScheduleEvaluationStep;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
+import net.brightroom.featureflag.core.provider.InMemoryReactiveConditionProvider;
 import net.brightroom.featureflag.core.provider.InMemoryReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.InMemoryReactiveScheduleProvider;
+import net.brightroom.featureflag.core.provider.ReactiveConditionProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
@@ -101,6 +103,12 @@ public class FeatureFlagWebFluxAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean(ReactiveConditionProvider.class)
+  ReactiveConditionProvider reactiveConditionProvider() {
+    return new InMemoryReactiveConditionProvider(featureFlagProperties.conditions());
+  }
+
+  @Bean
   @ConditionalOnMissingBean
   Clock featureFlagClock() {
     return Clock.systemDefaultZone();
@@ -180,8 +188,10 @@ public class FeatureFlagWebFluxAutoConfiguration {
   FeatureFlagAspect featureFlagAspect(
       ReactiveFeatureFlagEvaluationPipeline pipeline,
       ReactiveFeatureFlagContextResolver contextResolver,
-      ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider) {
-    return new FeatureFlagAspect(pipeline, contextResolver, reactiveRolloutPercentageProvider);
+      ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider,
+      ReactiveConditionProvider reactiveConditionProvider) {
+    return new FeatureFlagAspect(
+        pipeline, contextResolver, reactiveRolloutPercentageProvider, reactiveConditionProvider);
   }
 
   @Bean
@@ -196,11 +206,13 @@ public class FeatureFlagWebFluxAutoConfiguration {
       ReactiveFeatureFlagEvaluationPipeline pipeline,
       AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution,
       ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider,
+      ReactiveConditionProvider reactiveConditionProvider,
       ReactiveFeatureFlagContextResolver contextResolver) {
     return new FeatureFlagHandlerFilterFunction(
         pipeline,
         accessDeniedHandlerResolution,
         reactiveRolloutPercentageProvider,
+        reactiveConditionProvider,
         contextResolver);
   }
 

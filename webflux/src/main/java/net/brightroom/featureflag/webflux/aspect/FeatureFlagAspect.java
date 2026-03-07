@@ -6,6 +6,7 @@ import net.brightroom.featureflag.core.evaluation.AccessDecision;
 import net.brightroom.featureflag.core.evaluation.EvaluationContext;
 import net.brightroom.featureflag.core.evaluation.ReactiveFeatureFlagEvaluationPipeline;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.provider.ReactiveConditionProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.webflux.condition.ServerHttpConditionVariables;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
@@ -38,6 +39,7 @@ public class FeatureFlagAspect {
   private final ReactiveFeatureFlagEvaluationPipeline pipeline;
   private final ReactiveFeatureFlagContextResolver contextResolver;
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
+  private final ReactiveConditionProvider conditionProvider;
 
   /**
    * Around advice that checks the feature flag before proceeding with the annotated method.
@@ -45,7 +47,7 @@ public class FeatureFlagAspect {
    * <p>Applies to methods and classes annotated with {@link
    * net.brightroom.featureflag.core.annotation.FeatureFlag}. If the feature is disabled, a {@link
    * net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException} is returned in the
-   * reactive pipeline. Rollout percentage is also evaluated when configured.
+   * reactive pipeline. Rollout percentage and condition are also evaluated when configured.
    *
    * @param joinPoint the proceeding join point of the intercepted method
    * @return the result of the intercepted method, or an error signal if access is denied
@@ -63,8 +65,6 @@ public class FeatureFlagAspect {
     validateAnnotation(annotation);
 
     String featureName = annotation.value();
-    String condition = annotation.condition();
-    int annotationRollout = annotation.rollout();
 
     Class<?> returnType = ((MethodSignature) joinPoint.getSignature()).getReturnType();
 
@@ -73,9 +73,10 @@ public class FeatureFlagAspect {
             ctx -> {
               ServerWebExchange exchange = ctx.get(ServerWebExchange.class);
               return Mono.zip(
+                      conditionProvider.getCondition(featureName).defaultIfEmpty(""),
                       rolloutPercentageProvider
                           .getRolloutPercentage(featureName)
-                          .defaultIfEmpty(annotationRollout),
+                          .defaultIfEmpty(100),
                       contextResolver
                           .resolve(exchange.getRequest())
                           .map(java.util.Optional::of)
@@ -85,10 +86,10 @@ public class FeatureFlagAspect {
                         EvaluationContext evalCtx =
                             new EvaluationContext(
                                 featureName,
-                                condition,
                                 tuple.getT1(),
+                                tuple.getT2(),
                                 ServerHttpConditionVariables.build(exchange.getRequest()),
-                                () -> tuple.getT2().orElse(null));
+                                () -> tuple.getT3().orElse(null));
                         return pipeline.evaluate(evalCtx);
                       });
             });
@@ -156,10 +157,6 @@ public class FeatureFlagAspect {
           "@FeatureFlag must specify a non-empty value. "
               + "An empty value causes fail-open behavior and allows access unconditionally.");
     }
-    if (annotation.rollout() < 0 || annotation.rollout() > 100) {
-      throw new IllegalStateException(
-          "@FeatureFlag rollout must be between 0 and 100, but was: " + annotation.rollout());
-    }
   }
 
   /**
@@ -171,13 +168,17 @@ public class FeatureFlagAspect {
    *     be null
    * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
    *     feature; must not be null
+   * @param conditionProvider the provider used to look up the condition expression per feature;
+   *     must not be null
    */
   public FeatureFlagAspect(
       ReactiveFeatureFlagEvaluationPipeline pipeline,
       ReactiveFeatureFlagContextResolver contextResolver,
-      ReactiveRolloutPercentageProvider rolloutPercentageProvider) {
+      ReactiveRolloutPercentageProvider rolloutPercentageProvider,
+      ReactiveConditionProvider conditionProvider) {
     this.pipeline = pipeline;
     this.contextResolver = contextResolver;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
+    this.conditionProvider = conditionProvider;
   }
 }

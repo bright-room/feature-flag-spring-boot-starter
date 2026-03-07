@@ -20,7 +20,7 @@
     },
     {
       "name": "feature-flags.features",
-      "type": "java.util.Map<java.lang.String,net.brightroom.featureflag.core.properties.FeatureConfiguration>",
+      "type": "java.util.Map<java.lang.String,net.brightroom.featureflag.core.properties.FeatureProperties>",
       "description": "Per-feature configuration including enabled state and rollout percentage."
     },
     {
@@ -34,6 +34,11 @@
       "type": "java.lang.Integer",
       "description": "Rollout percentage for this feature flag (0-100). 100 means fully rolled out to all requests; 0 means no requests even if enabled.",
       "defaultValue": 100
+    },
+    {
+      "name": "feature-flags.features.[*].condition",
+      "type": "java.lang.String",
+      "description": "SpEL expression evaluated against the request context to conditionally enable this feature. Available variables: headers, params, cookies, path, method, remoteAddress. If empty, no condition is applied."
     },
     {
       "name": "feature-flags.response.type",

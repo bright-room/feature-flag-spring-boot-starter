@@ -1,8 +1,8 @@
 package net.brightroom.featureflag.core.properties;
 
 /**
- * Configuration for a single feature flag, including its enabled status, rollout percentage, and
- * optional schedule.
+ * Configuration for a single feature flag, including its enabled status, rollout percentage,
+ * optional condition expression, and optional schedule.
  *
  * <p>Used as the value type for {@code feature-flags.features} in {@link FeatureFlagProperties}.
  *
@@ -14,6 +14,7 @@ package net.brightroom.featureflag.core.properties;
  *     new-feature:
  *       enabled: true
  *       rollout: 50
+ *       condition: "headers['X-Beta'] != null"
  *     christmas-sale:
  *       enabled: true
  *       schedule:
@@ -24,11 +25,12 @@ package net.brightroom.featureflag.core.properties;
  *       enabled: true
  * }</pre>
  */
-public class FeatureConfiguration {
+public class FeatureProperties {
 
   private boolean enabled = true;
   private int rollout = 100;
-  private ScheduleConfiguration schedule;
+  private String condition = "";
+  private ScheduleProperties schedule;
 
   /**
    * Returns whether this feature is enabled.
@@ -52,12 +54,22 @@ public class FeatureConfiguration {
   }
 
   /**
+   * Returns the SpEL condition expression for this feature, or an empty string if no condition is
+   * configured.
+   *
+   * @return the SpEL condition expression, or empty string
+   */
+  public String condition() {
+    return condition;
+  }
+
+  /**
    * Returns the schedule configuration for this feature, or {@code null} if no schedule is
    * configured.
    *
    * @return the schedule configuration, or {@code null}
    */
-  public ScheduleConfiguration schedule() {
+  public ScheduleProperties schedule() {
     return schedule;
   }
 
@@ -75,9 +87,14 @@ public class FeatureConfiguration {
   }
 
   // for property binding
-  void setSchedule(ScheduleConfiguration schedule) {
+  void setCondition(String condition) {
+    this.condition = condition != null ? condition : "";
+  }
+
+  // for property binding
+  void setSchedule(ScheduleProperties schedule) {
     this.schedule = schedule;
   }
 
-  FeatureConfiguration() {}
+  FeatureProperties() {}
 }

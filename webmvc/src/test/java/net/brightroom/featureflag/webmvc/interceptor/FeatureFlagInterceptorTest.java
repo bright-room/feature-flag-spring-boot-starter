@@ -27,6 +27,7 @@ import net.brightroom.featureflag.core.evaluation.FeatureFlagEvaluationPipeline;
 import net.brightroom.featureflag.core.evaluation.RolloutEvaluationStep;
 import net.brightroom.featureflag.core.evaluation.ScheduleEvaluationStep;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.provider.ConditionProvider;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.Schedule;
@@ -46,6 +47,7 @@ class FeatureFlagInterceptorTest {
   private final FeatureFlagContextResolver contextResolver = mock(FeatureFlagContextResolver.class);
   private final RolloutPercentageProvider rolloutPercentageProvider =
       mock(RolloutPercentageProvider.class);
+  private final ConditionProvider conditionProvider = mock(ConditionProvider.class);
   private final FeatureFlagConditionEvaluator conditionEvaluator =
       mock(FeatureFlagConditionEvaluator.class);
   private final ScheduleProvider scheduleProvider =
@@ -59,7 +61,8 @@ class FeatureFlagInterceptorTest {
             new ConditionEvaluationStep(conditionEvaluator),
             new RolloutEvaluationStep(rolloutStrategy));
     FeatureFlagEvaluationPipeline pipeline = new FeatureFlagEvaluationPipeline(steps);
-    return new FeatureFlagInterceptor(pipeline, rolloutPercentageProvider, contextResolver);
+    return new FeatureFlagInterceptor(
+        pipeline, rolloutPercentageProvider, conditionProvider, contextResolver);
   }
 
   private final HttpServletRequest request = mock(HttpServletRequest.class);
@@ -70,6 +73,7 @@ class FeatureFlagInterceptorTest {
     // EvaluationContext is always built eagerly, so stub request and default dependencies
     stubRequestForConditionVariables();
     when(rolloutPercentageProvider.getRolloutPercentage(any())).thenReturn(OptionalInt.empty());
+    when(conditionProvider.getCondition(any())).thenReturn(Optional.empty());
     when(contextResolver.resolve(request)).thenReturn(Optional.empty());
   }
 
@@ -79,15 +83,9 @@ class FeatureFlagInterceptorTest {
     return handlerMethod;
   }
 
-  private FeatureFlag featureFlagAnnotation(String value, int rollout) {
-    return featureFlagAnnotation(value, "", rollout);
-  }
-
-  private FeatureFlag featureFlagAnnotation(String value, String condition, int rollout) {
+  private FeatureFlag featureFlagAnnotation(String value) {
     FeatureFlag annotation = mock(FeatureFlag.class);
     when(annotation.value()).thenReturn(value);
-    when(annotation.condition()).thenReturn(condition);
-    when(annotation.rollout()).thenReturn(rollout);
     return annotation;
   }
 
@@ -96,7 +94,7 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_throwsFeatureFlagAccessDeniedException_whenScheduleIsInactive() {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", 100);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     Schedule inactiveSchedule = new Schedule(null, LocalDateTime.of(2020, 1, 1, 0, 0), null);
@@ -109,7 +107,7 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_returnsTrue_whenScheduleIsActive() throws Exception {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", 100);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
@@ -127,7 +125,7 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_throwsIllegalStateException_whenFeatureFlagValueIsEmpty() {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("", 100);
+    FeatureFlag annotation = featureFlagAnnotation("");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
 
     assertThatIllegalStateException()
@@ -135,34 +133,12 @@ class FeatureFlagInterceptorTest {
         .withMessageContaining("non-empty value");
   }
 
-  @Test
-  void preHandle_throwsIllegalStateException_whenRolloutIsNegative() {
-    FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", -1);
-    HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
-
-    assertThatIllegalStateException()
-        .isThrownBy(() -> interceptor.preHandle(request, response, handlerMethod))
-        .withMessageContaining("rollout must be between 0 and 100");
-  }
-
-  @Test
-  void preHandle_throwsIllegalStateException_whenRolloutIsOver100() {
-    FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", 101);
-    HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
-
-    assertThatIllegalStateException()
-        .isThrownBy(() -> interceptor.preHandle(request, response, handlerMethod))
-        .withMessageContaining("rollout must be between 0 and 100");
-  }
-
   // --- checkRollout ---
 
   @Test
   void preHandle_returnsTrue_whenRolloutIs100() throws Exception {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", 100);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
@@ -176,11 +152,11 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_returnsTrue_whenContextPresentAndInsideRollout() throws Exception {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", 50);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
-        .thenReturn(OptionalInt.empty());
+        .thenReturn(OptionalInt.of(50));
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(request)).thenReturn(Optional.of(context));
     when(rolloutStrategy.isInRollout("my-feature", context, 50)).thenReturn(true);
@@ -193,11 +169,11 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_throwsFeatureFlagAccessDeniedException_whenContextPresentAndOutsideRollout() {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", 50);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
-        .thenReturn(OptionalInt.empty());
+        .thenReturn(OptionalInt.of(50));
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(request)).thenReturn(Optional.of(context));
     when(rolloutStrategy.isInRollout("my-feature", context, 50)).thenReturn(false);
@@ -209,11 +185,11 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_returnsTrue_whenContextIsEmpty() throws Exception {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", 50);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
-        .thenReturn(OptionalInt.empty());
+        .thenReturn(OptionalInt.of(50));
     when(contextResolver.resolve(request)).thenReturn(Optional.empty());
 
     boolean result = interceptor.preHandle(request, response, handlerMethod);
@@ -246,11 +222,11 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_throwsFeatureFlagAccessDeniedException_whenRolloutIsZero() throws Exception {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", 0);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
-        .thenReturn(OptionalInt.empty());
+        .thenReturn(OptionalInt.of(0));
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(request)).thenReturn(Optional.of(context));
     when(rolloutStrategy.isInRollout("my-feature", context, 0)).thenReturn(false);
@@ -261,7 +237,7 @@ class FeatureFlagInterceptorTest {
 
   // --- class-level @FeatureFlag + rollout ---
 
-  @FeatureFlag(value = "my-feature", rollout = 50)
+  @FeatureFlag("my-feature")
   static class RolloutAnnotatedController {}
 
   private HandlerMethod handlerMethodWithClassAnnotation() {
@@ -278,7 +254,7 @@ class FeatureFlagInterceptorTest {
     HandlerMethod handlerMethod = handlerMethodWithClassAnnotation();
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
-        .thenReturn(OptionalInt.empty());
+        .thenReturn(OptionalInt.of(50));
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(request)).thenReturn(Optional.of(context));
     when(rolloutStrategy.isInRollout("my-feature", context, 50)).thenReturn(true);
@@ -295,7 +271,7 @@ class FeatureFlagInterceptorTest {
     HandlerMethod handlerMethod = handlerMethodWithClassAnnotation();
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
-        .thenReturn(OptionalInt.empty());
+        .thenReturn(OptionalInt.of(50));
     FeatureFlagContext context = new FeatureFlagContext("user-1");
     when(contextResolver.resolve(request)).thenReturn(Optional.of(context));
     when(rolloutStrategy.isInRollout("my-feature", context, 50)).thenReturn(false);
@@ -318,11 +294,13 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_returnsTrue_whenConditionIsTrue() throws Exception {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", "headers['X-Beta'] != null", 100);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.empty());
+    when(conditionProvider.getCondition("my-feature"))
+        .thenReturn(Optional.of("headers['X-Beta'] != null"));
     stubRequestForConditionVariables();
     when(conditionEvaluator.evaluate(
             org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
@@ -337,9 +315,11 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_throwsFeatureFlagAccessDeniedException_whenConditionIsFalse() {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", "headers['X-Beta'] != null", 100);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    when(conditionProvider.getCondition("my-feature"))
+        .thenReturn(Optional.of("headers['X-Beta'] != null"));
     stubRequestForConditionVariables();
     when(conditionEvaluator.evaluate(
             org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
@@ -353,11 +333,12 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_skipsConditionCheck_whenConditionIsEmpty() throws Exception {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", "", 100);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.empty());
+    when(conditionProvider.getCondition("my-feature")).thenReturn(Optional.empty());
 
     boolean result = interceptor.preHandle(request, response, handlerMethod);
 
@@ -367,9 +348,11 @@ class FeatureFlagInterceptorTest {
   @Test
   void preHandle_evaluatesConditionBeforeRollout() throws Exception {
     FeatureFlagInterceptor interceptor = buildInterceptor();
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", "headers['X-Beta'] != null", 50);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(provider.isFeatureEnabled("my-feature")).thenReturn(true);
+    when(conditionProvider.getCondition("my-feature"))
+        .thenReturn(Optional.of("headers['X-Beta'] != null"));
     stubRequestForConditionVariables();
     when(conditionEvaluator.evaluate(
             org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
@@ -386,12 +369,14 @@ class FeatureFlagInterceptorTest {
   void preHandle_delegatesToPipeline_whenDecisionIsAllowed() throws Exception {
     FeatureFlagEvaluationPipeline pipeline = mock(FeatureFlagEvaluationPipeline.class);
     FeatureFlagInterceptor interceptor =
-        new FeatureFlagInterceptor(pipeline, rolloutPercentageProvider, contextResolver);
+        new FeatureFlagInterceptor(
+            pipeline, rolloutPercentageProvider, conditionProvider, contextResolver);
 
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", 100);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.empty());
+    when(conditionProvider.getCondition("my-feature")).thenReturn(Optional.empty());
     when(contextResolver.resolve(request)).thenReturn(Optional.empty());
     when(request.getHeaderNames()).thenReturn(Collections.emptyEnumeration());
     when(request.getParameterMap()).thenReturn(Map.of());
@@ -411,12 +396,14 @@ class FeatureFlagInterceptorTest {
   void preHandle_throwsException_whenPipelineReturnsDenied() {
     FeatureFlagEvaluationPipeline pipeline = mock(FeatureFlagEvaluationPipeline.class);
     FeatureFlagInterceptor interceptor =
-        new FeatureFlagInterceptor(pipeline, rolloutPercentageProvider, contextResolver);
+        new FeatureFlagInterceptor(
+            pipeline, rolloutPercentageProvider, conditionProvider, contextResolver);
 
-    FeatureFlag annotation = featureFlagAnnotation("my-feature", 100);
+    FeatureFlag annotation = featureFlagAnnotation("my-feature");
     HandlerMethod handlerMethod = handlerMethodWithAnnotation(annotation);
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.empty());
+    when(conditionProvider.getCondition("my-feature")).thenReturn(Optional.empty());
     when(contextResolver.resolve(request)).thenReturn(Optional.empty());
     when(request.getHeaderNames()).thenReturn(Collections.emptyEnumeration());
     when(request.getParameterMap()).thenReturn(Map.of());

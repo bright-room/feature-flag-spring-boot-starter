@@ -6,12 +6,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-class FeatureConfigurationTest {
+class FeaturePropertiesTest {
 
   @ParameterizedTest
   @ValueSource(ints = {0, 1, 50, 99, 100})
   void setRollout_shouldAcceptValidValues(int rollout) {
-    FeatureConfiguration config = new FeatureConfiguration();
+    FeatureProperties config = new FeatureProperties();
     assertDoesNotThrow(() -> config.setRollout(rollout));
     assertEquals(rollout, config.rollout());
   }
@@ -19,7 +19,7 @@ class FeatureConfigurationTest {
   @ParameterizedTest
   @ValueSource(ints = {-1, -100, 101, 200})
   void setRollout_shouldRejectOutOfRangeValues(int rollout) {
-    FeatureConfiguration config = new FeatureConfiguration();
+    FeatureProperties config = new FeatureProperties();
     IllegalArgumentException ex =
         assertThrows(IllegalArgumentException.class, () -> config.setRollout(rollout));
     assertTrue(ex.getMessage().contains(String.valueOf(rollout)));
@@ -27,7 +27,7 @@ class FeatureConfigurationTest {
 
   @Test
   void setRollout_errorMessageShouldContainInvalidValue() {
-    FeatureConfiguration config = new FeatureConfiguration();
+    FeatureProperties config = new FeatureProperties();
     IllegalArgumentException ex =
         assertThrows(IllegalArgumentException.class, () -> config.setRollout(101));
     assertEquals("rollout must be between 0 and 100, but was: 101", ex.getMessage());

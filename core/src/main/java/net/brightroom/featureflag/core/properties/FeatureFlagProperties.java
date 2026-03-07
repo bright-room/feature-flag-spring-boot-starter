@@ -29,7 +29,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "feature-flags")
 public class FeatureFlagProperties {
 
-  private Map<String, FeatureConfiguration> features = new HashMap<>();
+  private Map<String, FeatureProperties> features = new HashMap<>();
   private ResponseProperties response = new ResponseProperties();
   private ConditionProperties condition = new ConditionProperties();
   private boolean defaultEnabled = false;
@@ -60,6 +60,23 @@ public class FeatureFlagProperties {
   }
 
   /**
+   * Returns a map of feature names to their condition expressions. Features without a condition
+   * (empty string) are excluded.
+   *
+   * @return an immutable map of feature names to their condition expressions
+   */
+  public Map<String, String> conditions() {
+    var result = new HashMap<String, String>();
+    features.forEach(
+        (name, config) -> {
+          if (!config.condition().isEmpty()) {
+            result.put(name, config.condition());
+          }
+        });
+    return Map.copyOf(result);
+  }
+
+  /**
    * Returns a map of feature names to their schedule value objects. Features without a schedule are
    * excluded.
    *
@@ -79,9 +96,9 @@ public class FeatureFlagProperties {
   /**
    * Returns the full feature configuration map.
    *
-   * @return an immutable map of feature names to their {@link FeatureConfiguration}
+   * @return an immutable map of feature names to their {@link FeatureProperties}
    */
-  public Map<String, FeatureConfiguration> features() {
+  public Map<String, FeatureProperties> features() {
     return Map.copyOf(features);
   }
 
@@ -114,7 +131,7 @@ public class FeatureFlagProperties {
   }
 
   // for property binding
-  void setFeatures(Map<String, FeatureConfiguration> features) {
+  void setFeatures(Map<String, FeatureProperties> features) {
     this.features = features;
   }
 

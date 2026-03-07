@@ -4,7 +4,8 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEvent;
 
 /**
- * Event published when a feature flag's enabled state or rollout percentage is changed at runtime.
+ * Event published when a feature flag's enabled state, rollout percentage, or condition is changed
+ * at runtime.
  *
  * <p>Listeners can subscribe to this event via {@code @EventListener} to react to flag state
  * changes (e.g., clearing caches, logging audit trails, or updating dependent systems).
@@ -26,6 +27,9 @@ public class FeatureFlagChangedEvent extends ApplicationEvent {
   /** The new rollout percentage, or {@code null} if the rollout was not changed. */
   @Nullable private final Integer rolloutPercentage;
 
+  /** The new condition expression, or {@code null} if the condition was not changed. */
+  @Nullable private final String condition;
+
   /**
    * Constructs a {@code FeatureFlagChangedEvent} when only the enabled state changed.
    *
@@ -34,7 +38,7 @@ public class FeatureFlagChangedEvent extends ApplicationEvent {
    * @param enabled the new enabled state of the feature flag
    */
   public FeatureFlagChangedEvent(Object source, String featureName, boolean enabled) {
-    this(source, featureName, enabled, null);
+    this(source, featureName, enabled, null, null);
   }
 
   /**
@@ -48,10 +52,31 @@ public class FeatureFlagChangedEvent extends ApplicationEvent {
    */
   public FeatureFlagChangedEvent(
       Object source, String featureName, boolean enabled, @Nullable Integer rolloutPercentage) {
+    this(source, featureName, enabled, rolloutPercentage, null);
+  }
+
+  /**
+   * Constructs a {@code FeatureFlagChangedEvent} with optional rollout percentage and condition
+   * changes.
+   *
+   * @param source the object that published the event
+   * @param featureName the name of the feature flag that was changed
+   * @param enabled the new enabled state of the feature flag
+   * @param rolloutPercentage the new rollout percentage, or {@code null} if the rollout was not
+   *     changed
+   * @param condition the new condition expression, or {@code null} if the condition was not changed
+   */
+  public FeatureFlagChangedEvent(
+      Object source,
+      String featureName,
+      boolean enabled,
+      @Nullable Integer rolloutPercentage,
+      @Nullable String condition) {
     super(source);
     this.featureName = featureName;
     this.enabled = enabled;
     this.rolloutPercentage = rolloutPercentage;
+    this.condition = condition;
   }
 
   /**
@@ -80,5 +105,15 @@ public class FeatureFlagChangedEvent extends ApplicationEvent {
   @Nullable
   public Integer rolloutPercentage() {
     return rolloutPercentage;
+  }
+
+  /**
+   * Returns the new condition expression, or {@code null} if the condition was not changed.
+   *
+   * @return the SpEL condition expression, or {@code null}
+   */
+  @Nullable
+  public String condition() {
+    return condition;
   }
 }

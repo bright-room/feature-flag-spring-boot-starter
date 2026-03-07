@@ -27,6 +27,7 @@ import net.brightroom.featureflag.core.evaluation.FeatureFlagEvaluationPipeline;
 import net.brightroom.featureflag.core.evaluation.RolloutEvaluationStep;
 import net.brightroom.featureflag.core.evaluation.ScheduleEvaluationStep;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.provider.ConditionProvider;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.Schedule;
@@ -49,6 +50,8 @@ class FeatureFlagHandlerFilterFunctionTest {
   private final FeatureFlagContextResolver contextResolver = mock(FeatureFlagContextResolver.class);
   private final RolloutPercentageProvider rolloutPercentageProvider =
       mock(RolloutPercentageProvider.class);
+  private final ConditionProvider conditionProvider =
+      mock(ConditionProvider.class, invocation -> Optional.empty());
   private final FeatureFlagConditionEvaluator conditionEvaluator =
       mock(FeatureFlagConditionEvaluator.class);
   private final ScheduleProvider scheduleProvider =
@@ -64,7 +67,7 @@ class FeatureFlagHandlerFilterFunctionTest {
             new RolloutEvaluationStep(strategy));
     FeatureFlagEvaluationPipeline pipeline = new FeatureFlagEvaluationPipeline(steps);
     return new FeatureFlagHandlerFilterFunction(
-        pipeline, resolution, rolloutPercentageProvider, contextResolver);
+        pipeline, resolution, rolloutPercentageProvider, conditionProvider, contextResolver);
   }
 
   private final FeatureFlagHandlerFilterFunction filterFunction =
@@ -443,7 +446,7 @@ class FeatureFlagHandlerFilterFunctionTest {
     FeatureFlagEvaluationPipeline pipeline = mock(FeatureFlagEvaluationPipeline.class);
     FeatureFlagHandlerFilterFunction filterFn =
         new FeatureFlagHandlerFilterFunction(
-            pipeline, resolution, rolloutPercentageProvider, contextResolver);
+            pipeline, resolution, rolloutPercentageProvider, conditionProvider, contextResolver);
 
     when(rolloutPercentageProvider.getRolloutPercentage("my-feature"))
         .thenReturn(OptionalInt.empty());

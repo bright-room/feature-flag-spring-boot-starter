@@ -10,20 +10,34 @@ import java.lang.annotation.Target;
  * Feature flag annotation to control access to specific features. This annotation can be applied at
  * both method and class levels to manage feature availability.
  *
+ * <p>Condition expressions and rollout percentages are configured via {@code
+ * feature-flags.features.<name>} in {@code application.yaml} rather than on the annotation itself.
+ *
  * <p>Usage examples:
  *
  * <pre>{@code
  * // Method level
- * {@literal @}FeatureFlag(value = "new-api")
+ * {@literal @}FeatureFlag("new-api")
  * public void newFeature() {
  *     // This method will only be accessible if "new-api" feature is enabled
  * }
  *
  * // Class level
- * {@literal @}FeatureFlag(value = "beta-features")
+ * {@literal @}FeatureFlag("beta-features")
  * public class BetaController {
  *     // All methods in this class will only be accessible if "beta-features" is enabled
  * }
+ * }</pre>
+ *
+ * <p>To configure a condition or rollout percentage, use {@code application.yaml}:
+ *
+ * <pre>{@code
+ * feature-flags:
+ *   features:
+ *     new-api:
+ *       enabled: true
+ *       condition: "headers['X-Beta'] != null"
+ *       rollout: 50
  * }</pre>
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
@@ -43,37 +57,4 @@ public @interface FeatureFlag {
    * @return the identifier of the feature flag; must be a non-empty string
    */
   String value();
-
-  /**
-   * SpEL condition expression evaluated against request context.
-   *
-   * <p>When non-empty, the feature is enabled only if the expression evaluates to {@code true}.
-   *
-   * <p>Available variables:
-   *
-   * <ul>
-   *   <li>{@code headers} — request headers as {@code Map<String, String>}
-   *   <li>{@code params} — query parameters as {@code Map<String, String>}
-   *   <li>{@code cookies} — cookies as {@code Map<String, String>}
-   *   <li>{@code path} — request path as {@code String}
-   *   <li>{@code method} — HTTP method as {@code String}
-   *   <li>{@code remoteAddress} — client IP as {@code String}
-   * </ul>
-   *
-   * <p>Example: {@code @FeatureFlag(value = "beta", condition = "headers['X-Beta'] != null")}
-   *
-   * @return SpEL expression; empty string (default) means no condition
-   */
-  String condition() default "";
-
-  /**
-   * Rollout percentage (0–100). 100 means fully enabled (default).
-   *
-   * <p>When less than 100, the feature is enabled only for a percentage of requests (or users, if a
-   * sticky {@code FeatureFlagContextResolver} is provided). When 0, the feature is effectively
-   * disabled for all requests even if the flag itself is enabled.
-   *
-   * @return the rollout percentage; must be between 0 and 100 inclusive
-   */
-  int rollout() default 100;
 }

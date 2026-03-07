@@ -32,7 +32,7 @@ import net.brightroom.featureflag.core.provider.Schedule;
  *   <li>{@code timezone} omitted — system default timezone is used
  * </ul>
  */
-public class ScheduleConfiguration {
+public class ScheduleProperties {
 
   private LocalDateTime start;
   private LocalDateTime end;
@@ -101,5 +101,5 @@ public class ScheduleConfiguration {
     this.timezone = timezone;
   }
 
-  ScheduleConfiguration() {}
+  ScheduleProperties() {}
 }

@@ -20,6 +20,7 @@ import net.brightroom.featureflag.core.evaluation.ReactiveFeatureFlagEvaluationP
 import net.brightroom.featureflag.core.evaluation.ReactiveRolloutEvaluationStep;
 import net.brightroom.featureflag.core.evaluation.ReactiveScheduleEvaluationStep;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.provider.ReactiveConditionProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
@@ -46,6 +47,8 @@ class FeatureFlagAspectTest {
       mock(ReactiveFeatureFlagContextResolver.class, invocation -> Mono.empty());
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider =
       mock(ReactiveRolloutPercentageProvider.class, invocation -> Mono.empty());
+  private final ReactiveConditionProvider conditionProvider =
+      mock(ReactiveConditionProvider.class, invocation -> Mono.empty());
   private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator =
       mock(ReactiveFeatureFlagConditionEvaluator.class);
   private final ReactiveScheduleProvider reactiveScheduleProvider =
@@ -66,11 +69,15 @@ class FeatureFlagAspectTest {
       new FeatureFlagAspect(
           buildPipeline(new DefaultReactiveRolloutStrategy()),
           contextResolver,
-          rolloutPercentageProvider);
+          rolloutPercentageProvider,
+          conditionProvider);
 
   private final FeatureFlagAspect aspectWithRollout =
       new FeatureFlagAspect(
-          buildPipeline(rolloutStrategy), contextResolver, rolloutPercentageProvider);
+          buildPipeline(rolloutStrategy),
+          contextResolver,
+          rolloutPercentageProvider,
+          conditionProvider);
 
   // Helper: creates a mock exchange with a mocked request
   private ServerWebExchange mockExchange() {
@@ -103,34 +110,24 @@ class FeatureFlagAspectTest {
       return Flux.just("result1", "result2");
     }
 
-    @FeatureFlag(value = "some-feature", rollout = 50)
+    @FeatureFlag("some-feature")
     public Mono<String> rolloutMonoMethod() {
       return Mono.just("result");
     }
 
-    @FeatureFlag(value = "some-feature", rollout = 50)
+    @FeatureFlag("some-feature")
     public Flux<String> rolloutFluxMethod() {
       return Flux.just("result1", "result2");
     }
 
-    @FeatureFlag(value = "some-feature", condition = "headers['X-Beta'] != null")
+    @FeatureFlag("some-feature")
     public Mono<String> conditionMonoMethod() {
       return Mono.just("result");
     }
 
-    @FeatureFlag(value = "some-feature", condition = "headers['X-Beta'] != null")
+    @FeatureFlag("some-feature")
     public Flux<String> conditionFluxMethod() {
       return Flux.just("result1", "result2");
-    }
-
-    @FeatureFlag(value = "some-feature", rollout = -1)
-    public Mono<String> negativeRolloutMethod() {
-      return Mono.just("result");
-    }
-
-    @FeatureFlag(value = "some-feature", rollout = 101)
-    public Mono<String> over100RolloutMethod() {
-      return Mono.just("result");
     }
   }
 
@@ -263,36 +260,6 @@ class FeatureFlagAspectTest {
   }
 
   @Test
-  void checkFeatureFlag_throwsIllegalStateException_whenRolloutIsNegative() throws Throwable {
-    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-    MethodSignature signature = mock(MethodSignature.class);
-    when(joinPoint.getSignature()).thenReturn(signature);
-
-    Method method = TestController.class.getMethod("negativeRolloutMethod");
-    when(signature.getMethod()).thenReturn(method);
-    when(joinPoint.getTarget()).thenReturn(new TestController());
-
-    assertThatThrownBy(() -> aspect.checkFeatureFlag(joinPoint))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("rollout must be between 0 and 100");
-  }
-
-  @Test
-  void checkFeatureFlag_throwsIllegalStateException_whenRolloutIsOver100() throws Throwable {
-    ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
-    MethodSignature signature = mock(MethodSignature.class);
-    when(joinPoint.getSignature()).thenReturn(signature);
-
-    Method method = TestController.class.getMethod("over100RolloutMethod");
-    when(signature.getMethod()).thenReturn(method);
-    when(joinPoint.getTarget()).thenReturn(new TestController());
-
-    assertThatThrownBy(() -> aspect.checkFeatureFlag(joinPoint))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("rollout must be between 0 and 100");
-  }
-
-  @Test
   void checkFeatureFlag_throwsIllegalStateException_whenReturnTypeIsNonReactive() throws Throwable {
     ProceedingJoinPoint joinPoint = mock(ProceedingJoinPoint.class);
     MethodSignature signature = mock(MethodSignature.class);
@@ -383,6 +350,7 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Mono.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("some-feature")).thenReturn(Mono.just(50));
 
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
@@ -415,6 +383,7 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Mono.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("some-feature")).thenReturn(Mono.just(50));
     when(joinPoint.proceed()).thenReturn(Mono.just("result"));
 
     ServerWebExchange exchange = mock(ServerWebExchange.class);
@@ -446,6 +415,7 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Mono.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("some-feature")).thenReturn(Mono.just(50));
     when(joinPoint.proceed()).thenReturn(Mono.just("result"));
 
     ServerWebExchange exchange = mock(ServerWebExchange.class);
@@ -474,6 +444,7 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Flux.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("some-feature")).thenReturn(Mono.just(50));
 
     ServerWebExchange exchange = mock(ServerWebExchange.class);
     ServerHttpRequest httpRequest = mock(ServerHttpRequest.class);
@@ -506,6 +477,7 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Flux.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("some-feature")).thenReturn(Mono.just(50));
     when(joinPoint.proceed()).thenReturn(Flux.just("result1", "result2"));
 
     ServerWebExchange exchange = mock(ServerWebExchange.class);
@@ -537,6 +509,7 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Flux.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(rolloutPercentageProvider.getRolloutPercentage("some-feature")).thenReturn(Mono.just(50));
     when(joinPoint.proceed()).thenReturn(Flux.just("result1", "result2"));
 
     ServerWebExchange exchange = mock(ServerWebExchange.class);
@@ -649,6 +622,8 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Mono.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(conditionProvider.getCondition("some-feature"))
+        .thenReturn(Mono.just("headers['X-Beta'] != null"));
     when(joinPoint.proceed()).thenReturn(Mono.just("result"));
     when(conditionEvaluator.evaluate(
             org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
@@ -680,6 +655,8 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Mono.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(conditionProvider.getCondition("some-feature"))
+        .thenReturn(Mono.just("headers['X-Beta'] != null"));
     when(conditionEvaluator.evaluate(
             org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
             org.mockito.ArgumentMatchers.any()))
@@ -712,6 +689,8 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Flux.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(conditionProvider.getCondition("some-feature"))
+        .thenReturn(Mono.just("headers['X-Beta'] != null"));
     when(joinPoint.proceed()).thenReturn(Flux.just("result1", "result2"));
     when(conditionEvaluator.evaluate(
             org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
@@ -743,6 +722,8 @@ class FeatureFlagAspectTest {
     when(signature.getReturnType()).thenReturn(Flux.class);
     when(joinPoint.getTarget()).thenReturn(new TestController());
     when(provider.isFeatureEnabled("some-feature")).thenReturn(Mono.just(true));
+    when(conditionProvider.getCondition("some-feature"))
+        .thenReturn(Mono.just("headers['X-Beta'] != null"));
     when(conditionEvaluator.evaluate(
             org.mockito.ArgumentMatchers.eq("headers['X-Beta'] != null"),
             org.mockito.ArgumentMatchers.any()))

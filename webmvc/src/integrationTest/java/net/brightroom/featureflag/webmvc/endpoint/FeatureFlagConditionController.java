@@ -7,25 +7,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class FeatureFlagConditionController {
 
-  @FeatureFlag(value = "conditional-feature", condition = "headers['X-Beta'] != null")
+  @FeatureFlag("header-condition-feature")
   @GetMapping("/condition/header")
   String headerCondition() {
     return "Allowed";
   }
 
-  @FeatureFlag(value = "conditional-feature", condition = "params['variant'] == 'B'")
+  @FeatureFlag("param-condition-feature")
   @GetMapping("/condition/param")
   String paramCondition() {
     return "Allowed";
   }
 
-  @FeatureFlag(value = "conditional-feature", condition = "headers['X-Beta'] != null", rollout = 50)
+  @FeatureFlag("condition-rollout-feature")
   @GetMapping("/condition/with-rollout")
   String conditionWithRollout() {
     return "Allowed";
   }
 
-  @FeatureFlag(value = "conditional-feature", condition = "remoteAddress == '127.0.0.1'")
+  @FeatureFlag("remote-address-condition-feature")
   @GetMapping("/condition/remote-address")
   String remoteAddressCondition() {
     return "Allowed";

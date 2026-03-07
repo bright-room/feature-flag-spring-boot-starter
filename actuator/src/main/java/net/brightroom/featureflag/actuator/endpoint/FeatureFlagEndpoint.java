@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.util.Map;
 import net.brightroom.featureflag.core.event.FeatureFlagChangedEvent;
 import net.brightroom.featureflag.core.event.FeatureFlagRemovedEvent;
+import net.brightroom.featureflag.core.provider.MutableConditionProvider;
 import net.brightroom.featureflag.core.provider.MutableFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.MutableRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ScheduleProvider;
@@ -34,6 +35,7 @@ public class FeatureFlagEndpoint {
 
   private final MutableFeatureFlagProvider provider;
   private final MutableRolloutPercentageProvider rolloutProvider;
+  private final MutableConditionProvider conditionProvider;
   private final ScheduleProvider scheduleProvider;
   private final boolean defaultEnabled;
   private final ApplicationEventPublisher eventPublisher;
@@ -66,26 +68,37 @@ public class FeatureFlagEndpoint {
         featureName,
         provider.isFeatureEnabled(featureName),
         rolloutProvider.getRolloutPercentage(featureName).orElse(100),
+        conditionProvider.getCondition(featureName).orElse(null),
         buildScheduleResponse(featureName));
   }
 
   /**
-   * Updates the enabled state and optionally the rollout percentage of a feature flag, then
-   * publishes a {@link FeatureFlagChangedEvent}.
+   * Updates the enabled state and optionally the rollout percentage and condition of a feature
+   * flag, then publishes a {@link FeatureFlagChangedEvent}.
    *
    * <p>If the flag does not exist, it is created with the given state.
    *
    * <p><b>Note:</b> {@link FeatureFlagChangedEvent} is published on every invocation, regardless of
    * whether the value actually changed.
    *
+   * <p>For the {@code condition} parameter:
+   *
+   * <ul>
+   *   <li>{@code null} — condition is not changed
+   *   <li>{@code ""} (empty string) — condition is removed
+   *   <li>any other string — condition is set to the given value
+   * </ul>
+   *
    * @param featureName the name of the feature flag to update
    * @param enabled the new enabled state
    * @param rollout the new rollout percentage (0–100), or {@code null} to leave unchanged
+   * @param condition the new condition expression, {@code ""} to remove, or {@code null} to leave
+   *     unchanged
    * @return a response reflecting the updated state of all flags
    */
   @WriteOperation
   public FeatureFlagsEndpointResponse updateFeature(
-      String featureName, boolean enabled, @Nullable Integer rollout) {
+      String featureName, boolean enabled, @Nullable Integer rollout, @Nullable String condition) {
     if (featureName == null || featureName.isBlank()) {
       throw new IllegalArgumentException("featureName must not be null or blank");
     }
@@ -96,12 +109,20 @@ public class FeatureFlagEndpoint {
     if (rollout != null) {
       rolloutProvider.setRolloutPercentage(featureName, rollout);
     }
-    eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, enabled, rollout));
+    if (condition != null) {
+      if (condition.isEmpty()) {
+        conditionProvider.removeCondition(featureName);
+      } else {
+        conditionProvider.setCondition(featureName, condition);
+      }
+    }
+    eventPublisher.publishEvent(
+        new FeatureFlagChangedEvent(this, featureName, enabled, rollout, condition));
     return buildFlagsResponse();
   }
 
   /**
-   * Removes a feature flag and its associated rollout percentage.
+   * Removes a feature flag and its associated rollout percentage and condition.
    *
    * <p>A {@link FeatureFlagRemovedEvent} is published only if the flag actually existed. This
    * operation is idempotent: deleting a non-existent flag is a no-op and still returns 204 No
@@ -117,6 +138,7 @@ public class FeatureFlagEndpoint {
     }
     boolean removed = provider.removeFeature(featureName);
     rolloutProvider.removeRolloutPercentage(featureName);
+    conditionProvider.removeCondition(featureName);
     if (removed) {
       eventPublisher.publishEvent(new FeatureFlagRemovedEvent(this, featureName));
     }
@@ -124,6 +146,7 @@ public class FeatureFlagEndpoint {
 
   private FeatureFlagsEndpointResponse buildFlagsResponse() {
     var rolloutPercentages = rolloutProvider.getRolloutPercentages();
+    var conditions = conditionProvider.getConditions();
     var featureList =
         provider.getFeatures().entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
@@ -133,6 +156,7 @@ public class FeatureFlagEndpoint {
                         e.getKey(),
                         e.getValue(),
                         rolloutPercentages.getOrDefault(e.getKey(), 100),
+                        conditions.getOrDefault(e.getKey(), null),
                         buildScheduleResponse(e.getKey())))
             .toList();
     return new FeatureFlagsEndpointResponse(featureList, defaultEnabled);
@@ -157,6 +181,7 @@ public class FeatureFlagEndpoint {
    *
    * @param provider the mutable feature flag provider
    * @param rolloutProvider the mutable rollout percentage provider
+   * @param conditionProvider the mutable condition provider
    * @param scheduleProvider the schedule provider used to look up schedules per feature
    * @param defaultEnabled the default-enabled value to include in responses
    * @param eventPublisher the publisher used to broadcast flag change events
@@ -165,12 +190,14 @@ public class FeatureFlagEndpoint {
   public FeatureFlagEndpoint(
       MutableFeatureFlagProvider provider,
       MutableRolloutPercentageProvider rolloutProvider,
+      MutableConditionProvider conditionProvider,
       ScheduleProvider scheduleProvider,
       boolean defaultEnabled,
       ApplicationEventPublisher eventPublisher,
       Clock clock) {
     this.provider = provider;
     this.rolloutProvider = rolloutProvider;
+    this.conditionProvider = conditionProvider;
     this.scheduleProvider = scheduleProvider;
     this.defaultEnabled = defaultEnabled;
     this.eventPublisher = eventPublisher;
