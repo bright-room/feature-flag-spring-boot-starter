@@ -4,6 +4,7 @@ import java.util.Optional;
 import net.brightroom.featureflag.core.context.FeatureFlagContext;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
+import net.brightroom.featureflag.core.provider.RolloutPercentageProvider;
 import net.brightroom.featureflag.core.rollout.RolloutStrategy;
 import net.brightroom.featureflag.webmvc.context.FeatureFlagContextResolver;
 import net.brightroom.featureflag.webmvc.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
@@ -40,6 +41,7 @@ public class FeatureFlagHandlerFilterFunction {
   private final AccessDeniedHandlerFilterResolution resolution;
   private final RolloutStrategy rolloutStrategy;
   private final FeatureFlagContextResolver contextResolver;
+  private final RolloutPercentageProvider rolloutPercentageProvider;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -56,26 +58,35 @@ public class FeatureFlagHandlerFilterFunction {
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag
    * and rollout percentage.
    *
+   * <p>The rollout percentage is resolved from the {@link RolloutPercentageProvider} first. If no
+   * rollout percentage is configured in the provider, the {@code rolloutFallback} argument is used
+   * as a fallback.
+   *
    * @param featureName the name of the feature flag to check; must not be null or empty
-   * @param rollout the rollout percentage (0–100); 100 means fully enabled
+   * @param rolloutFallback the fallback rollout percentage (0–100) when no value is configured in
+   *     the provider; 100 means fully enabled
    * @return a {@link HandlerFilterFunction} that allows or denies access based on the feature flag
    *     and rollout
-   * @throws IllegalArgumentException if {@code featureName} is null or empty, or if {@code rollout}
-   *     is not between 0 and 100
+   * @throws IllegalArgumentException if {@code featureName} is null or empty, or if {@code
+   *     rolloutFallback} is not between 0 and 100
    */
-  public HandlerFilterFunction<ServerResponse, ServerResponse> of(String featureName, int rollout) {
+  public HandlerFilterFunction<ServerResponse, ServerResponse> of(
+      String featureName, int rolloutFallback) {
     if (featureName == null || featureName.isEmpty()) {
       throw new IllegalArgumentException(
           "featureName must not be null or empty. "
               + "An empty value causes fail-open behavior and allows access unconditionally.");
     }
-    if (rollout < 0 || rollout > 100) {
-      throw new IllegalArgumentException("rollout must be between 0 and 100, but was: " + rollout);
+    if (rolloutFallback < 0 || rolloutFallback > 100) {
+      throw new IllegalArgumentException(
+          "rollout must be between 0 and 100, but was: " + rolloutFallback);
     }
     return (request, next) -> {
       if (!featureFlagProvider.isFeatureEnabled(featureName)) {
         return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
       }
+      int rollout =
+          rolloutPercentageProvider.getRolloutPercentage(featureName).orElse(rolloutFallback);
       if (rollout < 100) {
         Optional<FeatureFlagContext> ctx = contextResolver.resolve(request.servletRequest());
         if (ctx.isPresent() && !rolloutStrategy.isInRollout(featureName, ctx.get(), rollout)) {
@@ -96,15 +107,19 @@ public class FeatureFlagHandlerFilterFunction {
    *     null
    * @param contextResolver the resolver used to obtain the feature flag context from the request;
    *     must not be null
+   * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
+   *     feature; must not be null
    */
   public FeatureFlagHandlerFilterFunction(
       FeatureFlagProvider featureFlagProvider,
       AccessDeniedHandlerFilterResolution resolution,
       RolloutStrategy rolloutStrategy,
-      FeatureFlagContextResolver contextResolver) {
+      FeatureFlagContextResolver contextResolver,
+      RolloutPercentageProvider rolloutPercentageProvider) {
     this.featureFlagProvider = featureFlagProvider;
     this.resolution = resolution;
     this.rolloutStrategy = rolloutStrategy;
     this.contextResolver = contextResolver;
+    this.rolloutPercentageProvider = rolloutPercentageProvider;
   }
 }
