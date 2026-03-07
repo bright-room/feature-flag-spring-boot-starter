@@ -1,19 +1,14 @@
 package net.brightroom.featureflag.webflux.filter;
 
-import java.time.Clock;
-import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
-import net.brightroom.featureflag.core.context.FeatureFlagContext;
+import net.brightroom.featureflag.core.evaluation.AccessDecision;
+import net.brightroom.featureflag.core.evaluation.EvaluationContext;
+import net.brightroom.featureflag.core.evaluation.ReactiveFeatureFlagEvaluationPipeline;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
-import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
-import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
 import net.brightroom.featureflag.webflux.condition.ServerHttpConditionVariables;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
-import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.springframework.web.reactive.function.server.HandlerFilterFunction;
-import org.springframework.web.reactive.function.server.HandlerFunction;
-import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import reactor.core.publisher.Mono;
 
@@ -43,14 +38,10 @@ import reactor.core.publisher.Mono;
  */
 public class FeatureFlagHandlerFilterFunction {
 
-  private final ReactiveFeatureFlagProvider reactiveFeatureFlagProvider;
+  private final ReactiveFeatureFlagEvaluationPipeline pipeline;
   private final AccessDeniedHandlerFilterResolution resolution;
-  private final ReactiveRolloutStrategy rolloutStrategy;
-  private final ReactiveFeatureFlagContextResolver contextResolver;
   private final ReactiveRolloutPercentageProvider rolloutPercentageProvider;
-  private final ReactiveFeatureFlagConditionEvaluator conditionEvaluator;
-  private final ReactiveScheduleProvider reactiveScheduleProvider;
-  private final Clock clock;
+  private final ReactiveFeatureFlagContextResolver contextResolver;
 
   /**
    * Creates a {@link HandlerFilterFunction} that guards the route with the specified feature flag.
@@ -124,153 +115,56 @@ public class FeatureFlagHandlerFilterFunction {
       throw new IllegalArgumentException(
           "rollout must be between 0 and 100, but was: " + rolloutFallback);
     }
-    return (request, next) -> filter(request, next, featureName, condition, rolloutFallback);
-  }
-
-  private Mono<ServerResponse> filter(
-      ServerRequest request,
-      HandlerFunction<ServerResponse> next,
-      String featureName,
-      String condition,
-      int rolloutFallback) {
-    return reactiveFeatureFlagProvider
-        .isFeatureEnabled(featureName)
-        .defaultIfEmpty(false)
-        .flatMap(
-            enabled ->
-                handleEnabled(request, next, featureName, condition, rolloutFallback, enabled));
-  }
-
-  private Mono<ServerResponse> handleEnabled(
-      ServerRequest request,
-      HandlerFunction<ServerResponse> next,
-      String featureName,
-      String condition,
-      int rolloutFallback,
-      boolean enabled) {
-    if (!enabled) {
-      return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
-    }
-    return reactiveScheduleProvider
-        .getSchedule(featureName)
-        .map(schedule -> schedule.isActive(clock.instant()))
-        .defaultIfEmpty(true)
-        .flatMap(
-            active -> {
-              if (!active) {
-                return resolution.resolve(
-                    request, new FeatureFlagAccessDeniedException(featureName));
-              }
-              return evaluateCondition(request, next, featureName, condition, rolloutFallback);
-            });
-  }
-
-  private Mono<ServerResponse> evaluateCondition(
-      ServerRequest request,
-      HandlerFunction<ServerResponse> next,
-      String featureName,
-      String condition,
-      int rolloutFallback) {
-    Mono<Boolean> conditionMono;
-    if (condition != null && !condition.isEmpty()) {
-      conditionMono =
-          conditionEvaluator.evaluate(
-              condition, ServerHttpConditionVariables.build(request.exchange().getRequest()));
-    } else {
-      conditionMono = Mono.just(true);
-    }
-    return conditionMono.flatMap(
-        passed -> handleConditionResult(request, next, featureName, rolloutFallback, passed));
-  }
-
-  private Mono<ServerResponse> handleConditionResult(
-      ServerRequest request,
-      HandlerFunction<ServerResponse> next,
-      String featureName,
-      int rolloutFallback,
-      boolean passed) {
-    if (!passed) {
-      return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
-    }
-    return applyRollout(request, next, featureName, rolloutFallback);
-  }
-
-  private Mono<ServerResponse> applyRollout(
-      ServerRequest request,
-      HandlerFunction<ServerResponse> next,
-      String featureName,
-      int rolloutFallback) {
-    return rolloutPercentageProvider
-        .getRolloutPercentage(featureName)
-        .defaultIfEmpty(rolloutFallback)
-        .flatMap(rollout -> handleRollout(request, next, featureName, rollout));
-  }
-
-  private Mono<ServerResponse> handleRollout(
-      ServerRequest request,
-      HandlerFunction<ServerResponse> next,
-      String featureName,
-      int rollout) {
-    if (rollout >= 100) {
-      return next.handle(request);
-    }
-    return contextResolver
-        .resolve(request.exchange().getRequest())
-        .flatMap(ctx -> checkInRollout(request, next, featureName, ctx, rollout))
-        .switchIfEmpty(Mono.defer(() -> next.handle(request)));
-  }
-
-  private Mono<ServerResponse> checkInRollout(
-      ServerRequest request,
-      HandlerFunction<ServerResponse> next,
-      String featureName,
-      FeatureFlagContext ctx,
-      int rollout) {
-    return rolloutStrategy
-        .isInRollout(featureName, ctx, rollout)
-        .flatMap(inRollout -> handleRolloutResult(request, next, featureName, inRollout));
-  }
-
-  private Mono<ServerResponse> handleRolloutResult(
-      ServerRequest request,
-      HandlerFunction<ServerResponse> next,
-      String featureName,
-      boolean inRollout) {
-    if (!inRollout) {
-      return resolution.resolve(request, new FeatureFlagAccessDeniedException(featureName));
-    }
-    return next.handle(request);
+    return (request, next) ->
+        Mono.zip(
+                rolloutPercentageProvider
+                    .getRolloutPercentage(featureName)
+                    .defaultIfEmpty(rolloutFallback),
+                contextResolver
+                    .resolve(request.exchange().getRequest())
+                    .map(java.util.Optional::of)
+                    .defaultIfEmpty(java.util.Optional.empty()))
+            .flatMap(
+                tuple -> {
+                  EvaluationContext evalCtx =
+                      new EvaluationContext(
+                          featureName,
+                          condition,
+                          tuple.getT1(),
+                          ServerHttpConditionVariables.build(request.exchange().getRequest()),
+                          () -> tuple.getT2().orElse(null));
+                  return pipeline.evaluate(evalCtx);
+                })
+            .flatMap(
+                decision -> {
+                  if (decision instanceof AccessDecision.Denied denied) {
+                    return resolution.resolve(
+                        request, new FeatureFlagAccessDeniedException(denied.featureName()));
+                  }
+                  return next.handle(request);
+                });
   }
 
   /**
    * Creates a new {@code FeatureFlagHandlerFilterFunction}.
    *
-   * @param reactiveFeatureFlagProvider the provider used to check whether a feature flag is enabled
-   * @param resolution the resolution used to build the denied response for functional endpoints
-   * @param rolloutStrategy the strategy used to determine rollout bucket membership
-   * @param contextResolver the resolver used to extract context from the current request
+   * @param pipeline the reactive evaluation pipeline that performs all feature flag checks; must
+   *     not be null
+   * @param resolution the resolution used to build the denied response for functional endpoints;
+   *     must not be null
    * @param rolloutPercentageProvider the provider used to look up the rollout percentage per
-   *     feature
-   * @param conditionEvaluator the reactive evaluator used to evaluate SpEL condition expressions
-   * @param reactiveScheduleProvider the provider used to look up the schedule per feature
-   * @param clock the clock used to obtain the current time for schedule evaluation
+   *     feature; must not be null
+   * @param contextResolver the resolver used to extract context from the current request; must not
+   *     be null
    */
   public FeatureFlagHandlerFilterFunction(
-      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
+      ReactiveFeatureFlagEvaluationPipeline pipeline,
       AccessDeniedHandlerFilterResolution resolution,
-      ReactiveRolloutStrategy rolloutStrategy,
-      ReactiveFeatureFlagContextResolver contextResolver,
       ReactiveRolloutPercentageProvider rolloutPercentageProvider,
-      ReactiveFeatureFlagConditionEvaluator conditionEvaluator,
-      ReactiveScheduleProvider reactiveScheduleProvider,
-      Clock clock) {
-    this.reactiveFeatureFlagProvider = reactiveFeatureFlagProvider;
+      ReactiveFeatureFlagContextResolver contextResolver) {
+    this.pipeline = pipeline;
     this.resolution = resolution;
-    this.rolloutStrategy = rolloutStrategy;
-    this.contextResolver = contextResolver;
     this.rolloutPercentageProvider = rolloutPercentageProvider;
-    this.conditionEvaluator = conditionEvaluator;
-    this.reactiveScheduleProvider = reactiveScheduleProvider;
-    this.clock = clock;
+    this.contextResolver = contextResolver;
   }
 }

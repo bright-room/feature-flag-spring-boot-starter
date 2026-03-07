@@ -1,17 +1,26 @@
 package net.brightroom.featureflag.webflux.autoconfigure;
 
 import java.time.Clock;
+import java.util.List;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.condition.ReactiveFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.condition.SpelFeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.condition.SpelReactiveFeatureFlagConditionEvaluator;
+import net.brightroom.featureflag.core.evaluation.ReactiveConditionEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.ReactiveEnabledEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.ReactiveEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.ReactiveFeatureFlagEvaluationPipeline;
+import net.brightroom.featureflag.core.evaluation.ReactiveRolloutEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.ReactiveScheduleEvaluationStep;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.InMemoryReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.InMemoryReactiveScheduleProvider;
 import net.brightroom.featureflag.core.provider.ReactiveFeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.ReactiveRolloutPercentageProvider;
 import net.brightroom.featureflag.core.provider.ReactiveScheduleProvider;
+import net.brightroom.featureflag.core.rollout.DefaultReactiveRolloutStrategy;
+import net.brightroom.featureflag.core.rollout.ReactiveRolloutStrategy;
 import net.brightroom.featureflag.webflux.aspect.FeatureFlagAspect;
 import net.brightroom.featureflag.webflux.context.RandomReactiveFeatureFlagContextResolver;
 import net.brightroom.featureflag.webflux.context.ReactiveFeatureFlagContextResolver;
@@ -22,8 +31,6 @@ import net.brightroom.featureflag.webflux.resolution.exceptionhandler.AccessDeni
 import net.brightroom.featureflag.webflux.resolution.exceptionhandler.AccessDeniedExceptionHandlerResolutionFactory;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolution;
 import net.brightroom.featureflag.webflux.resolution.handlerfilter.AccessDeniedHandlerFilterResolutionFactory;
-import net.brightroom.featureflag.webflux.rollout.DefaultReactiveRolloutStrategy;
-import net.brightroom.featureflag.webflux.rollout.ReactiveRolloutStrategy;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -75,7 +82,7 @@ public class FeatureFlagWebFluxAutoConfiguration {
   }
 
   @Bean
-  @ConditionalOnMissingBean
+  @ConditionalOnMissingBean(ReactiveRolloutStrategy.class)
   ReactiveRolloutStrategy reactiveRolloutStrategy() {
     return new DefaultReactiveRolloutStrategy();
   }
@@ -118,6 +125,41 @@ public class FeatureFlagWebFluxAutoConfiguration {
     return new SpelReactiveFeatureFlagConditionEvaluator(conditionEvaluator);
   }
 
+  @Bean
+  @ConditionalOnMissingBean(ReactiveEnabledEvaluationStep.class)
+  ReactiveEnabledEvaluationStep reactiveEnabledEvaluationStep(
+      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider) {
+    return new ReactiveEnabledEvaluationStep(reactiveFeatureFlagProvider);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ReactiveScheduleEvaluationStep.class)
+  ReactiveScheduleEvaluationStep reactiveScheduleEvaluationStep(
+      ReactiveScheduleProvider reactiveScheduleProvider, Clock clock) {
+    return new ReactiveScheduleEvaluationStep(reactiveScheduleProvider, clock);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ReactiveConditionEvaluationStep.class)
+  ReactiveConditionEvaluationStep reactiveConditionEvaluationStep(
+      ReactiveFeatureFlagConditionEvaluator conditionEvaluator) {
+    return new ReactiveConditionEvaluationStep(conditionEvaluator);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ReactiveRolloutEvaluationStep.class)
+  ReactiveRolloutEvaluationStep reactiveRolloutEvaluationStep(
+      ReactiveRolloutStrategy reactiveRolloutStrategy) {
+    return new ReactiveRolloutEvaluationStep(reactiveRolloutStrategy);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  ReactiveFeatureFlagEvaluationPipeline reactiveFeatureFlagEvaluationPipeline(
+      List<ReactiveEvaluationStep> steps) {
+    return new ReactiveFeatureFlagEvaluationPipeline(steps);
+  }
+
   /**
    * Propagates {@link ServerWebExchange} into the Reactor context so that {@link FeatureFlagAspect}
    * can access it via {@code Mono.deferContextual} during rollout percentage checks.
@@ -136,21 +178,10 @@ public class FeatureFlagWebFluxAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   FeatureFlagAspect featureFlagAspect(
-      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
-      ReactiveRolloutStrategy reactiveRolloutStrategy,
+      ReactiveFeatureFlagEvaluationPipeline pipeline,
       ReactiveFeatureFlagContextResolver contextResolver,
-      ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider,
-      ReactiveFeatureFlagConditionEvaluator conditionEvaluator,
-      ReactiveScheduleProvider reactiveScheduleProvider,
-      Clock clock) {
-    return new FeatureFlagAspect(
-        reactiveFeatureFlagProvider,
-        reactiveRolloutStrategy,
-        contextResolver,
-        reactiveRolloutPercentageProvider,
-        conditionEvaluator,
-        reactiveScheduleProvider,
-        clock);
+      ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider) {
+    return new FeatureFlagAspect(pipeline, contextResolver, reactiveRolloutPercentageProvider);
   }
 
   @Bean
@@ -162,23 +193,15 @@ public class FeatureFlagWebFluxAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   FeatureFlagHandlerFilterFunction featureFlagHandlerFilterFunction(
-      ReactiveFeatureFlagProvider reactiveFeatureFlagProvider,
+      ReactiveFeatureFlagEvaluationPipeline pipeline,
       AccessDeniedHandlerFilterResolution accessDeniedHandlerResolution,
-      ReactiveRolloutStrategy reactiveRolloutStrategy,
-      ReactiveFeatureFlagContextResolver contextResolver,
       ReactiveRolloutPercentageProvider reactiveRolloutPercentageProvider,
-      ReactiveFeatureFlagConditionEvaluator conditionEvaluator,
-      ReactiveScheduleProvider reactiveScheduleProvider,
-      Clock clock) {
+      ReactiveFeatureFlagContextResolver contextResolver) {
     return new FeatureFlagHandlerFilterFunction(
-        reactiveFeatureFlagProvider,
+        pipeline,
         accessDeniedHandlerResolution,
-        reactiveRolloutStrategy,
-        contextResolver,
         reactiveRolloutPercentageProvider,
-        conditionEvaluator,
-        reactiveScheduleProvider,
-        clock);
+        contextResolver);
   }
 
   /**

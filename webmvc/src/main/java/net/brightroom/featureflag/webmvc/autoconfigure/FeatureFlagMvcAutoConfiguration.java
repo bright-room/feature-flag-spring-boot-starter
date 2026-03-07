@@ -1,9 +1,16 @@
 package net.brightroom.featureflag.webmvc.autoconfigure;
 
 import java.time.Clock;
+import java.util.List;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.condition.FeatureFlagConditionEvaluator;
 import net.brightroom.featureflag.core.condition.SpelFeatureFlagConditionEvaluator;
+import net.brightroom.featureflag.core.evaluation.ConditionEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.EnabledEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.EvaluationStep;
+import net.brightroom.featureflag.core.evaluation.FeatureFlagEvaluationPipeline;
+import net.brightroom.featureflag.core.evaluation.RolloutEvaluationStep;
+import net.brightroom.featureflag.core.evaluation.ScheduleEvaluationStep;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
 import net.brightroom.featureflag.core.provider.InMemoryFeatureFlagProvider;
@@ -93,22 +100,42 @@ public class FeatureFlagMvcAutoConfiguration {
   }
 
   @Bean
+  @ConditionalOnMissingBean(EnabledEvaluationStep.class)
+  EnabledEvaluationStep enabledEvaluationStep(FeatureFlagProvider featureFlagProvider) {
+    return new EnabledEvaluationStep(featureFlagProvider);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ScheduleEvaluationStep.class)
+  ScheduleEvaluationStep scheduleEvaluationStep(ScheduleProvider scheduleProvider, Clock clock) {
+    return new ScheduleEvaluationStep(scheduleProvider, clock);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(ConditionEvaluationStep.class)
+  ConditionEvaluationStep conditionEvaluationStep(
+      FeatureFlagConditionEvaluator conditionEvaluator) {
+    return new ConditionEvaluationStep(conditionEvaluator);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean(RolloutEvaluationStep.class)
+  RolloutEvaluationStep rolloutEvaluationStep(RolloutStrategy rolloutStrategy) {
+    return new RolloutEvaluationStep(rolloutStrategy);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
+  FeatureFlagEvaluationPipeline featureFlagEvaluationPipeline(List<EvaluationStep> steps) {
+    return new FeatureFlagEvaluationPipeline(steps);
+  }
+
+  @Bean
   FeatureFlagInterceptor featureFlagInterceptor(
-      FeatureFlagProvider featureFlagProvider,
-      RolloutStrategy rolloutStrategy,
-      FeatureFlagContextResolver contextResolver,
+      FeatureFlagEvaluationPipeline pipeline,
       RolloutPercentageProvider rolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator,
-      ScheduleProvider scheduleProvider,
-      Clock clock) {
-    return new FeatureFlagInterceptor(
-        featureFlagProvider,
-        rolloutStrategy,
-        contextResolver,
-        rolloutPercentageProvider,
-        conditionEvaluator,
-        scheduleProvider,
-        clock);
+      FeatureFlagContextResolver contextResolver) {
+    return new FeatureFlagInterceptor(pipeline, rolloutPercentageProvider, contextResolver);
   }
 
   @Bean
@@ -126,23 +153,12 @@ public class FeatureFlagMvcAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   FeatureFlagHandlerFilterFunction featureFlagHandlerFilterFunction(
-      FeatureFlagProvider featureFlagProvider,
+      FeatureFlagEvaluationPipeline pipeline,
       AccessDeniedHandlerFilterResolution accessDeniedHandlerFilterResolution,
-      RolloutStrategy rolloutStrategy,
-      FeatureFlagContextResolver contextResolver,
       RolloutPercentageProvider rolloutPercentageProvider,
-      FeatureFlagConditionEvaluator conditionEvaluator,
-      ScheduleProvider scheduleProvider,
-      Clock clock) {
+      FeatureFlagContextResolver contextResolver) {
     return new FeatureFlagHandlerFilterFunction(
-        featureFlagProvider,
-        accessDeniedHandlerFilterResolution,
-        rolloutStrategy,
-        contextResolver,
-        rolloutPercentageProvider,
-        conditionEvaluator,
-        scheduleProvider,
-        clock);
+        pipeline, accessDeniedHandlerFilterResolution, rolloutPercentageProvider, contextResolver);
   }
 
   /**

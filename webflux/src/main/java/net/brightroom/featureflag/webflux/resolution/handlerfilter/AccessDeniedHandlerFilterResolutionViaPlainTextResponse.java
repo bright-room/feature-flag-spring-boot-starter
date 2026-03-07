@@ -2,6 +2,7 @@ package net.brightroom.featureflag.webflux.resolution.handlerfilter;
 
 import java.nio.charset.StandardCharsets;
 import net.brightroom.featureflag.core.exception.FeatureFlagAccessDeniedException;
+import net.brightroom.featureflag.core.resolution.PlainTextResponseBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -23,7 +24,7 @@ class AccessDeniedHandlerFilterResolutionViaPlainTextResponse
   public Mono<ServerResponse> resolve(ServerRequest request, FeatureFlagAccessDeniedException e) {
     return ServerResponse.status(HttpStatus.FORBIDDEN)
         .contentType(TEXT_PLAIN_UTF8)
-        .bodyValue(e.getMessage());
+        .bodyValue(PlainTextResponseBuilder.build(e));
   }
 
   AccessDeniedHandlerFilterResolutionViaPlainTextResponse() {}
