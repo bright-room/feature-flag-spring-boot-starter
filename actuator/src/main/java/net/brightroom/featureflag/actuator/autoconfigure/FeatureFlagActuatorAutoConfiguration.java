@@ -1,9 +1,12 @@
 package net.brightroom.featureflag.actuator.autoconfigure;
 
+import java.util.List;
 import net.brightroom.featureflag.actuator.endpoint.FeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.endpoint.ReactiveFeatureFlagEndpoint;
 import net.brightroom.featureflag.actuator.health.FeatureFlagHealthIndicator;
+import net.brightroom.featureflag.actuator.health.HealthDetailsContributor;
 import net.brightroom.featureflag.actuator.health.ReactiveFeatureFlagHealthIndicator;
+import net.brightroom.featureflag.actuator.health.ReactiveHealthDetailsContributor;
 import net.brightroom.featureflag.core.autoconfigure.FeatureFlagAutoConfiguration;
 import net.brightroom.featureflag.core.properties.FeatureFlagProperties;
 import net.brightroom.featureflag.core.provider.FeatureFlagProvider;
@@ -93,12 +96,14 @@ public class FeatureFlagActuatorAutoConfiguration {
      * indicator is enabled.
      *
      * @param provider the feature flag provider
+     * @param contributors the list of {@link HealthDetailsContributor} beans; may be empty
      * @return the feature flag health indicator
      */
     @Bean
     @ConditionalOnEnabledHealthIndicator("featureFlag")
-    FeatureFlagHealthIndicator featureFlagHealthIndicator(FeatureFlagProvider provider) {
-      return new FeatureFlagHealthIndicator(provider, featureFlagProperties);
+    FeatureFlagHealthIndicator featureFlagHealthIndicator(
+        FeatureFlagProvider provider, List<HealthDetailsContributor> contributors) {
+      return new FeatureFlagHealthIndicator(provider, featureFlagProperties, contributors);
     }
 
     /**
@@ -164,13 +169,14 @@ public class FeatureFlagActuatorAutoConfiguration {
      * health indicator is enabled.
      *
      * @param provider the reactive feature flag provider
+     * @param contributors the list of {@link ReactiveHealthDetailsContributor} beans; may be empty
      * @return the reactive feature flag health indicator
      */
     @Bean
     @ConditionalOnEnabledHealthIndicator("featureFlag")
     ReactiveFeatureFlagHealthIndicator featureFlagHealthIndicator(
-        ReactiveFeatureFlagProvider provider) {
-      return new ReactiveFeatureFlagHealthIndicator(provider, featureFlagProperties);
+        ReactiveFeatureFlagProvider provider, List<ReactiveHealthDetailsContributor> contributors) {
+      return new ReactiveFeatureFlagHealthIndicator(provider, featureFlagProperties, contributors);
     }
 
     /**
