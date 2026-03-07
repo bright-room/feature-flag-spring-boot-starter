@@ -144,8 +144,7 @@ class ReactiveFeatureFlagHealthIndicatorTest {
     ReactiveHealthDetailsContributor contributor =
         () -> Mono.just(Map.of("connectionPoolSize", 10, "latencyMs", 5));
     var indicator =
-        new ReactiveFeatureFlagHealthIndicator(
-            provider, properties, null, List.of(contributor));
+        new ReactiveFeatureFlagHealthIndicator(provider, properties, null, List.of(contributor));
 
     Health health = indicator.health().block();
 
