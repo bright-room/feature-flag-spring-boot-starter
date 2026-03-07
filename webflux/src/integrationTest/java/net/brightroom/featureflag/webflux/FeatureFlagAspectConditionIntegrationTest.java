@@ -96,6 +96,12 @@ class FeatureFlagAspectConditionIntegrationTest {
         .isEqualTo("Allowed");
   }
 
+  @Test
+  void shouldBlockAccess_whenRemoteAddressConditionIsNotSatisfied() {
+    // @WebFluxTest slice does not set a real remote address, so the condition fails
+    webTestClient.get().uri("/condition/remote-address").exchange().expectStatus().isForbidden();
+  }
+
   @Autowired
   FeatureFlagAspectConditionIntegrationTest(WebTestClient webTestClient) {
     this.webTestClient = webTestClient;

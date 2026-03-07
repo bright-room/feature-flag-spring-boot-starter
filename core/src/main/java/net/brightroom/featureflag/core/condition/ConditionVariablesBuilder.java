@@ -23,12 +23,12 @@ import java.util.Map;
  */
 public final class ConditionVariablesBuilder {
 
-  private Map<String, String> headers;
-  private Map<String, String> params;
-  private Map<String, String> cookies;
-  private String path;
-  private String method;
-  private String remoteAddress;
+  private Map<String, String> headers = Map.of();
+  private Map<String, String> params = Map.of();
+  private Map<String, String> cookies = Map.of();
+  private String path = "";
+  private String method = "";
+  private String remoteAddress = "";
 
   /** Sets the {@code headers} variable. */
   public ConditionVariablesBuilder headers(Map<String, String> headers) {

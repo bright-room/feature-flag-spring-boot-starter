@@ -53,6 +53,28 @@ class FeatureFlagHandlerFilterFunctionConditionIntegrationTest {
             """);
   }
 
+  @Test
+  void shouldAllowAccess_whenParamConditionIsSatisfied() {
+    webTestClient
+        .get()
+        .uri("/functional/condition/param?variant=B")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(String.class)
+        .isEqualTo("Allowed");
+  }
+
+  @Test
+  void shouldBlockAccess_whenParamConditionIsNotSatisfied() {
+    webTestClient
+        .get()
+        .uri("/functional/condition/param?variant=A")
+        .exchange()
+        .expectStatus()
+        .isForbidden();
+  }
+
   @Autowired
   FeatureFlagHandlerFilterFunctionConditionIntegrationTest(WebTestClient webTestClient) {
     this.webTestClient = webTestClient;
