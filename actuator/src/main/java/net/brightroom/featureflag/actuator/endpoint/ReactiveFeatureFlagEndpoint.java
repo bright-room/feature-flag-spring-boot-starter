@@ -87,7 +87,7 @@ public class ReactiveFeatureFlagEndpoint {
     }
     provider.setFeatureEnabled(featureName, enabled).block();
     if (rollout != null) {
-      rolloutProvider.setRolloutPercentage(featureName, rollout);
+      rolloutProvider.setRolloutPercentage(featureName, rollout).block();
     }
     eventPublisher.publishEvent(new FeatureFlagChangedEvent(this, featureName, enabled, rollout));
     return buildFlagsResponse();
@@ -109,7 +109,7 @@ public class ReactiveFeatureFlagEndpoint {
       throw new IllegalArgumentException("featureName must not be null or blank");
     }
     Boolean removed = provider.removeFeature(featureName).block();
-    rolloutProvider.removeRolloutPercentage(featureName);
+    rolloutProvider.removeRolloutPercentage(featureName).block();
     if (Boolean.TRUE.equals(removed)) {
       eventPublisher.publishEvent(new FeatureFlagRemovedEvent(this, featureName));
     }
