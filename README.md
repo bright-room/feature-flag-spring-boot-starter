@@ -1,5 +1,10 @@
 # feature-flag-spring-boot-starter
 
+> [!CAUTION]
+> This repository is no longer maintained.
+> A new library, [endpoint-gate](https://github.com/bright-room/endpoint-gate), is now available as its successor.
+> Please migrate to it.
+
 Library for integrating feature flag functionality into Spring MVC and Spring WebFlux.
 
 ## Features
